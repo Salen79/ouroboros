@@ -83,17 +83,18 @@ Telegram --> colab_launcher.py
 2. Go to the menu: **Runtime > Change runtime type** and select a **GPU** (optional, but recommended for browser automation).
 3. Click the **key icon** in the left sidebar (Secrets) and add each API key from the table above. Make sure "Notebook access" is toggled on for each secret.
 
-### Step 4: Clone and Run
+### Step 4: Fork and Run
 
-Paste the following into a Google Colab cell and press **Shift+Enter** to run:
+1. **Fork** this repository on GitHub: click the **Fork** button at the top of the page.
+2. Paste the following into a Google Colab cell and press **Shift+Enter** to run:
 
 ```python
 import os
 
-# Optional: customize models and settings
+# ⚠️ CHANGE THESE to your GitHub username and forked repo name
 CFG = {
-    "GITHUB_USER": "razzant",
-    "GITHUB_REPO": "ouroboros",
+    "GITHUB_USER": "YOUR_GITHUB_USERNAME",                       # <-- CHANGE THIS
+    "GITHUB_REPO": "ouroboros",                                  # <-- repo name (after fork)
     # Models
     "OUROBOROS_MODEL": "anthropic/claude-sonnet-4.6",            # primary LLM (via OpenRouter)
     "OUROBOROS_MODEL_CODE": "anthropic/claude-sonnet-4.6",       # code editing (Claude Code CLI)
@@ -109,7 +110,7 @@ CFG = {
 for k, v in CFG.items():
     os.environ[k] = str(v)
 
-# Clone the repository
+# Clone the original repo (the boot shim will re-point origin to your fork)
 !git clone https://github.com/razzant/ouroboros.git /content/ouroboros_repo
 %cd /content/ouroboros_repo
 !git checkout ouroboros

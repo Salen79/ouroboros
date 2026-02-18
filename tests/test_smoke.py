@@ -105,10 +105,6 @@ EXPECTED_TOOLS = [
     "summarize_dialogue",
     # Task decomposition
     "get_task_result", "wait_for_task",
-    # Dashboard
-    "update_dashboard",
-    # Self-portrait
-    "generate_self_portrait",
     "generate_evolution_stats",
     # VLM / Vision
     "analyze_screenshot", "vlm_query",

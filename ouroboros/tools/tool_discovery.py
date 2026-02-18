@@ -85,7 +85,7 @@ def get_tools() -> List[ToolEntry]:
                 "description": (
                     "Enable specific additional tools by name (comma-separated). "
                     "Their schemas will be added to your active tool set for the "
-                    "remainder of this task. Example: enable_tools(tools='multi_model_review,generate_self_portrait')"
+                    "remainder of this task. Example: enable_tools(tools='multi_model_review,generate_evolution_stats')"
                 ),
                 "parameters": {
                     "type": "object",

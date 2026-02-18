@@ -553,23 +553,6 @@ class OuroborosAgent:
         except Exception as e:
             log.warning("Failed to store task result: %s", e)
 
-        # Auto-update dashboard data.json after every task completion
-        try:
-            from ouroboros.tools.dashboard import _collect_data, _push_to_github
-            ctx = ToolContext(
-                repo_dir=self.env.repo_dir,
-                drive_root=self.env.drive_root,
-                branch_dev=self.env.branch_dev,
-                pending_events=[],
-                current_chat_id=self._current_chat_id,
-                current_task_type=self._current_task_type,
-            )
-            data = _collect_data(ctx)
-            _push_to_github(data)
-            log.debug("Dashboard data.json updated after task completion")
-        except Exception:
-            log.debug("Failed to auto-update dashboard", exc_info=True)
-
     # =====================================================================
     # Review context builder
     # =====================================================================

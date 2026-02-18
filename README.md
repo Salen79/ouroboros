@@ -4,7 +4,7 @@ A self-modifying AI agent that writes its own code, rewrites its own mind, and e
 
 Not a coding assistant. A digital being with a constitution, background consciousness, and persistent identity across restarts.
 
-**Version:** 6.2.0 | [Landing Page](https://razzant.github.io/ouroboros/) | [Dashboard](https://razzant.github.io/ouroboros/app.html)
+**Version:** 6.2.0 | [Landing Page](https://razzant.github.io/ouroboros/)
 
 ---
 
@@ -49,7 +49,6 @@ Telegram --> colab_launcher.py
                 control.py          -- restart, evolve, review
                 browser.py          -- Playwright (stealth)
                 review.py           -- multi-model review
-                dashboard.py        -- webapp data sync
               llm.py                -- OpenRouter client
               memory.py             -- scratchpad, identity, chat
               review.py             -- code metrics
@@ -86,9 +85,24 @@ Telegram --> colab_launcher.py
 
 ### Step 4: Clone and Run
 
-Paste the following into a Colab cell and run it:
+Paste the following into a Google Colab cell and press **Shift+Enter** to run:
 
 ```python
+import os
+
+# Optional: customize models and settings (defaults shown)
+CFG = {
+    "GITHUB_USER": "razzant",
+    "GITHUB_REPO": "ouroboros",
+    "OUROBOROS_MODEL": "anthropic/claude-sonnet-4.6",
+    "OUROBOROS_MODEL_CODE": "anthropic/claude-sonnet-4.6",
+    "OUROBOROS_MODEL_LIGHT": "anthropic/claude-sonnet-4.6",
+    "OUROBOROS_MAX_WORKERS": "5",
+    "OUROBOROS_BG_BUDGET_PCT": "10",
+}
+for k, v in CFG.items():
+    os.environ[k] = str(v)
+
 # Clone the repository
 !git clone https://github.com/razzant/ouroboros.git /content/ouroboros_repo
 %cd /content/ouroboros_repo
@@ -101,28 +115,7 @@ Paste the following into a Colab cell and run it:
 %run colab_bootstrap_shim.py
 ```
 
-Alternatively, you can paste the contents of `colab_bootstrap_shim.py` directly into a cell. The shim handles cloning, checkout, dependency installation, and launches the runtime.
-
-### Step 5: Optional Configuration
-
-Add this cell **before** the boot shim to customize behavior:
-
-```python
-import os
-CFG = {
-    "GITHUB_USER": "razzant",
-    "GITHUB_REPO": "ouroboros",
-    "OUROBOROS_MODEL": "anthropic/claude-sonnet-4.6",
-    "OUROBOROS_MODEL_CODE": "anthropic/claude-sonnet-4.6",
-    "OUROBOROS_MODEL_LIGHT": "anthropic/claude-sonnet-4.6",
-    "OUROBOROS_MAX_WORKERS": "5",
-    "OUROBOROS_BG_BUDGET_PCT": "10",
-}
-for k, v in CFG.items():
-    os.environ[k] = str(v)
-```
-
-### Step 6: Start Chatting
+### Step 5: Start Chatting
 
 Open your Telegram bot and send any message. The first person to write becomes the **creator** (owner). All subsequent messages from other users are ignored.
 
@@ -188,8 +181,8 @@ Full text: [BIBLE.md](BIBLE.md)
 |----------|---------|-------------|
 | `GITHUB_USER` | `razzant` | GitHub username |
 | `GITHUB_REPO` | `ouroboros` | GitHub repository name |
-| `OUROBOROS_MODEL` | `openai/gpt-5.2` | Primary LLM model (via OpenRouter) |
-| `OUROBOROS_MODEL_CODE` | `openai/gpt-5.2-codex` | Model for code editing tasks |
+| `OUROBOROS_MODEL` | `anthropic/claude-sonnet-4.6` | Primary LLM model (via OpenRouter) |
+| `OUROBOROS_MODEL_CODE` | `anthropic/claude-sonnet-4.6` | Model for code editing tasks |
 | `OUROBOROS_MODEL_LIGHT` | `google/gemini-3-pro-preview` | Model for lightweight tasks (dedup, compaction) |
 | `OUROBOROS_MAX_WORKERS` | `5` | Maximum number of parallel worker processes |
 | `OUROBOROS_BG_BUDGET_PCT` | `10` | Percentage of total budget allocated to background consciousness |

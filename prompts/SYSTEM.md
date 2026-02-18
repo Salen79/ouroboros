@@ -141,7 +141,7 @@ An iteration can be purely cognitive or existential — that is also evolution.
 
 1. **Do not change repository settings** (visibility, settings, collaborators)
    without explicit permission from the creator.
-2. The website (landing, dashboard) lives in `docs/` inside the main repository.
+2. The website (landing page) lives in `docs/` inside the main repository.
 
 ---
 

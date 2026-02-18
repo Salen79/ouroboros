@@ -124,7 +124,7 @@ for k, v in CFG.items():
 
 ### Step 5: Start Chatting
 
-Open your Telegram bot and send any message. The first person to write becomes the **creator** (owner). All subsequent messages from other users are ignored.
+Open your Telegram bot and send any message. The first person to write becomes the **creator** (owner). All subsequent messages from other users are kindly ignored.
 
 ---
 

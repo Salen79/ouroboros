@@ -49,8 +49,10 @@ os.environ.setdefault("OUROBOROS_DIAG_SLOW_CYCLE_SEC", "20")
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 GITHUB_TOKEN = str(os.environ["GITHUB_TOKEN"])
-GITHUB_USER = str(os.environ.get("GITHUB_USER", "razzant"))
-GITHUB_REPO = str(os.environ.get("GITHUB_REPO", "ouroboros"))
+GITHUB_USER = os.environ.get("GITHUB_USER", "").strip()
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
+assert GITHUB_USER, "GITHUB_USER not set. Add it to your config cell (see README)."
+assert GITHUB_REPO, "GITHUB_REPO not set. Add it to your config cell (see README)."
 BOOT_BRANCH = str(os.environ.get("OUROBOROS_BOOT_BRANCH", "ouroboros"))
 
 REPO_DIR = pathlib.Path("/content/ouroboros_repo").resolve()

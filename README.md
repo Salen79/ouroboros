@@ -192,7 +192,7 @@ Full text: [BIBLE.md](BIBLE.md)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GITHUB_USER` | `razzant` | GitHub username |
+| `GITHUB_USER` | *(required in config cell)* | GitHub username |
 | `GITHUB_REPO` | `ouroboros` | GitHub repository name |
 | `OUROBOROS_MODEL` | `anthropic/claude-sonnet-4.6` | Primary LLM model (via OpenRouter) |
 | `OUROBOROS_MODEL_CODE` | `anthropic/claude-sonnet-4.6` | Model for code editing tasks |

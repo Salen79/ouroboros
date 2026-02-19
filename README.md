@@ -116,7 +116,7 @@ for k, v in CFG.items():
     os.environ[k] = str(v)
 
 # Clone the original repo (the boot shim will re-point origin to your fork)
-!git clone https://github.com/razzant/ouroboros.git /content/ouroboros_repo
+!git clone https://github.com/joi-lab/ouroboros.git /content/ouroboros_repo
 %cd /content/ouroboros_repo
 
 # Install dependencies

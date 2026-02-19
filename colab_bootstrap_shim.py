@@ -63,8 +63,24 @@ else:
     subprocess.run(["git", "remote", "set-url", "origin", REMOTE_URL], cwd=str(REPO_DIR), check=True)
 
 subprocess.run(["git", "fetch", "origin"], cwd=str(REPO_DIR), check=True)
-subprocess.run(["git", "checkout", BOOT_BRANCH], cwd=str(REPO_DIR), check=True)
-subprocess.run(["git", "reset", "--hard", f"origin/{BOOT_BRANCH}"], cwd=str(REPO_DIR), check=True)
+
+# Check if BOOT_BRANCH exists on the fork's remote.
+# New forks (from the main-only public repo) won't have it yet.
+_rc = subprocess.run(
+    ["git", "rev-parse", "--verify", f"origin/{BOOT_BRANCH}"],
+    cwd=str(REPO_DIR), capture_output=True,
+).returncode
+
+if _rc == 0:
+    subprocess.run(["git", "checkout", BOOT_BRANCH], cwd=str(REPO_DIR), check=True)
+    subprocess.run(["git", "reset", "--hard", f"origin/{BOOT_BRANCH}"], cwd=str(REPO_DIR), check=True)
+else:
+    print(f"[boot] branch {BOOT_BRANCH} not found on fork — creating from origin/main")
+    subprocess.run(["git", "checkout", "-b", BOOT_BRANCH, "origin/main"], cwd=str(REPO_DIR), check=True)
+    subprocess.run(["git", "push", "-u", "origin", BOOT_BRANCH], cwd=str(REPO_DIR), check=True)
+    _STABLE = f"{BOOT_BRANCH}-stable"
+    subprocess.run(["git", "branch", _STABLE], cwd=str(REPO_DIR), check=True)
+    subprocess.run(["git", "push", "-u", "origin", _STABLE], cwd=str(REPO_DIR), check=True)
 HEAD_SHA = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(REPO_DIR), text=True).strip()
 print(
     "[boot] branch=%s sha=%s worker_start=%s diag_heartbeat=%ss"

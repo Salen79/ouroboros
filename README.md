@@ -135,7 +135,7 @@ Open your Telegram bot and send any message. The first person to write becomes t
 | `/panic` | Emergency stop. Kills all workers and halts the process immediately. |
 | `/restart` | Soft restart. Saves state, kills workers, re-launches the process. |
 | `/status` | Shows active workers, task queue, and budget breakdown. |
-| `/evolve` | Start autonomous evolution mode. |
+| `/evolve` | Start autonomous evolution mode (attention! burns money). |
 | `/evolve stop` | Stop evolution mode. Also accepts `/evolve off`. |
 | `/review` | Queue a deep review task (code, understanding, identity). |
 | `/bg start` | Start background consciousness loop. Also accepts `/bg on`. |

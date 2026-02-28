@@ -677,6 +677,7 @@ while True:
             else:
                 # Dispatch to direct chat handler
                 _consciousness.pause()
+                agent._busy = True  # Set BEFORE thread start to close race window
                 def _run_task_and_resume(cid, txt, img):
                     try:
                         handle_chat_direct(cid, txt, img)
@@ -691,6 +692,7 @@ while True:
                     _t.start()
                 except Exception as _te:
                     log.error("Failed to start chat thread: %s", _te)
+                    agent._busy = False  # Reset if thread failed to start
                     _consciousness.resume()  # ensure resume if thread fails to start
 
     st = load_state()

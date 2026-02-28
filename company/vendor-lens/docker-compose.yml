@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    container_name: vendorlens_backend
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://ai_company:${POSTGRES_PASSWORD}@postgres:5432/ai_company
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
+      - JINA_API_KEY=${JINA_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vendorlens
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8002}
+    container_name: vendorlens_frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+    networks:
+      - vendorlens
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: vendorlens_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_company
+      POSTGRES_USER: ai_company
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_company"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vendorlens
+
+volumes:
+  postgres_data:
+
+networks:
+  vendorlens:
+    driver: bridge

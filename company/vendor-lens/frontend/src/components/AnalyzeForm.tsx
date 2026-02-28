@@ -17,7 +17,7 @@ export default function AnalyzeForm({ className }: { className?: string }) {
     }
     setLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analyze`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

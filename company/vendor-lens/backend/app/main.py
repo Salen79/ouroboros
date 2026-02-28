@@ -4,29 +4,30 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import engine, Base
+from app.database import init_db
 from app.routers import analysis, comparison, health
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables on startup (dev mode; use Alembic for prod)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await init_db()
     yield
-    await engine.dispose()
 
 
 app = FastAPI(
     title="VendorLens API",
     version="0.1.0",
-    description="Paste a SaaS vendor URL, get instant pricing analysis & risk assessment.",
+    description="AI-powered vendor pricing analysis for indie developers",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:3001"],
+    allow_origins=[
+        settings.frontend_url,
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,3 +36,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(analysis.router)
 app.include_router(comparison.router)
+
+
+@app.get("/")
+async def root():
+    return {"service": "VendorLens API", "version": "0.1.0", "docs": "/docs"}

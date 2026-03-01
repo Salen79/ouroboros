@@ -74,7 +74,7 @@ class OuroborosAgent:
 
         # Message injection: owner can send messages while agent is busy
         self._incoming_messages: queue.Queue = queue.Queue()
-        self._busy = False
+        self._chat_lock = threading.Lock()  # Atomic busy flag — acquired BEFORE thread start
         self._last_progress_ts: float = 0.0
         self._task_started_ts: float = 0.0
 
@@ -84,6 +84,11 @@ class OuroborosAgent:
         self.memory = Memory(drive_root=env.drive_root, repo_dir=env.repo_dir)
 
         self._log_worker_boot_once()
+
+    @property
+    def _busy(self) -> bool:
+        """Backward-compatible: True while a chat task is being processed."""
+        return self._chat_lock.locked()
 
     def inject_message(self, text: str) -> None:
         """Thread-safe: inject owner message into the active conversation."""
@@ -384,7 +389,7 @@ class OuroborosAgent:
         return ctx, messages, cap_info
 
     def handle_task(self, task: Dict[str, Any]) -> List[Dict[str, Any]]:
-        self._busy = True
+        # _chat_lock is acquired externally before handle_task is called
         start_time = time.time()
         self._task_started_ts = start_time
         self._last_progress_ts = start_time
@@ -444,7 +449,7 @@ class OuroborosAgent:
             return list(self._pending_events)
 
         finally:
-            self._busy = False
+            # _chat_lock is released externally after handle_task returns
             # Clean up browser if it was used during this task
             try:
                 from ouroboros.tools.browser import cleanup_browser

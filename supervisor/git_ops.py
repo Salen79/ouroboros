@@ -330,7 +330,8 @@ def sync_runtime_dependencies(reason: str) -> Tuple[bool, str]:
         cmd += ["openai>=1.0.0", "requests"]
         source = "fallback:minimal"
     try:
-        rc = subprocess.run(cmd, cwd=str(REPO_DIR), check=False).returncode
+        rc = subprocess.run(cmd, cwd=str(REPO_DIR), check=False,
+                            capture_output=True).returncode
         if rc != 0:
             # PEP 668 (Ubuntu 24.04+): fall back to --break-system-packages
             subprocess.run(cmd + ["--break-system-packages"], cwd=str(REPO_DIR), check=True)

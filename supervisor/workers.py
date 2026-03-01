@@ -161,7 +161,26 @@ def handle_chat_direct(chat_id: int, text: str, image_data: Optional[Union[Tuple
         # Fallback for truly empty messages
         if not task["text"]:
             task["text"] = "(image attached)" if image_data else ""
-        events = agent.handle_task(task)
+        # Atomically guard against duplicate concurrent processing
+        if not agent._chat_lock.acquire(blocking=False):
+            log.warning(
+                "handle_chat_direct: agent busy, dropping duplicate msg chat_id=%s text=%.60r",
+                chat_id, text,
+            )
+            append_jsonl(
+                DRIVE_ROOT / "logs" / "supervisor.jsonl",
+                {
+                    "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "type": "duplicate_message_dropped",
+                    "chat_id": chat_id,
+                    "text_preview": text[:100],
+                },
+            )
+            return
+        try:
+            events = agent.handle_task(task)
+        finally:
+            agent._chat_lock.release()
         for e in events:
             get_event_q().put(e)
     except Exception as e:

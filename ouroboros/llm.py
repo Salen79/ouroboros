@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 log = logging.getLogger(__name__)
 
-DEFAULT_LIGHT_MODEL = "google/gemini-3-pro-preview"
+DEFAULT_LIGHT_MODEL = "google/gemini-2.0-flash-001"
 
 
 def normalize_reasoning_effort(value: str, default: str = "medium") -> str:
@@ -121,7 +121,7 @@ class LLMClient:
                 base_url=self._base_url,
                 api_key=self._api_key,
                 default_headers={
-                    "HTTP-Referer": "https://colab.research.google.com/",
+                    "HTTP-Referer": "https://github.com/Salen79/ouroboros",
                     "X-Title": "Ouroboros",
                 },
             )

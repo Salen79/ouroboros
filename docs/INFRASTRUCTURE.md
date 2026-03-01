@@ -3,136 +3,111 @@
 > VPS: ISHosting USA (New York)
 > IP: 38.180.135.77 | SSH port: 2222 | User: deploy
 > OS: Ubuntu 24.04 | 4 vCPU Xeon / 8 GB RAM / 50 GB SSD
+> Cost: $39.99/month
 
 ---
 
-## Доступные сервисы (Docker Compose)
+## Ты (CEO) имеешь полный доступ ко всему на этом сервере
 
-| Сервис | Порт | Статус | Назначение |
-|--------|------|--------|------------|
-| PostgreSQL 16 | 5432 (localhost) | ✅ Running | Основная БД |
-| Redis 7 | 6379 (localhost) | ✅ Running | Кэш, pub/sub, очереди |
-| ChromaDB | 8000 (localhost) | ✅ Running | Vector storage для RAG |
-
-Все сервисы доступны только через localhost (не открыты наружу).
-Docker Compose файл: `~/ai-company/docker-compose.yml`
-
-```bash
-# Управление сервисами
-cd ~/ai-company
-docker compose up -d          # Запустить всё
-docker compose ps             # Статус
-docker compose logs chromadb  # Логи конкретного сервиса
-docker compose down           # Остановить
-```
+Ты — CEO компании. Сервер — твой офис. Все ресурсы ниже — в твоём
+распоряжении. Используй как считаешь нужным для достижения результата.
 
 ---
 
-## Код AI Company (CrewAI)
+## Docker-сервисы (docker compose up -d)
 
-**Расположение:** `~/ai-company/`
+| Сервис | Порт | Назначение |
+|--------|------|------------|
+| PostgreSQL 16 | localhost:5432 | Основная БД |
+| Redis 7 | localhost:6379 | Кеш, pub/sub, очереди |
+| ChromaDB | localhost:8000 | Vector storage для RAG |
 
-### Что уже работает
-- **Discovery Crew** (4 агента): Market Researcher, Opportunity Analyst, Product Strategist, Risk Assessor
-- **FastAPI Bridge** на порту 8001 — middleware между CrewAI и Dashboard
-- **CEO Dashboard** (Next.js) на порту 3000 — веб-интерфейс мониторинга
-- **Budget Controller** — 3-tier thresholds (50% warning, 80% alert, 95% hard stop)
-- **Circuit Breaker** — защита от runaway (3 пустых ответа → стоп)
-- **30 тестов** — unit tests для budget, circuit breaker, token tracking
+## AI Company codebase (~/ai-company/)
 
-### Ключевые файлы
+Мульти-агентная система на CrewAI. Твои "сотрудники" — 4 Discovery агента
+уже работают. Development crew (Architect, Sr Dev, Frontend Dev, QA)
+готов к запуску.
+
 ```
 ~/ai-company/
 ├── src/ai_company/
-│   ├── main.py                  # CLI entry point
+│   ├── main.py                  # CLI + pipeline runner
+│   ├── circuit_breaker.py       # CircuitBreaker + PipelineTimeout
 │   ├── config/
-│   │   ├── agents.yaml          # 4 агента Discovery crew
-│   │   └── tasks.yaml           # Задачи агентов
+│   │   ├── agents.yaml          # 4 agent definitions (Discovery crew)
+│   │   └── tasks.yaml           # 4 task definitions
 │   ├── crews/discovery/crew.py  # DiscoveryCrew implementation
 │   └── utils/
-│       ├── budget.py            # BudgetController
-│       ├── circuit_breaker.py   # CircuitBreaker + PipelineTimeout
-│       ├── dashboard_bridge.py  # FastAPI bridge (:8001)
-│       └── crewai_callbacks.py  # Event handlers
+│       ├── budget.py            # BudgetController (3-tier thresholds)
+│       ├── crewai_callbacks.py  # Event handlers → budget + bridge
+│       ├── dashboard_bridge.py  # FastAPI bridge on :8001
+│       ├── report_generator.py  # PDF generation
+│       └── briefing_engine.py   # Mission briefing engine
 ├── ceo-dashboard/               # Next.js CEO Dashboard v2.0
-├── tests/                       # 30 тестов
-├── outputs/                     # Результаты прошлых прогонов
-└── .env                         # API ключи (НЕ в git)
+├── tests/                       # 30 tests
+├── outputs/                     # Results of 4 Discovery runs
+├── docker-compose.yml           # PostgreSQL, Redis, ChromaDB
+└── .env                         # API keys
 ```
 
-### Запуск Discovery crew
+### CrewAI Discovery Crew (твои агенты)
+- Market Researcher (Sonnet 4.5) — web research, trend analysis
+- Opportunity Analyst (GPT-5.2) — scoring and ranking product ideas
+- Product Strategist (Opus 4.6) — detailed product brief generation
+- Risk Assessor (Opus 4.6) — risk analysis on selected product
+
+### CEO Dashboard (Next.js + React Flow)
+- Граф агентов с real-time статусом
+- Deep Observability: prompt inspector, response log, chain-of-thought
+- Active Control: start/stop/pause/resume pipeline
+- Mission Briefing: 5-step wizard
+- Доступ: localhost:3000
+
+### Как запустить CrewAI Discovery
 ```bash
 cd ~/ai-company
-docker compose up -d                              # Инфраструктура
-uv run python -m ai_company.main --crew discovery  # Pipeline
+source .venv/bin/activate  # или uv run
+python -m ai_company.main --crew discovery
 ```
+Стоимость одного прогона: ~$0.24-3.00
 
-### Результаты прошлых прогонов
-| # | Дата | Продукт | Стоимость | Статус |
-|---|------|---------|-----------|--------|
-| 1 | 2026-02-16 | VendorLens | ~$2-3 | APPROVED (CEO Gate 1) |
-| 2 | 2026-02-21 | CodeLens Docs | ~$0.24 | Test run |
-| 3 | 2026-02-21 | CodeSensei | $0.24 | 25.9k tokens, 4 min |
-| 4 | 2026-02-22 | Integration test | $0.26 | Score 10/10 |
+### Результаты предыдущих Discovery runs
+| # | Дата | Продукт | Стоимость |
+|---|------|---------|-----------|
+| 1 | 2026-02-16 | VendorLens | ~$2-3 |
+| 2 | 2026-02-21 | CodeLens Docs | ~$0.24 |
+| 3 | 2026-02-21 | CodeSensei | $0.24 |
+| 4 | 2026-02-22 | Integration test | $0.26 |
 
-Подробные результаты: `~/ai-company/outputs/`
+Полные отчёты: ~/ai-company/outputs/
 
 ---
 
 ## Порты
 
-| Порт | Сервис | Доступ |
-|------|--------|--------|
-| 2222 | SSH | Внешний (ключ deploy) |
-| 3000 | CEO Dashboard (Next.js) | localhost (SSH tunnel) |
-| 5432 | PostgreSQL | localhost only |
-| 6379 | Redis | localhost only |
-| 8000 | ChromaDB | localhost only |
-| 8001 | FastAPI Bridge | localhost only |
+| Порт | Сервис |
+|------|--------|
+| 2222 | SSH |
+| 3000 | CEO Dashboard (Next.js) |
+| 5432 | PostgreSQL (localhost only) |
+| 6379 | Redis (localhost only) |
+| 8000 | ChromaDB (localhost only) |
+| 8001 | FastAPI Bridge |
 
-**⚠️ Bridge на :8001, НЕ :8000** — ChromaDB занимает :8000.
+## Environment Variables (~/ai-company/.env)
 
----
-
-## Доступ с Mac (CEO)
-
-```bash
-# SSH с туннелями для Dashboard
-ssh -p 2222 -L 3000:localhost:3000 -L 8001:localhost:8001 deploy@38.180.135.77
+```
+ANTHROPIC_API_KEY=       # Claude models
+OPENAI_API_KEY=          # GPT-5.2
+SERPER_API_KEY=          # Web search
+DASHBOARD_API_PORT=8001  # FastAPI bridge
 ```
 
 ---
 
-## API-ключи
+## Границы (из BIBLE.md P9)
 
-Файл: `~/ai-company/.env` (не в git)
-
-| Переменная | Назначение |
-|-----------|------------|
-| `ANTHROPIC_API_KEY` | Claude models (Opus, Sonnet, Haiku) |
-| `OPENAI_API_KEY` | GPT-5.2, web search |
-| `SERPER_API_KEY` | Web search для CrewAI |
-| `OPENROUTER_API_KEY` | Мультимодельный доступ (для Ouroboros) |
-
----
-
-## Модели доступные через API
-
-| Модель | API String | Цена (in/out per MTok) |
-|--------|-----------|------------------------|
-| Claude Opus 4.6 | `anthropic/claude-opus-4-6` | $5 / $25 |
-| Claude Sonnet 4.5 | `anthropic/claude-sonnet-4-5-20250929` | $3 / $15 |
-| GPT-5.2 | `openai/gpt-5.2` | $1.75 / $14 |
-| Claude Haiku 4.5 | `anthropic/claude-haiku-4-5-20251001` | $1 / $5 |
-
-Через OpenRouter доступны все модели всех провайдеров.
-
----
-
-## Безопасность
-
-- SSH: только ключевая аутентификация, нестандартный порт 2222
-- UFW firewall: открыты только 2222 (SSH) и 80/443 (для будущих продуктов)
-- fail2ban: защита от брутфорса
-- Все БД: только localhost, не открыты наружу
-- .env: не в git, скопирован отдельно
+CEO может делать всё на сервере кроме:
+- Менять SSH-конфигурацию или firewall
+- Открывать порты наружу без согласования с акционером
+- Удалять ~/ai-company/ (можно модифицировать, нельзя удалять)

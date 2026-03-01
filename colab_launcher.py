@@ -14,10 +14,19 @@ log = logging.getLogger(__name__)
 # 0) Install launcher deps
 # ----------------------------
 def install_launcher_deps() -> None:
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", "openai>=1.0.0", "requests"],
-        check=True,
-    )
+    """Install runtime deps if missing. Handles PEP 668 (Ubuntu 24.04+)."""
+    missing = []
+    for pkg in ("openai", "requests"):
+        try:
+            __import__(pkg)
+        except ImportError:
+            missing.append(pkg)
+    if not missing:
+        return
+    cmd = [sys.executable, "-m", "pip", "install", "-q"] + missing
+    rc = subprocess.run(cmd, check=False).returncode
+    if rc != 0:
+        subprocess.run(cmd + ["--break-system-packages"], check=True)
 
 install_launcher_deps()
 
@@ -50,14 +59,16 @@ install_apply_patch()
 # ----------------------------
 # 1) Secrets + runtime config
 # ----------------------------
-# VPS mode — load from .env
+# Load .env — override empty values (setdefault keeps empty strings)
 dotenv_path = pathlib.Path(__file__).parent / ".env"
 if dotenv_path.exists():
     for line in dotenv_path.read_text().splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
+            k, v = k.strip(), v.strip()
+            if v and not os.environ.get(k):
+                os.environ[k] = v
 _LEGACY_CFG_WARNED: Set[str] = set()
 
 def _userdata_get(name: str) -> Optional[str]:

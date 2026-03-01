@@ -668,19 +668,21 @@ while True:
             else:
                 final_text = text  # fallback to original
 
-            # Re-check if agent became busy during batch window (race condition fix)
-            if agent._busy:
+            # Atomic dispatch: acquire lock BEFORE thread start to prevent duplicate dispatch
+            if not agent._chat_lock.acquire(blocking=False):
+                # Agent is already handling a message — inject for later
                 if final_text:
                     agent.inject_message(final_text)
                 if _batched_image:
                     send_with_budget(chat_id, "📎 Photo received, but a task is in progress. Send again when I'm free.")
             else:
-                # Dispatch to direct chat handler
+                # Lock acquired atomically — safe to dispatch (lock released in thread finally)
                 _consciousness.pause()
                 def _run_task_and_resume(cid, txt, img):
                     try:
                         handle_chat_direct(cid, txt, img)
                     finally:
+                        agent._chat_lock.release()
                         _consciousness.resume()
                 _t = threading.Thread(
                     target=_run_task_and_resume,
@@ -691,7 +693,8 @@ while True:
                     _t.start()
                 except Exception as _te:
                     log.error("Failed to start chat thread: %s", _te)
-                    _consciousness.resume()  # ensure resume if thread fails to start
+                    agent._chat_lock.release()
+                    _consciousness.resume()  # ensure release/resume if thread fails to start
 
     st = load_state()
     st["tg_offset"] = offset

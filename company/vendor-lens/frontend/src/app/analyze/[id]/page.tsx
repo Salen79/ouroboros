@@ -36,7 +36,7 @@ export default function AnalysisPage() {
     let timer: NodeJS.Timeout
     async function poll() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analyze/${id}`)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyses/${id}`)
         if (!res.ok) throw new Error('Not found')
         const json: AnalysisResult = await res.json()
         setData(json)

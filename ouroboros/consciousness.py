@@ -436,6 +436,20 @@ class BackgroundConsciousness:
                 })
                 return "Skipped: owner message was already answered by task worker."
 
+        # Bug 3 fix: 120s cooldown for all proactive actions after direct chat task_done
+        if fn_name in ("send_owner_message", "schedule_task"):
+            elapsed = time.time() - self._last_direct_task_done_ts
+            if self._last_direct_task_done_ts > 0 and elapsed < 120:
+                log.info("Skipping: cooldown active (%.0fs since task_done, tool=%s)", elapsed, fn_name)
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_proactive_skipped",
+                    "reason": "Skipping: cooldown active",
+                    "tool": fn_name,
+                    "elapsed_sec": round(elapsed, 1),
+                })
+                return "Skipped: post-task cooldown active (120s)."
+
         # Bug 2 fix: suppress proactive actions when owner_hold is set
         if fn_name in ("send_owner_message", "schedule_task"):
             try:

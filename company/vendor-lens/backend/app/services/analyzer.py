@@ -3,6 +3,7 @@ import json
 import logging
 from openai import AsyncOpenAI, APIError, APITimeoutError, RateLimitError
 from app.config import settings
+from app.security import sanitize_content
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ async def analyze_vendor(url: str, page_markdown: str) -> dict:
     client = get_llm_client()
 
     # Truncate to stay within context limits
-    content = page_markdown[: settings.llm_max_content_chars]
+    content = sanitize_content(page_markdown, max_chars=15000)
     if len(page_markdown) > settings.llm_max_content_chars:
         logger.info(
             "Content truncated from %d to %d chars for %s",

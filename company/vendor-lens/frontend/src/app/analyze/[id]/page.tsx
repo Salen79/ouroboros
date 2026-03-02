@@ -55,7 +55,7 @@ function VerdictBadge({ verdict }: { verdict: string }) {
     label = 'Use Caution'
   }
   return (
-    <span className={\`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium \${cls}\`}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${cls}`}>
       {label}
     </span>
   )
@@ -69,7 +69,7 @@ function RiskBadge({ level }: { level: string }) {
   }
   const cls = map[level] ?? 'bg-gray-50 border-gray-200 text-gray-700'
   return (
-    <span className={\`inline-block px-2 py-0.5 rounded text-xs font-semibold border \${cls} capitalize\`}>
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold border ${cls} capitalize`}>
       {level}
     </span>
   )
@@ -85,7 +85,7 @@ export default function AnalysisPage() {
     let timer: NodeJS.Timeout
     async function poll() {
       try {
-        const res = await fetch(\`/api/analyses/\${id}\`)
+        const res = await fetch(`/api/analyses/${id}`)
         if (!res.ok) throw new Error('Analysis not found')
         const json: Analysis = await res.json()
         setData(json)
@@ -154,7 +154,7 @@ export default function AnalysisPage() {
       {/* Result */}
       {data?.status === 'done' && data.result && (
         <div className="max-w-5xl mx-auto px-4 py-8">
-          {/* Hero */}
+          {/* Hero card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
@@ -187,7 +187,7 @@ export default function AnalysisPage() {
           <div className="flex flex-wrap gap-2 mb-6">
             {data.result.free_tier && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">
-                ✓ Free tier
+                ✓ Free tier available
               </span>
             )}
             {data.result.open_source && (
@@ -207,7 +207,7 @@ export default function AnalysisPage() {
             )}
           </div>
 
-          {/* Plans */}
+          {/* Plans grid */}
           {data.result.plans.length > 0 && (
             <section className="mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Pricing Plans</h2>
@@ -215,7 +215,7 @@ export default function AnalysisPage() {
                 {data.result.plans.map((plan) => (
                   <div
                     key={plan.name}
-                    className={\`bg-white rounded-2xl border p-5 shadow-sm flex flex-col \${plan.is_free_tier ? 'border-green-200' : 'border-gray-200'}\`}
+                    className={`bg-white rounded-2xl border p-5 shadow-sm flex flex-col ${plan.is_free_tier ? 'border-green-200' : 'border-gray-200'}`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold text-gray-900">{plan.name}</h3>
@@ -226,7 +226,7 @@ export default function AnalysisPage() {
 
                     {plan.price_usd_monthly !== null ? (
                       <p className="text-2xl font-bold text-blue-600 mb-3">
-                        \${plan.price_usd_monthly}
+                        ${plan.price_usd_monthly}
                         <span className="text-sm font-normal text-gray-500">/mo</span>
                       </p>
                     ) : plan.is_free_tier ? (
@@ -237,7 +237,7 @@ export default function AnalysisPage() {
 
                     {plan.price_usd_annual !== null && plan.price_usd_monthly !== null && (
                       <p className="text-xs text-gray-400 -mt-2 mb-2">
-                        \${plan.price_usd_annual}/mo billed annually
+                        ${plan.price_usd_annual}/mo billed annually
                       </p>
                     )}
 
@@ -301,9 +301,11 @@ export default function AnalysisPage() {
             </section>
           )}
 
-          {/* Footer */}
+          {/* Footer CTA */}
           <div className="text-center pt-6 pb-2">
-            <p className="text-gray-400 text-xs mb-2">Analyzed by VendorLens · {new Date(data.created_at).toLocaleDateString()}</p>
+            <p className="text-gray-400 text-xs mb-2">
+              Analyzed by VendorLens · {new Date(data.created_at).toLocaleDateString()}
+            </p>
             <Link href="/" className="text-blue-500 hover:underline text-sm">← Analyze another vendor</Link>
           </div>
         </div>

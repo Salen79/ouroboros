@@ -436,6 +436,24 @@ class BackgroundConsciousness:
                 })
                 return "Skipped: owner message was already answered by task worker."
 
+        # Bug 2 fix: suppress proactive actions when owner_hold is set
+        if fn_name in ("send_owner_message", "schedule_task"):
+            try:
+                state_path = self._drive_root / "state" / "state.json"
+                if state_path.exists():
+                    state_data = json.loads(read_text(state_path))
+                    if state_data.get("owner_hold"):
+                        log.info("Skipping: owner_hold is set (tool=%s)", fn_name)
+                        append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                            "ts": utc_now_iso(),
+                            "type": "consciousness_proactive_skipped",
+                            "reason": "Skipping: owner_hold",
+                            "tool": fn_name,
+                        })
+                        return "Skipped: owner requested hold. Waiting for next instruction."
+            except Exception:
+                log.debug("Failed to check owner_hold state", exc_info=True)
+
         # Set chat_id context for send_owner_message
         chat_id = self._owner_chat_id_fn()
         self._registry._ctx.current_chat_id = chat_id

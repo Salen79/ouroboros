@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { submitAnalysis } from '@/lib/api'
 
 export default function AnalyzeForm({ className }: { className?: string }) {
   const [url, setUrl] = useState('')
@@ -17,16 +18,7 @@ export default function AnalyzeForm({ className }: { className?: string }) {
     }
     setLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.detail ?? 'Analysis failed')
-      }
-      const { id } = await res.json()
+      const { id } = await submitAnalysis(url)
       router.push(`/analyze/${id}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')

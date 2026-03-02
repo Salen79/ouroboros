@@ -1,46 +1,60 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
+import { getAnalysis } from '@/lib/api'
 import CompareButton from '@/components/CompareButton'
 
 type Plan = {
   name: string
-  price_monthly: number | null
-  price_annual: number | null
-  price_unit: string | null
-  features: string[]
-  limits: Record<string, string>
+  price?: string | number | null
+  features?: string[]
+  [key: string]: unknown
 }
 
 type AnalysisResult = {
+  plans?: Plan[]
+  summary?: string
+  verdict?: string
+  risk_flags?: string[]
+  vendor_name?: string
+}
+
+type Analysis = {
   id: string
+  status: 'pending' | 'completed' | 'failed'
   url: string
-  vendor_name: string
-  summary: string
-  plans: Plan[]
-  cost_at_100: number | null
-  cost_at_1k: number | null
-  cost_at_10k: number | null
-  risks: string[]
-  missing_info: string[]
-  status: 'pending' | 'processing' | 'done' | 'failed'
-  created_at: string
+  result?: AnalysisResult
+}
+
+function vendorLabel(analysis: Analysis): string {
+  const name = analysis.result?.vendor_name
+  if (name) return name
+  try {
+    return new URL(analysis.url).hostname.replace(/^www\./, '')
+  } catch {
+    return analysis.url
+  }
+}
+
+function formatPrice(price: string | number | null | undefined): string {
+  if (price == null) return '—'
+  if (typeof price === 'number') return `$${price}`
+  return String(price)
 }
 
 export default function AnalysisPage() {
   const { id } = useParams<{ id: string }>()
-  const [data, setData] = useState<AnalysisResult | null>(null)
+  const [data, setData] = useState<Analysis | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let timer: NodeJS.Timeout
+    let timer: ReturnType<typeof setTimeout>
     async function poll() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyses/${id}`)
-        if (!res.ok) throw new Error('Not found')
-        const json: AnalysisResult = await res.json()
+        const json = await getAnalysis(id) as Analysis
         setData(json)
-        if (json.status === 'pending' || json.status === 'processing') {
+        if (json.status === 'pending') {
           timer = setTimeout(poll, 2000)
         }
       } catch (err: unknown) {
@@ -51,83 +65,121 @@ export default function AnalysisPage() {
     return () => clearTimeout(timer)
   }, [id])
 
-  if (error) return <div className="p-8 text-red-500">{error}</div>
-  if (!data) return <div className="p-8 text-gray-400">Loading…</div>
+  if (error) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
+      <p className="text-red-500 text-lg">{error}</p>
+      <Link href="/" className="text-blue-500 hover:underline text-sm">← Back to home</Link>
+    </div>
+  )
 
-  if (data.status === 'pending' || data.status === 'processing') {
+  if (!data) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
+      <p className="text-gray-400">Loading…</p>
+    </div>
+  )
+
+  if (data.status === 'pending') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
-        <p className="text-gray-500">Analyzing {data.url}…</p>
+        <p className="text-gray-500">Analyzing pricing page…</p>
+        <p className="text-gray-400 text-sm">{data.url}</p>
       </div>
     )
   }
 
   if (data.status === 'failed') {
-    return <div className="p-8 text-red-500">Analysis failed. Please try another URL.</div>
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
+        <p className="text-red-500 text-lg">Analysis failed. Please try another URL.</p>
+        <Link href="/" className="text-blue-500 hover:underline text-sm">← Back to home</Link>
+      </div>
+    )
   }
+
+  const result = data.result ?? {}
+  const plans = result.plans ?? []
+  const riskFlags = result.risk_flags ?? []
+  const label = vendorLabel(data)
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-12">
+      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{data.vendor_name}</h1>
-          <a href={data.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-sm hover:underline">{data.url}</a>
+          <Link href="/" className="text-gray-400 text-sm hover:text-gray-600 mb-2 block">← Back</Link>
+          <h1 className="text-3xl font-bold text-gray-900">{label}</h1>
+          <a href={data.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-sm hover:underline break-all">{data.url}</a>
         </div>
-        <CompareButton analysisId={data.id} vendorName={data.vendor_name} />
+        <CompareButton analysisId={data.id} vendorName={label} />
       </div>
 
-      <p className="text-gray-600 mb-8 text-lg">{data.summary}</p>
+      {/* Summary */}
+      {result.summary && (
+        <p className="text-gray-600 mb-8 text-lg leading-relaxed">{result.summary}</p>
+      )}
 
-      {/* Plans */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Pricing Plans</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.plans.map((plan) => (
-            <div key={plan.name} className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-1">{plan.name}</h3>
-              {plan.price_monthly !== null && (
-                <p className="text-2xl font-bold text-blue-600 mb-3">
-                  ${plan.price_monthly}<span className="text-sm font-normal text-gray-500">/mo</span>
-                </p>
-              )}
-              {plan.price_unit && <p className="text-sm text-gray-500 mb-2">or {plan.price_unit}</p>}
-              <ul className="text-sm text-gray-600 space-y-1">
-                {plan.features.slice(0, 4).map((f, i) => <li key={i}>✓ {f}</li>)}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Verdict */}
+      {result.verdict && (
+        <section className="mb-8 bg-blue-50 border border-blue-100 rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-wide mb-2">Verdict</h2>
+          <p className="text-gray-800">{result.verdict}</p>
+        </section>
+      )}
 
-      {/* Cost projections */}
-      {(data.cost_at_100 || data.cost_at_1k || data.cost_at_10k) && (
-        <section className="mb-8 bg-blue-50 rounded-2xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Cost Projections</h2>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            {[['100 users', data.cost_at_100], ['1k users', data.cost_at_1k], ['10k users', data.cost_at_10k]].map(([label, val]) => (
-              <div key={label as string}>
-                <p className="text-2xl font-bold text-gray-900">${val ?? '?'}</p>
-                <p className="text-sm text-gray-500">{label}</p>
-              </div>
-            ))}
+      {/* Plans table */}
+      {plans.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Pricing Plans</h2>
+          <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Plan</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Price</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Features</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plans.map((plan, i) => (
+                  <tr key={plan.name ?? i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{plan.name}</td>
+                    <td className="px-4 py-3 text-blue-700 font-semibold whitespace-nowrap">{formatPrice(plan.price)}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {Array.isArray(plan.features) && plan.features.length > 0
+                        ? plan.features.join(' · ')
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
 
-      {/* Risks */}
-      {data.risks.length > 0 && (
+      {/* Risk flags */}
+      {riskFlags.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">⚠️ Risk Flags</h2>
+          <h2 className="text-xl font-semibold mb-4">Risk Flags</h2>
           <ul className="space-y-2">
-            {data.risks.map((r, i) => (
+            {riskFlags.map((r, i) => (
               <li key={i} className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900">
-                <span>⚠️</span>{r}
+                <span className="mt-0.5">⚠</span><span>{r}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
+
+      {/* Compare CTA */}
+      <div className="mt-10 pt-8 border-t border-gray-100 text-center">
+        <p className="text-gray-500 text-sm mb-3">Want to compare this vendor against others?</p>
+        <Link href="/compare" className="inline-block px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-colors">
+          Go to Compare →
+        </Link>
+      </div>
     </main>
   )
 }

@@ -1,60 +1,97 @@
 version: '3.9'
 
 services:
+  traefik:
+    image: traefik:v2.11
+    container_name: vendorlens_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=vendorlens_net"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=hello@vendorlens.app"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - vendorlens_net
+
   backend:
     build: ./backend
     container_name: vendorlens_backend
     restart: unless-stopped
-    ports:
-      - "8002:8002"
+    env_file: .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://ai_company:${POSTGRES_PASSWORD}@postgres:5432/ai_company
+      - DATABASE_URL=postgresql+asyncpg://vendorlens:${POSTGRES_PASSWORD}@postgres:5432/vendorlens
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
       - JINA_API_KEY=${JINA_API_KEY:-}
+      - FRONTEND_URL=https://vendorlens.app
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - vendorlens
+      - vendorlens_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`vendorlens.app`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.priority=10"
+      - "traefik.http.services.backend.loadbalancer.server.port=8002"
 
   frontend:
     build:
       context: ./frontend
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8002}
+        - NEXT_PUBLIC_API_URL=https://vendorlens.app/api
     container_name: vendorlens_frontend
     restart: unless-stopped
-    ports:
-      - "3001:3001"
     depends_on:
       - backend
     networks:
-      - vendorlens
+      - vendorlens_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`vendorlens.app`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3001"
 
   postgres:
     image: postgres:16-alpine
     container_name: vendorlens_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ai_company
-      POSTGRES_USER: ai_company
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
+      POSTGRES_DB: vendorlens
+      POSTGRES_USER: vendorlens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - vendorlens_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ai_company"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U vendorlens"]
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - vendorlens
+      - vendorlens_net
 
 volumes:
-  postgres_data:
+  traefik_certs:
+  vendorlens_pg_data:
 
 networks:
-  vendorlens:
+  vendorlens_net:
     driver: bridge

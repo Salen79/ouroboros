@@ -1,9 +1,10 @@
-"""Analysis endpoints: submit URL, poll status, get result, export."""
+"""Analysis endpoints: submit URL, poll status, get result, list recent."""
 from uuid import uuid4
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 import asyncio
 
 from app.database import get_db
@@ -46,6 +47,31 @@ async def _run_analysis(analysis_id: str, url: str) -> None:
         await db.commit()
 
 
+@router.get("")
+async def list_analyses(
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """List recent completed analyses."""
+    result = await db.execute(
+        select(Analysis)
+        .where(Analysis.status == "done")
+        .order_by(desc(Analysis.created_at))
+        .limit(limit)
+    )
+    rows = result.scalars().all()
+    return [
+        {
+            "id": r.id,
+            "url": r.url,
+            "status": r.status,
+            "result": r.result,
+            "created_at": str(r.created_at),
+        }
+        for r in rows
+    ]
+
+
 @router.post("", response_model=SubmitResponse, status_code=202)
 async def submit_analysis(
     req: SubmitRequest,
@@ -81,5 +107,5 @@ async def get_analysis(analysis_id: str, db: AsyncSession = Depends(get_db)):
         "status": obj.status,
         "result": obj.result,
         "error": obj.error,
-        "created_at": obj.created_at,
+        "created_at": str(obj.created_at),
     }

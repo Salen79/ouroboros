@@ -1,9 +1,14 @@
 """LLM-powered analysis of vendor pricing pages."""
 import json
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError, APITimeoutError, APIError
 from app.config import settings
 
 _client = None
+
+
+class AnalyzerError(Exception):
+    """Raised when LLM analysis fails."""
+    pass
 
 
 def get_llm_client() -> AsyncOpenAI:
@@ -51,22 +56,36 @@ Return ONLY valid JSON matching this exact schema:
 async def analyze_vendor(url: str, page_markdown: str) -> dict:
     """Send page content to LLM and return structured analysis."""
     client = get_llm_client()
-
-    # Truncate to ~15k chars to stay within context
     content = page_markdown[:15000]
 
-    response = await client.chat.completions.create(
-        model=settings.llm_model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"Analyze this vendor pricing page for {url}:\n\n{content}",
-            },
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.1,
-    )
+    try:
+        response = await client.chat.completions.create(
+            model=settings.llm_model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Analyze this vendor pricing page for {url}:\n\n{content}",
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+        )
+    except RateLimitError as e:
+        raise AnalyzerError(f"Rate limit exceeded: {e}") from e
+    except APITimeoutError as e:
+        raise AnalyzerError(f"LLM request timed out: {e}") from e
+    except APIError as e:
+        raise AnalyzerError(f"LLM API error: {e}") from e
 
     raw = response.choices[0].message.content
-    return json.loads(raw)
+    if not raw:
+        raise AnalyzerError("LLM returned empty response")
+
+    if raw.strip().startswith("```"):
+        raw = raw.strip().lstrip("`json").lstrip("`").rstrip("`").strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise AnalyzerError(f"Failed to parse LLM response as JSON: {e}") from e

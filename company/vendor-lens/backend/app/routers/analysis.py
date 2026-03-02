@@ -1,11 +1,12 @@
 """Analysis endpoints: submit URL, poll status, get result, list recent."""
+from urllib.parse import urlparse, urlunparse
 from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, text
 from slowapi import Limiter
-from slowapi.util import get_remote_address
+from slowapi.util import get_remote_address as _get_remote_address
 
 from app.database import get_db
 from app.models import Analysis
@@ -13,7 +14,40 @@ from app.services.scraper import fetch_page_markdown
 from app.services.analyzer import analyze_vendor
 from app.security import validate_url
 
-limiter = Limiter(key_func=get_remote_address)
+
+def get_client_ip(request: Request) -> str:
+    """Get real client IP, preferring CF-Connecting-IP when behind Cloudflare."""
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return _get_remote_address(request)
+
+
+def normalize_url(url: str) -> str:
+    """Normalize URL for consistent deduplication.
+
+    - Lowercases scheme and host
+    - Strips trailing slash from path (unless path is just '/')
+    - Removes default ports (80 for http, 443 for https)
+    """
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc.lower()
+    # Remove default ports
+    if netloc.endswith(":80") and scheme == "http":
+        netloc = netloc[:-3]
+    elif netloc.endswith(":443") and scheme == "https":
+        netloc = netloc[:-4]
+    path = parsed.path.rstrip("/") or "/"
+    # Reconstruct without fragment
+    normalized = urlunparse((scheme, netloc, path, parsed.params, parsed.query, ""))
+    return normalized
+
+
+limiter = Limiter(key_func=get_client_ip)
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 
@@ -57,21 +91,30 @@ async def list_analyses(
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """List recent completed analyses."""
+    """List recent completed analyses, deduplicated by URL (latest per URL)."""
+    # DISTINCT ON url: one row per URL, the most recent one
     result = await db.execute(
-        select(Analysis)
-        .where(Analysis.status == "done")
-        .order_by(desc(Analysis.created_at))
-        .limit(limit)
+        text("""
+            SELECT id, url, status, result, created_at
+            FROM (
+                SELECT DISTINCT ON (url) id, url, status, result, created_at
+                FROM analyses
+                WHERE status = 'done'
+                ORDER BY url, created_at DESC
+            ) deduped
+            ORDER BY created_at DESC
+            LIMIT :limit
+        """),
+        {"limit": limit},
     )
-    rows = result.scalars().all()
+    rows = result.mappings().all()
     return [
         {
-            "id": r.id,
-            "url": r.url,
-            "status": r.status,
-            "result": r.result,
-            "created_at": str(r.created_at),
+            "id": r["id"],
+            "url": r["url"],
+            "status": r["status"],
+            "result": r["result"],
+            "created_at": str(r["created_at"]),
         }
         for r in rows
     ]
@@ -85,13 +128,13 @@ async def submit_analysis(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Queue a URL for analysis. Rate limited: 5/min, 20/hour per IP."""
-    url_str = str(req.url)
+    """Queue a URL for analysis. Returns cached result if URL was analyzed before."""
+    url_str = normalize_url(str(req.url))
 
     # Security: validate URL (SSRF prevention)
     validate_url(url_str)
 
-    # Check cache: already analyzed this URL recently
+    # Check cache: already analyzed this URL? Return existing result.
     existing = await db.execute(
         select(Analysis)
         .where(Analysis.url == url_str, Analysis.status == "done")
@@ -101,6 +144,17 @@ async def submit_analysis(
     cached = existing.scalars().first()
     if cached:
         return SubmitResponse(id=cached.id, status=cached.status)
+
+    # Also check if analysis is already in progress for this URL
+    in_progress = await db.execute(
+        select(Analysis)
+        .where(Analysis.url == url_str, Analysis.status.in_(["pending", "processing"]))
+        .order_by(desc(Analysis.created_at))
+        .limit(1)
+    )
+    running = in_progress.scalars().first()
+    if running:
+        return SubmitResponse(id=running.id, status=running.status)
 
     analysis = Analysis(
         id=str(uuid4()),

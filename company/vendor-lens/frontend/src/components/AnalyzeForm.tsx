@@ -1,23 +1,28 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { submitAnalysis, getAnalysis } from '@/lib/api'
 
 type Phase = 'idle' | 'submitting' | 'polling' | 'error'
 
-export default function AnalyzeForm() {
+function AnalyzeFormInner() {
   const [url, setUrl] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
   const [statusText, setStatusText] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q) setUrl(q)
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = url.trim()
     if (!trimmed) return
 
-    // Normalise: add https:// if missing
     const normalised = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 
     setPhase('submitting')
@@ -29,9 +34,8 @@ export default function AnalyzeForm() {
       setPhase('polling')
       setStatusText('Scraping pricing page...')
 
-      // Poll every 2 s until done or failed
       let attempts = 0
-      const maxAttempts = 45 // 90 seconds max
+      const maxAttempts = 45
       const pollMessages = [
         'Scraping pricing page...',
         'Reading pricing details...',
@@ -76,44 +80,53 @@ export default function AnalyzeForm() {
   const isLoading = phase === 'submitting' || phase === 'polling'
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto">
-      <div className="flex gap-2 p-1.5 bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex gap-0 bg-white border-2 border-gray-200 rounded-2xl shadow-md focus-within:border-blue-500 focus-within:shadow-lg transition-all overflow-hidden">
         <input
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="stripe.com/pricing"
           disabled={isLoading}
-          className="flex-1 px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none disabled:opacity-60"
+          autoFocus
+          className="flex-1 px-5 py-4 text-lg text-gray-900 placeholder-gray-400 bg-transparent outline-none disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={isLoading || !url.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
+          className="flex items-center gap-2 px-7 py-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-colors text-base whitespace-nowrap"
         >
           {isLoading ? (
             <>
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               Analyzing
             </>
           ) : (
-            <>Analyze &rarr;</>
+            'Analyze →'
           )}
         </button>
       </div>
 
       {isLoading && (
-        <p className="mt-3 text-sm text-gray-500 animate-pulse">{statusText}</p>
+        <p className="mt-3 text-sm text-center text-gray-500 animate-pulse">{statusText}</p>
       )}
 
       {phase === 'error' && (
-        <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           {error}
         </p>
       )}
     </form>
+  )
+}
+
+export default function AnalyzeForm() {
+  return (
+    <Suspense fallback={<div className="h-16" />}>
+      <AnalyzeFormInner />
+    </Suspense>
   )
 }

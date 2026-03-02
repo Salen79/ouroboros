@@ -74,7 +74,7 @@ class OuroborosAgent:
 
         # Message injection: owner can send messages while agent is busy
         self._incoming_messages: queue.Queue = queue.Queue()
-        self._busy = False
+        self._chat_lock = threading.Lock()
         self._last_progress_ts: float = 0.0
         self._task_started_ts: float = 0.0
 
@@ -384,7 +384,6 @@ class OuroborosAgent:
         return ctx, messages, cap_info
 
     def handle_task(self, task: Dict[str, Any]) -> List[Dict[str, Any]]:
-        self._busy = True
         start_time = time.time()
         self._task_started_ts = start_time
         self._last_progress_ts = start_time
@@ -444,7 +443,6 @@ class OuroborosAgent:
             return list(self._pending_events)
 
         finally:
-            self._busy = False
             # Clean up browser if it was used during this task
             try:
                 from ouroboros.tools.browser import cleanup_browser

@@ -265,7 +265,7 @@ def auto_resume_after_restart() -> None:
         # Auto-resume: inject synthetic message
         time.sleep(2)  # Let everything initialize
         agent = _get_chat_agent()
-        if not agent._busy:
+        if not agent._chat_lock.locked():
             import threading
             threading.Thread(
                 target=handle_chat_direct,

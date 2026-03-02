@@ -297,7 +297,7 @@ def _chat_watchdog_loop():
         time.sleep(30)
         try:
             agent = _get_chat_agent()
-            if not agent._busy:
+            if not agent._chat_lock.locked():
                 soft_warned = False
                 continue
 
@@ -590,7 +590,7 @@ while True:
 
         agent = _get_chat_agent()
 
-        if agent._busy:
+        if agent._chat_lock.locked():
             # BUSY PATH: inject into active conversation (single consumer)
             if image_data:
                 if text:
@@ -669,15 +669,14 @@ while True:
                 final_text = text  # fallback to original
 
             # Re-check if agent became busy during batch window (race condition fix)
-            if agent._busy:
+            if agent._chat_lock.locked():
                 if final_text:
                     agent.inject_message(final_text)
                 if _batched_image:
                     send_with_budget(chat_id, "📎 Photo received, but a task is in progress. Send again when I'm free.")
             else:
-                # Dispatch to direct chat handler
+                # Dispatch to direct chat handler (handle_chat_direct acquires _chat_lock)
                 _consciousness.pause()
-                agent._busy = True  # Set BEFORE thread start to close race window
                 def _run_task_and_resume(cid, txt, img):
                     try:
                         handle_chat_direct(cid, txt, img)
@@ -692,7 +691,6 @@ while True:
                     _t.start()
                 except Exception as _te:
                     log.error("Failed to start chat thread: %s", _te)
-                    agent._busy = False  # Reset if thread failed to start
                     _consciousness.resume()  # ensure resume if thread fails to start
 
     st = load_state()

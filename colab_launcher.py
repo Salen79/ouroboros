@@ -565,6 +565,24 @@ while True:
         log_chat("in", chat_id, user_id, text)
         st["last_owner_message_at"] = now_iso
         _last_message_ts = time.time()
+
+        # --- Owner hold detection (Bug 2 fix) ---
+        # Reset hold on any non-/status owner message
+        _text_lower = text.strip().lower()
+        if _text_lower != "/status":
+            if st.get("owner_hold"):
+                st["owner_hold"] = False
+                log.info("owner_hold cleared by new owner message")
+
+        # Detect hold patterns
+        import re as _re_mod
+        _HOLD_PATTERNS = _re_mod.compile(
+            r"(?:^|\b)(?:жди|подожди|wait|hold\s+on|stand\s+by)(?:\b|$)", _re_mod.IGNORECASE
+        )
+        if _HOLD_PATTERNS.search(_text_lower):
+            st["owner_hold"] = True
+            log.info("owner_hold SET by message: %s", text[:80])
+
         save_state(st)
 
         # --- Supervisor commands ---

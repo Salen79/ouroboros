@@ -220,6 +220,22 @@ class BackgroundConsciousness:
                 except Exception:
                     log.debug("Failed to update global budget from BG consciousness", exc_info=True)
 
+                # Per-cycle cost cap
+                try:
+                    consciousness_cost_cap = float(os.environ.get("OUROBOROS_CONSCIOUSNESS_COST_CAP", "0.10"))
+                except (ValueError, TypeError):
+                    consciousness_cost_cap = 0.10
+                if total_cost > consciousness_cost_cap:
+                    log.warning("Consciousness cycle exceeded $%.2f cost cap, skipping (spent $%.4f)", consciousness_cost_cap, total_cost)
+                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "consciousness_cost_cap_exceeded",
+                        "cost": total_cost,
+                        "cap": consciousness_cost_cap,
+                        "round": round_idx,
+                    })
+                    break
+
                 # Budget check between rounds
                 if not self._check_budget():
                     append_jsonl(self._drive_root / "logs" / "events.jsonl", {

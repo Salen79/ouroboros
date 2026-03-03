@@ -95,9 +95,47 @@ def sort_pending() -> None:
 # Queue operations
 # ---------------------------------------------------------------------------
 
+def _keyword_overlap(desc_a: str, desc_b: str) -> float:
+    """Return word overlap ratio (0.0-1.0) between two descriptions."""
+    words_a = set(desc_a.lower().split())
+    words_b = set(desc_b.lower().split())
+    if not words_a or not words_b:
+        return 0.0
+    intersection = words_a & words_b
+    smaller = min(len(words_a), len(words_b))
+    return len(intersection) / smaller if smaller > 0 else 0.0
+
+
+def _find_keyword_duplicate(description: str) -> Optional[str]:
+    """Check if a pending/running task has >50% keyword overlap. Returns task_id or None."""
+    for task in PENDING:
+        existing_desc = str(task.get("text") or task.get("description") or "")
+        if existing_desc.strip() and _keyword_overlap(description, existing_desc) > 0.5:
+            return task.get("id", "?")
+    for task_id, meta in RUNNING.items():
+        task_data = meta.get("task") if isinstance(meta, dict) else None
+        if not isinstance(task_data, dict):
+            continue
+        existing_desc = str(task_data.get("text") or task_data.get("description") or "")
+        if existing_desc.strip() and _keyword_overlap(description, existing_desc) > 0.5:
+            return task_id
+    return None
+
+
 def enqueue_task(task: Dict[str, Any], front: bool = False) -> Dict[str, Any]:
     """Add task to PENDING queue."""
     t = dict(task)
+
+    # Keyword-overlap dedup (skip for retries and restores)
+    is_retry = t.get("timeout_retry_from") or int(t.get("_attempt") or 1) > 1
+    if not is_retry:
+        desc = str(t.get("text") or t.get("description") or "")
+        if desc.strip():
+            dup_id = _find_keyword_duplicate(desc)
+            if dup_id:
+                log.warning("Duplicate task skipped: %s", desc[:50])
+                return t  # Return without appending
+
     QUEUE_SEQ_COUNTER_REF["value"] += 1
     seq = QUEUE_SEQ_COUNTER_REF["value"]
     t.setdefault("priority", _task_priority(str(t.get("type") or "")))

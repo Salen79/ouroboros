@@ -421,6 +421,26 @@ def _check_budget_limits(
         return None
 
     task_cost = accumulated_usage.get("cost", 0)
+    # Per-task cost cap (hard stop before percentage-based budget check)
+    try:
+        max_task_cost = float(os.environ.get("OUROBOROS_MAX_TASK_COST", "1.5"))
+    except (ValueError, TypeError):
+        max_task_cost = 1.5
+    if task_cost > max_task_cost:
+        finish_reason = f"Task cost exceeded ${max_task_cost} cap. Decompose into subtasks via schedule_task."
+        log.warning("Per-task cost cap exceeded: $%.3f > $%.2f", task_cost, max_task_cost)
+        messages.append({"role": "system", "content": f"[COST CAP] {finish_reason} Give your final response now."})
+        try:
+            final_msg, final_cost = _call_llm_with_retry(
+                llm, messages, active_model, None, active_effort,
+                max_retries, drive_logs, task_id, round_idx, event_queue, accumulated_usage, task_type
+            )
+            if final_msg:
+                return (final_msg.get("content") or finish_reason), accumulated_usage, llm_trace
+            return finish_reason, accumulated_usage, llm_trace
+        except Exception:
+            log.warning("Failed to get final response after cost cap", exc_info=True)
+            return finish_reason, accumulated_usage, llm_trace
     budget_pct = task_cost / budget_remaining_usd if budget_remaining_usd > 0 else 1.0
 
     if budget_pct > 0.5:

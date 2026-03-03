@@ -105,6 +105,29 @@ DASHBOARD_API_PORT=8001  # FastAPI bridge
 
 ---
 
+## VendorLens Production
+
+### VendorLens Services
+
+| Сервис | Порт | Systemd unit |
+|--------|------|--------------|
+| Backend (FastAPI/uvicorn) | 8100 | vendorlens-backend.service |
+| Frontend (Next.js) | 3000 | vendorlens-frontend.service |
+| PostgreSQL | 5432 | (Docker: ai-company-postgres) |
+| Caddy | 80/443 | caddy.service |
+
+### Database Access
+
+```bash
+docker exec ai-company-postgres psql -U ai_company -d vendorlens
+```
+
+### Domain
+
+vendorlens.app (Cloudflare DNS, SSL Full Strict)
+
+---
+
 ## Границы (из BIBLE.md P9)
 
 CEO может делать всё на сервере кроме:

@@ -14,10 +14,19 @@ log = logging.getLogger(__name__)
 # 0) Install launcher deps
 # ----------------------------
 def install_launcher_deps() -> None:
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", "openai>=1.0.0", "requests"],
-        check=True,
-    )
+    """Install runtime deps if missing. Handles PEP 668 (Ubuntu 24.04+)."""
+    missing = []
+    for pkg in ("openai", "requests"):
+        try:
+            __import__(pkg)
+        except ImportError:
+            missing.append(pkg)
+    if not missing:
+        return
+    cmd = [sys.executable, "-m", "pip", "install", "-q"] + missing
+    rc = subprocess.run(cmd, check=False).returncode
+    if rc != 0:
+        subprocess.run(cmd + ["--break-system-packages"], check=True)
 
 install_launcher_deps()
 
@@ -50,26 +59,20 @@ install_apply_patch()
 # ----------------------------
 # 1) Secrets + runtime config
 # ----------------------------
-# VPS mode — load from .env
+# Load .env — override empty values (setdefault keeps empty strings)
 dotenv_path = pathlib.Path(__file__).parent / ".env"
 if dotenv_path.exists():
     for line in dotenv_path.read_text().splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
-# drive import removed for VPS
-
+            k, v = k.strip(), v.strip()
+            if v and not os.environ.get(k):
+                os.environ[k] = v
 _LEGACY_CFG_WARNED: Set[str] = set()
 
 def _userdata_get(name: str) -> Optional[str]:
-    return os.environ.get(name)  # VPS: read from env
-
-def _userdata_get_DISABLED(name: str) -> Optional[str]:
-    try:
-        return userdata.get(name)
-    except Exception:
-        return None
+    return os.environ.get(name)
 
 def get_secret(name: str, default: Optional[str] = None, required: bool = False) -> Optional[str]:
     v = _userdata_get(name)
@@ -87,7 +90,7 @@ def get_cfg(name: str, default: Optional[str] = None, allow_legacy_secret: bool 
         legacy = _userdata_get(name)
         if legacy is not None and str(legacy).strip() != "":
             if name not in _LEGACY_CFG_WARNED:
-                print(f"[cfg] DEPRECATED: move {name} from Colab Secrets to config cell/env.")
+                print(f"[cfg] DEPRECATED: move {name} to .env file.")
                 _LEGACY_CFG_WARNED.add(name)
             return legacy
     return default
@@ -105,8 +108,7 @@ TELEGRAM_BOT_TOKEN = get_secret("TELEGRAM_BOT_TOKEN", required=True)
 TOTAL_BUDGET_DEFAULT = get_secret("TOTAL_BUDGET", required=True)
 GITHUB_TOKEN = get_secret("GITHUB_TOKEN", required=True)
 
-# Robust TOTAL_BUDGET parsing — handles \r\n, spaces, and other junk from Colab Secrets
-# Example: user enters "8 800" → Colab stores as "8\r\n800" → we need 8800
+# Robust TOTAL_BUDGET parsing — handles whitespace and other junk
 try:
     import re
     _raw_budget = str(TOTAL_BUDGET_DEFAULT or "")
@@ -122,8 +124,8 @@ OPENAI_API_KEY = get_secret("OPENAI_API_KEY", default="")
 ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY", default="")
 GITHUB_USER = get_cfg("GITHUB_USER", default=None, allow_legacy_secret=True)
 GITHUB_REPO = get_cfg("GITHUB_REPO", default=None, allow_legacy_secret=True)
-assert GITHUB_USER and str(GITHUB_USER).strip(), "GITHUB_USER not set. Add it to your config cell (see README)."
-assert GITHUB_REPO and str(GITHUB_REPO).strip(), "GITHUB_REPO not set. Add it to your config cell (see README)."
+assert GITHUB_USER and str(GITHUB_USER).strip(), "GITHUB_USER not set. Add it to .env (see README)."
+assert GITHUB_REPO and str(GITHUB_REPO).strip(), "GITHUB_REPO not set. Add it to .env (see README)."
 MAX_WORKERS = int(get_cfg("OUROBOROS_MAX_WORKERS", default="5", allow_legacy_secret=True) or "5")
 MODEL_MAIN = get_cfg("OUROBOROS_MODEL", default="anthropic/claude-sonnet-4.6", allow_legacy_secret=True)
 MODEL_CODE = get_cfg("OUROBOROS_MODEL_CODE", default="anthropic/claude-sonnet-4.6", allow_legacy_secret=True)
@@ -160,11 +162,8 @@ if str(ANTHROPIC_API_KEY or "").strip():
     ensure_claude_code_cli()
 
 # ----------------------------
-# 2) Mount Drive
+# 2) Data directories
 # ----------------------------
-# VPS mode — no Google Drive needed
-# drive.mount("/content/drive")
-
 DRIVE_ROOT = pathlib.Path(os.path.expanduser("~/ouroboros-data")).resolve()
 REPO_DIR = pathlib.Path(os.path.expanduser("~/ouroboros")).resolve()
 
@@ -566,6 +565,24 @@ while True:
         log_chat("in", chat_id, user_id, text)
         st["last_owner_message_at"] = now_iso
         _last_message_ts = time.time()
+
+        # --- Owner hold detection (Bug 2 fix) ---
+        # Reset hold on any non-/status owner message
+        _text_lower = text.strip().lower()
+        if _text_lower != "/status":
+            if st.get("owner_hold"):
+                st["owner_hold"] = False
+                log.info("owner_hold cleared by new owner message")
+
+        # Detect hold patterns
+        import re as _re_mod
+        _HOLD_PATTERNS = _re_mod.compile(
+            r"(?:^|\b)(?:жди|подожди|wait|hold\s+on|stand\s+by)(?:\b|$)", _re_mod.IGNORECASE
+        )
+        if _HOLD_PATTERNS.search(_text_lower):
+            st["owner_hold"] = True
+            log.info("owner_hold SET by message: %s", text[:80])
+
         save_state(st)
 
         # --- Supervisor commands ---
@@ -668,19 +685,21 @@ while True:
             else:
                 final_text = text  # fallback to original
 
-            # Re-check if agent became busy during batch window (race condition fix)
-            if agent._chat_lock.locked():
+            # Atomic dispatch: acquire lock BEFORE thread start to prevent duplicate dispatch
+            if not agent._chat_lock.acquire(blocking=False):
+                # Agent is already handling a message — inject for later
                 if final_text:
                     agent.inject_message(final_text)
                 if _batched_image:
                     send_with_budget(chat_id, "📎 Photo received, but a task is in progress. Send again when I'm free.")
             else:
-                # Dispatch to direct chat handler (handle_chat_direct acquires _chat_lock)
+                # Lock acquired atomically — safe to dispatch (lock released in thread finally)
                 _consciousness.pause()
                 def _run_task_and_resume(cid, txt, img):
                     try:
                         handle_chat_direct(cid, txt, img)
                     finally:
+                        agent._chat_lock.release()
                         _consciousness.resume()
                 _t = threading.Thread(
                     target=_run_task_and_resume,
@@ -691,7 +710,8 @@ while True:
                     _t.start()
                 except Exception as _te:
                     log.error("Failed to start chat thread: %s", _te)
-                    _consciousness.resume()  # ensure resume if thread fails to start
+                    agent._chat_lock.release()
+                    _consciousness.resume()  # ensure release/resume if thread fails to start
 
     st = load_state()
     st["tg_offset"] = offset

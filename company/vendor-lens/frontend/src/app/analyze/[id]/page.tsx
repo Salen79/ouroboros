@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { getAnalysis } from '@/lib/api'
 import CompareButton from '@/components/CompareButton'
 
+type Risk = {
+  level: 'low' | 'medium' | 'high'
+  description: string
+}
+
 type Plan = {
   name: string
   price?: string | number | null
@@ -38,9 +43,44 @@ function vendorLabel(analysis: Analysis): string {
 }
 
 function formatPrice(price: string | number | null | undefined): string {
-  if (price == null) return '—'
+  if (price == null) return '---'
   if (typeof price === 'number') return `$${price}`
   return String(price)
+}
+
+function VerdictBadge({ verdict }: { verdict: string }) {
+  const lower = verdict.toLowerCase()
+  let cls = 'bg-gray-100 text-gray-700'
+  let label = 'Analyzed'
+  if (lower.includes('recommend') || lower.includes('great') || lower.includes('excellent')) {
+    cls = 'bg-green-100 text-green-800'
+    label = 'Recommended'
+  } else if (lower.includes('avoid') || lower.includes('not recommend') || lower.includes('poor')) {
+    cls = 'bg-red-100 text-red-800'
+    label = 'Avoid'
+  } else if (lower.includes('caution') || lower.includes('careful') || lower.includes('consider')) {
+    cls = 'bg-yellow-100 text-yellow-800'
+    label = 'Use Caution'
+  }
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${cls}`}>
+      {label}
+    </span>
+  )
+}
+
+function RiskBadge({ level }: { level: string }) {
+  const map: Record<string, string> = {
+    low: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    medium: 'bg-orange-50 border-orange-200 text-orange-800',
+    high: 'bg-red-50 border-red-200 text-red-800',
+  }
+  const cls = map[level] ?? 'bg-gray-50 border-gray-200 text-gray-700'
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold border ${cls} capitalize`}>
+      {level}
+    </span>
+  )
 }
 
 export default function AnalysisPage() {
@@ -58,7 +98,7 @@ export default function AnalysisPage() {
           timer = setTimeout(poll, 2000)
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load')
+        setError(err instanceof Error ? err.message : 'Failed to load analysis')
       }
     }
     poll()
@@ -149,14 +189,14 @@ export default function AnalysisPage() {
                     <td className="px-4 py-3 text-gray-600">
                       {Array.isArray(plan.features) && plan.features.length > 0
                         ? plan.features.join(' · ')
-                        : '—'}
+                        : '---'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       )}
 
       {/* Risk flags */}

@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 _client = None
 
 
+class AnalyzerError(Exception):
+    """Raised when LLM analysis fails."""
+    pass
+
+
 def get_llm_client() -> AsyncOpenAI:
     global _client
     if _client is None:

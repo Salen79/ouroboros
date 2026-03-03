@@ -64,6 +64,9 @@ class BackgroundConsciousness:
         self._observations: queue.Queue = queue.Queue()
         self._deferred_events: list = []
 
+        # Track last direct-chat task_done to suppress duplicate proactive messages
+        self._last_direct_task_done_ts: float = 0.0
+
         # Budget tracking
         self._bg_spent_usd: float = 0.0
         self._bg_budget_pct: float = float(
@@ -110,6 +113,8 @@ class BackgroundConsciousness:
             for evt in self._deferred_events:
                 self._event_queue.put(evt)
             self._deferred_events.clear()
+        # Record when direct chat task finished — used to suppress duplicate proactive messages
+        self._last_direct_task_done_ts = time.time()
         self._paused = False
         self._wakeup_event.set()
 
@@ -417,6 +422,51 @@ class BackgroundConsciousness:
             args = json.loads(tc.get("function", {}).get("arguments", "{}"))
         except (json.JSONDecodeError, ValueError):
             return "Failed to parse arguments."
+
+        # Bug 1 fix: suppress proactive_message if worker already answered recently
+        if fn_name == "send_owner_message":
+            elapsed = time.time() - self._last_direct_task_done_ts
+            if self._last_direct_task_done_ts > 0 and elapsed < 300:
+                log.info("Skipping proactive: task already answered (%.0fs ago)", elapsed)
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_proactive_skipped",
+                    "reason": "Skipping proactive: task already answered",
+                    "elapsed_sec": round(elapsed, 1),
+                })
+                return "Skipped: owner message was already answered by task worker."
+
+        # Bug 3 fix: 120s cooldown for all proactive actions after direct chat task_done
+        if fn_name in ("send_owner_message", "schedule_task"):
+            elapsed = time.time() - self._last_direct_task_done_ts
+            if self._last_direct_task_done_ts > 0 and elapsed < 120:
+                log.info("Skipping: cooldown active (%.0fs since task_done, tool=%s)", elapsed, fn_name)
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_proactive_skipped",
+                    "reason": "Skipping: cooldown active",
+                    "tool": fn_name,
+                    "elapsed_sec": round(elapsed, 1),
+                })
+                return "Skipped: post-task cooldown active (120s)."
+
+        # Bug 2 fix: suppress proactive actions when owner_hold is set
+        if fn_name in ("send_owner_message", "schedule_task"):
+            try:
+                state_path = self._drive_root / "state" / "state.json"
+                if state_path.exists():
+                    state_data = json.loads(read_text(state_path))
+                    if state_data.get("owner_hold"):
+                        log.info("Skipping: owner_hold is set (tool=%s)", fn_name)
+                        append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                            "ts": utc_now_iso(),
+                            "type": "consciousness_proactive_skipped",
+                            "reason": "Skipping: owner_hold",
+                            "tool": fn_name,
+                        })
+                        return "Skipped: owner requested hold. Waiting for next instruction."
+            except Exception:
+                log.debug("Failed to check owner_hold state", exc_info=True)
 
         # Set chat_id context for send_owner_message
         chat_id = self._owner_chat_id_fn()

@@ -2,7 +2,7 @@
 Supervisor event dispatcher.
 
 Maps event types from worker EVENT_Q to handler functions.
-Extracted from colab_launcher.py main loop to keep it under 500 lines.
+Extracted from launcher main loop to keep it under 500 lines.
 """
 
 from __future__ import annotations

@@ -27,8 +27,8 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Module-level config (set via init())
 # ---------------------------------------------------------------------------
-REPO_DIR: pathlib.Path = pathlib.Path("/content/ouroboros_repo")
-DRIVE_ROOT: pathlib.Path = pathlib.Path("/content/drive/MyDrive/Ouroboros")
+REPO_DIR: pathlib.Path = pathlib.Path(os.path.expanduser("~/ouroboros"))
+DRIVE_ROOT: pathlib.Path = pathlib.Path(os.path.expanduser("~/ouroboros-data"))
 REMOTE_URL: str = ""
 BRANCH_DEV: str = "ouroboros"
 BRANCH_STABLE: str = "ouroboros-stable"
@@ -330,7 +330,11 @@ def sync_runtime_dependencies(reason: str) -> Tuple[bool, str]:
         cmd += ["openai>=1.0.0", "requests"]
         source = "fallback:minimal"
     try:
-        subprocess.run(cmd, cwd=str(REPO_DIR), check=True)
+        rc = subprocess.run(cmd, cwd=str(REPO_DIR), check=False,
+                            capture_output=True).returncode
+        if rc != 0:
+            # PEP 668 (Ubuntu 24.04+): fall back to --break-system-packages
+            subprocess.run(cmd + ["--break-system-packages"], cwd=str(REPO_DIR), check=True)
         append_jsonl(
             DRIVE_ROOT / "logs" / "supervisor.jsonl",
             {

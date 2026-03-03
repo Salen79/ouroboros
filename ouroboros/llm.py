@@ -118,6 +118,7 @@ class LLMClient:
         if self._client is None:
             from openai import OpenAI
             self._client = OpenAI(
+                timeout=120,
                 base_url=self._base_url,
                 api_key=self._api_key,
                 default_headers={

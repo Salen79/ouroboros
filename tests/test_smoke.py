@@ -304,10 +304,10 @@ def test_version_in_readme():
 
 
 def test_bible_exists_and_has_principles():
-    """BIBLE.md exists and contains all 9 principles (0-8)."""
+    """BIBLE.md exists and contains all principles (P0-P10)."""
     bible = (REPO / "BIBLE.md").read_text()
-    for i in range(9):
-        assert f"Principle {i}" in bible, f"Principle {i} missing from BIBLE.md"
+    for i in range(11):
+        assert f"## P{i}:" in bible, f"P{i} missing from BIBLE.md"
 
 
 # ── Code quality invariants ──────────────────────────────────────

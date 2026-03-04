@@ -35,6 +35,63 @@ from ouroboros.loop import run_llm_loop
 
 
 # ---------------------------------------------------------------------------
+# Conversation Router
+# ---------------------------------------------------------------------------
+
+def _classify_message_for_routing(message_text: str, task_type: str) -> str:
+    """
+    Classify a message to determine if it needs full model or light model.
+
+    Returns: "light" if conversational/simple, "full" if task-heavy
+
+    Light signals:
+    - task_type is "direct_chat"
+    - Short message (< 80 chars)
+    - No code/file/deploy/build/run/create/fix keywords
+    - No URL in message
+    - Looks like status check, greeting, acknowledgement
+
+    Full signals:
+    - Any task_type other than "direct_chat"
+    - Contains technical keywords
+    - Long message (>= 80 chars) with action words
+    """
+    if task_type != "direct_chat":
+        return "full"
+
+    text_lower = message_text.lower().strip()
+
+    # Short messages that are clearly conversational
+    if len(message_text) < 60:
+        # Unless they have action keywords even when short
+        action_keywords = [
+            "создай", "сделай", "напиши", "исправь", "задеплой", "запусти",
+            "create", "make", "write", "fix", "deploy", "run", "build", "implement",
+            "код", "файл", "скрипт", "code", "file", "script",
+        ]
+        if not any(kw in text_lower for kw in action_keywords):
+            return "light"
+
+    # Check for heavy task signals
+    heavy_keywords = [
+        # Russian
+        "создай", "сделай", "напиши", "исправь", "задеплой", "запусти", "реализуй",
+        "добавь", "удали", "измени", "настрой", "установи", "проверь код",
+        "архитектур", "рефактор", "оптимизир",
+        # English
+        "create", "implement", "write", "fix", "deploy", "run", "build",
+        "refactor", "optimize", "configure", "install", "test",
+        "```", "http://", "https://", ".py", ".js", ".yaml", ".json",
+    ]
+
+    if any(kw in text_lower for kw in heavy_keywords):
+        return "full"
+
+    # Default for direct_chat without heavy keywords
+    return "light"
+
+
+# ---------------------------------------------------------------------------
 # Module-level guard for one-time worker boot logging
 # ---------------------------------------------------------------------------
 _worker_boot_logged = False
@@ -416,6 +473,17 @@ class OuroborosAgent:
             else:
                 initial_effort = "medium"
 
+            # Conversation Router: route simple messages to light model
+            _light_model = os.environ.get("OUROBOROS_MODEL_LIGHT", "")
+            _routing = _classify_message_for_routing(
+                message_text=task.get("text", "") or task.get("description", "") or "",
+                task_type=task_type_str,
+            )
+            if _routing == "light" and _light_model:
+                initial_model = _light_model
+            else:
+                initial_model = None  # will use default
+
             try:
                 text, usage, llm_trace = run_llm_loop(
                     messages=messages,
@@ -429,6 +497,7 @@ class OuroborosAgent:
                     budget_remaining_usd=budget_remaining,
                     event_queue=self._event_queue,
                     initial_effort=initial_effort,
+                    initial_model=initial_model,
                     drive_root=self.env.drive_root,
                 )
             except Exception as e:

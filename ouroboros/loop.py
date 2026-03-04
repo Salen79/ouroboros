@@ -620,6 +620,7 @@ def run_llm_loop(
     budget_remaining_usd: Optional[float] = None,
     event_queue: Optional[queue.Queue] = None,
     initial_effort: str = "medium",
+    initial_model: Optional[str] = None,
     drive_root: Optional[pathlib.Path] = None,
 ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """
@@ -631,11 +632,12 @@ def run_llm_loop(
     Args:
         budget_remaining_usd: If set, forces completion when task cost exceeds 50% of this budget
         initial_effort: Initial reasoning effort level (default "medium")
+        initial_model: Override starting model (default: llm.default_model())
 
     Returns: (final_text, accumulated_usage, llm_trace)
     """
     # LLM-first: single default model, LLM switches via tool if needed
-    active_model = llm.default_model()
+    active_model = initial_model if initial_model else llm.default_model()
     active_effort = initial_effort
 
     llm_trace: Dict[str, Any] = {"assistant_notes": [], "tool_calls": []}

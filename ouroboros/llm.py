@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import httpx
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -118,7 +119,7 @@ class LLMClient:
         if self._client is None:
             from openai import OpenAI
             self._client = OpenAI(
-                timeout=120,
+                timeout=httpx.Timeout(60.0, connect=10.0, read=90.0),
                 base_url=self._base_url,
                 api_key=self._api_key,
                 default_headers={

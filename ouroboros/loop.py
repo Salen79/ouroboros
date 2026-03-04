@@ -423,9 +423,9 @@ def _check_budget_limits(
     task_cost = accumulated_usage.get("cost", 0)
     # Per-task cost cap (hard stop before percentage-based budget check)
     try:
-        max_task_cost = float(os.environ.get("OUROBOROS_MAX_TASK_COST", "1.5"))
+        max_task_cost = float(os.environ.get("OUROBOROS_MAX_TASK_COST", "3.0"))
     except (ValueError, TypeError):
-        max_task_cost = 1.5
+        max_task_cost = 3.0
     if task_cost > max_task_cost:
         finish_reason = f"Task cost exceeded ${max_task_cost} cap. Decompose into subtasks via schedule_task."
         log.warning("Per-task cost cap exceeded: $%.3f > $%.2f", task_cost, max_task_cost)

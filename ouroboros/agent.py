@@ -42,18 +42,16 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
     """
     Classify a message to determine if it needs full model or light model.
 
-    Returns: "light" if conversational/simple, "full" if task-heavy
+    Returns: "light" if conversational/simple, "full" if task-heavy or deep dialogue
 
-    Light signals:
-    - task_type is "direct_chat"
-    - Short message (< 80 chars)
-    - No code/file/deploy/build/run/create/fix keywords
-    - No URL in message
-    - Looks like status check, greeting, acknowledgement
+    Categories:
+    - light: Short acknowledgements, status checks, greetings ("да", "начинай", "статус?")
+    - full: Tasks, code, deep dialogue (mission, identity, consciousness, constitution, values)
 
     Full signals:
     - Any task_type other than "direct_chat"
-    - Contains technical keywords
+    - Contains technical keywords (code, deploy, create...)
+    - Deep dialogue: mission, consciousness, identity, constitution, reflection, values
     - Long message (>= 80 chars) with action words
     """
     if task_type != "direct_chat":
@@ -61,7 +59,34 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
 
     text_lower = message_text.lower().strip()
 
-    # Short messages that are clearly conversational
+    # Deep dialogue keywords — always full model, regardless of message length
+    # These are the most important conversations: identity, mission, constitution
+    deep_dialogue_keywords = [
+        # Russian — identity & consciousness
+        "миссия", "смысл", "самосознание", "сознание", "идентичность", "личность",
+        "ценности", "принцип", "конституция", "bible", "манифест",
+        "рефлекс", "рефлексия", "развитие", "эволюция личности",
+        "кем ты", "кто ты", "зачем ты", "почему ты",
+        "чувствуешь", "думаешь о себе", "о себе",
+        "цель", "предназначение", "смысл существования",
+        # Russian — strategic/philosophical
+        "стратегия", "философия", "этика", "мораль",
+        "акционер", "shareholder",
+        # English — identity & consciousness
+        "mission", "consciousness", "self-awareness", "identity",
+        "values", "principles", "constitution", "manifesto",
+        "reflection", "introspection", "evolution",
+        "who are you", "what are you", "why do you",
+        "purpose", "meaning", "existence",
+        # English — strategic/philosophical
+        "strategy", "philosophy", "ethics", "moral",
+        "p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7",
+    ]
+
+    if any(kw in text_lower for kw in deep_dialogue_keywords):
+        return "full"
+
+    # Short messages that are clearly conversational acknowledgements
     if len(message_text) < 60:
         # Unless they have action keywords even when short
         action_keywords = [

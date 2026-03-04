@@ -195,7 +195,7 @@ if not CHAT_LOG_PATH.exists():
 # ----------------------------
 BRANCH_DEV = "ouroboros"
 BRANCH_STABLE = "ouroboros"
-REMOTE_URL = f"https://{GITHUB_TOKEN}:x-oauth-basic@github.com/{GITHUB_USER}/{GITHUB_REPO}.git"
+REMOTE_URL = f"git@github.com:{GITHUB_USER}/{GITHUB_REPO}.git"
 
 # ----------------------------
 # 4) Initialize supervisor modules

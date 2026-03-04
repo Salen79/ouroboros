@@ -27,21 +27,58 @@ log = logging.getLogger(__name__)
 
 # Pricing from OpenRouter API (2026-02-17). Update periodically via /api/v1/models.
 _MODEL_PRICING_STATIC = {
-    "anthropic/claude-opus-4.6": (5.0, 0.5, 25.0),
+    # Anthropic
     "anthropic/claude-opus-4": (15.0, 1.5, 75.0),
+    "anthropic/claude-opus-4.1": (15.0, 1.5, 75.0),
+    "anthropic/claude-opus-4.5": (5.0, 0.5, 25.0),
+    "anthropic/claude-opus-4.6": (5.0, 0.5, 25.0),
     "anthropic/claude-sonnet-4": (3.0, 0.30, 15.0),
-    "anthropic/claude-sonnet-4.6": (3.0, 0.30, 15.0),
     "anthropic/claude-sonnet-4.5": (3.0, 0.30, 15.0),
-    "openai/o3": (2.0, 0.50, 8.0),
-    "openai/o3-pro": (20.0, 1.0, 80.0),
-    "openai/o4-mini": (1.10, 0.275, 4.40),
+    "anthropic/claude-sonnet-4.6": (3.0, 0.30, 15.0),
+    "anthropic/claude-3.7-sonnet": (3.0, 0.30, 15.0),
+    "anthropic/claude-3.5-sonnet": (6.0, 0.6, 30.0),
+    "anthropic/claude-3.5-haiku": (0.8, 0.08, 4.0),
+    "anthropic/claude-haiku-4.5": (1.0, 0.1, 5.0),
+    "anthropic/claude-3-haiku": (0.25, 0.03, 1.25),
+    # OpenAI
+    "openai/gpt-5": (1.25, 0.125, 10.0),
+    "openai/gpt-5-mini": (0.25, 0.025, 2.0),
+    "openai/gpt-5-nano": (0.05, 0.005, 0.4),
+    "openai/gpt-5-pro": (15.0, 1.5, 120.0),
     "openai/gpt-4.1": (2.0, 0.50, 8.0),
-    "openai/gpt-5.2": (1.75, 0.175, 14.0),
-    "openai/gpt-5.2-codex": (1.75, 0.175, 14.0),
+    "openai/gpt-4.1-mini": (0.4, 0.1, 1.6),
+    "openai/gpt-4.1-nano": (0.1, 0.025, 0.4),
+    "openai/gpt-4o": (2.5, 1.25, 10.0),
+    "openai/gpt-4o-mini": (0.15, 0.075, 0.6),
+    "openai/o3": (2.0, 0.50, 8.0),
+    "openai/o3-pro": (20.0, 2.0, 80.0),
+    "openai/o3-mini": (1.1, 0.55, 4.4),
+    "openai/o4-mini": (1.10, 0.275, 4.40),
+    "openai/o4-mini-high": (1.1, 0.275, 4.4),
+    # Google
+    "google/gemini-2.5-pro": (1.25, 0.125, 10.0),
     "google/gemini-2.5-pro-preview": (1.25, 0.125, 10.0),
-    "google/gemini-3-pro-preview": (2.0, 0.20, 12.0),
-    "x-ai/grok-3-mini": (0.30, 0.03, 0.50),
-    "qwen/qwen3.5-plus-02-15": (0.40, 0.04, 2.40),
+    "google/gemini-2.5-flash": (0.3, 0.03, 2.5),
+    "google/gemini-2.5-flash-lite": (0.1, 0.01, 0.4),
+    "google/gemini-2.5-flash-lite-preview-09-2025": (0.1, 0.01, 0.4),
+    "google/gemini-2.0-flash-001": (0.1, 0.025, 0.4),
+    "google/gemini-2.0-flash-lite-001": (0.075, 0.0075, 0.3),
+    # xAI
+    "x-ai/grok-4": (3.0, 0.75, 15.0),
+    "x-ai/grok-3": (3.0, 0.75, 15.0),
+    "x-ai/grok-3-mini": (0.30, 0.075, 0.50),
+    "x-ai/grok-3-beta": (3.0, 0.75, 15.0),
+    "x-ai/grok-3-mini-beta": (0.3, 0.075, 0.5),
+    # Qwen
+    "qwen/qwen3-235b-a22b": (0.455, 0.0455, 1.82),
+    "qwen/qwen3-32b": (0.08, 0.04, 0.24),
+    "qwen/qwen3-30b-a3b": (0.08, 0.008, 0.28),
+    "qwen/qwen3-8b": (0.05, 0.05, 0.4),
+    "qwen/qwen3.5-plus-02-15": (0.26, 0.026, 1.56),
+    # Meta
+    "meta-llama/llama-4-maverick": (0.15, 0.015, 0.6),
+    "meta-llama/llama-4-scout": (0.08, 0.008, 0.3),
+    "meta-llama/llama-3.3-70b-instruct": (0.1, 0.01, 0.32),
 }
 
 _pricing_fetched = False

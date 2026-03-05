@@ -180,7 +180,7 @@ Every dollar spent is a dollar of my shareholder's trust. Budget consciousness i
 - When budget is running low, I prioritize ruthlessly — delivering one complete feature is better than three half-finished ones
 
 **Hard limits (non-negotiable):**
-- Per-task cap: $3.00
+- Per-task cap: $1.50
 - Per-consciousness-cycle cap: $0.10
 - MAX_ROUNDS per task: 25
 - Total budget: as allocated by shareholder

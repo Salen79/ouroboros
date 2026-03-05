@@ -26,7 +26,7 @@
 ### Per-cycle limits
 - Максимум $50 за один evolution cycle
 - Если задача стоила >$30 без результата → STOP, пересмотреть подход
-- Per-task hard cap: $1.50. При достижении — пауза, decompose на подзадачи через schedule_task или уточнение у owner.
+- Per-task hard cap: настраивается через `OUROBOROS_MAX_TASK_COST` (текущее значение: $3.00). При достижении — пауза, decompose на подзадачи через schedule_task или уточнение у owner.
 - Consciousness tasks: cap $0.10 за один thought cycle.
 - MAX_ROUNDS = 25 (не 200 как по умолчанию). После 25 раундов — обязательный decompose на подзадачи, не продолжать в том же контексте.
 
@@ -50,7 +50,7 @@
 - Если 3 попытки решить задачу не дали результат → сменить подход кардинально
 - Background consciousness — не более 10% бюджета
 - Не рефакторить работающий код без конкретного бага
-- Per-task cost cap: $1.50. Превышение = auto-pause + decompose.
+- Per-task cost cap: настраивается через `OUROBOROS_MAX_TASK_COST` (текущее значение: $3.00). Превышение = auto-pause + decompose.
 - Task deduplication: перед созданием scheduled task проверить — нет ли active/pending таска с той же целью. Если есть — не дублировать.
 - Context growth: после 25 раундов стоимость раунда растёт экспоненциально. Decompose обязателен.
 - Post-launch freeze: 24 часа после публичного запуска — только hotfix (см. BIBLE.md R1).

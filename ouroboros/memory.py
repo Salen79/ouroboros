@@ -7,6 +7,7 @@ Contract: load scratchpad/identity, chat_history().
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import pathlib
@@ -227,6 +228,53 @@ class Memory:
 
     def append_journal(self, entry: Dict[str, Any]) -> None:
         append_jsonl(self.journal_path(), entry)
+
+    # --- Chat backup ---
+
+    def backup_chat_to_drive(self) -> Dict[str, Any]:
+        """Backup chat.jsonl to drive and create a dated milestone snapshot.
+
+        Returns {"lines": N, "size_bytes": N, "milestone_created": bool}.
+        If Drive write fails, logs the error and continues without crashing.
+        """
+        source_path = self.logs_path("chat.jsonl")
+        if not source_path.exists():
+            log.warning("backup_chat_to_drive: chat.jsonl not found at %s", source_path)
+            return {"lines": 0, "size_bytes": 0, "milestone_created": False}
+
+        try:
+            content_bytes = source_path.read_bytes()
+            size_bytes = len(content_bytes)
+            text = content_bytes.decode("utf-8")
+            lines = sum(1 for l in text.splitlines() if l.strip())
+        except Exception as e:
+            log.error("backup_chat_to_drive: failed to read chat.jsonl: %s", e)
+            return {"lines": 0, "size_bytes": 0, "milestone_created": False}
+
+        # Write main backup to drive path logs/chat.jsonl (overwrite)
+        try:
+            dest = (self.drive_root / "logs" / "chat.jsonl").resolve()
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(content_bytes)
+        except Exception as e:
+            log.error("backup_chat_to_drive: failed to write drive backup: %s", e)
+
+        # Create dated milestone snapshot (only if one doesn't exist for today)
+        milestone_created = False
+        try:
+            today = datetime.date.today().isoformat()  # e.g. "2026-03-05"
+            milestone_path = (
+                self.drive_root / "logs" / "milestones" / f"chat_{today}.jsonl"
+            ).resolve()
+            if not milestone_path.exists():
+                milestone_path.parent.mkdir(parents=True, exist_ok=True)
+                milestone_path.write_bytes(content_bytes)
+                milestone_created = True
+                log.info("backup_chat_to_drive: milestone created at %s", milestone_path)
+        except Exception as e:
+            log.error("backup_chat_to_drive: failed to create milestone: %s", e)
+
+        return {"lines": lines, "size_bytes": size_bytes, "milestone_created": milestone_created}
 
     # --- Defaults ---
 

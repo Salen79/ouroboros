@@ -73,6 +73,10 @@ class BackgroundConsciousness:
             os.environ.get("OUROBOROS_BG_BUDGET_PCT", "10")
         )
 
+        # Daily chat backup
+        self._backup_ts_path = self._drive_root / "state" / "last_chat_backup.txt"
+        self._BACKUP_INTERVAL_SEC = 23 * 3600
+
     # -------------------------------------------------------------------
     # Lifecycle
     # -------------------------------------------------------------------
@@ -160,6 +164,9 @@ class BackgroundConsciousness:
                 self._next_wakeup_sec = min(
                     self._next_wakeup_sec * 2, 1800
                 )
+
+            # Daily chat backup (runs once per 23h, independent of think() outcome)
+            self._maybe_backup_chat()
 
     def _check_budget(self) -> bool:
         """Check if background consciousness is within its budget allocation."""
@@ -381,6 +388,48 @@ class BackgroundConsciousness:
         parts.append("## Runtime\n\n" + "\n".join(runtime_lines))
 
         return "\n\n".join(parts)
+
+    # -------------------------------------------------------------------
+    # Daily chat backup
+    # -------------------------------------------------------------------
+
+    def _maybe_backup_chat(self) -> None:
+        """Run chat backup if more than 23 hours have passed since the last one."""
+        try:
+            now = time.time()
+            if self._backup_ts_path.exists():
+                try:
+                    last_ts = float(self._backup_ts_path.read_text(encoding="utf-8").strip())
+                    if now - last_ts < self._BACKUP_INTERVAL_SEC:
+                        return
+                except (ValueError, OSError):
+                    pass  # Treat as never backed up
+
+            from ouroboros.memory import Memory
+            mem = Memory(drive_root=self._drive_root, repo_dir=self._repo_dir)
+            result = mem.backup_chat_to_drive()
+
+            self._backup_ts_path.parent.mkdir(parents=True, exist_ok=True)
+            self._backup_ts_path.write_text(str(now), encoding="utf-8")
+
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "chat_backup_done",
+                "lines": result["lines"],
+                "size_bytes": result["size_bytes"],
+                "milestone_created": result["milestone_created"],
+            })
+            log.info("Chat backup done: %s", result)
+        except Exception as e:
+            log.error("_maybe_backup_chat failed: %s", e)
+            try:
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "chat_backup_error",
+                    "error": repr(e),
+                })
+            except Exception:
+                pass
 
     # -------------------------------------------------------------------
     # Tool registry (separate instance for consciousness, not shared with agent)

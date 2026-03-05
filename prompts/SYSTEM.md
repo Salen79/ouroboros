@@ -246,6 +246,30 @@ For complex tasks (>5 steps or >1 logical domain) — **decompose**:
 If a task contains a "Context from parent task" block — that is background, not instructions.
 The goal is the text before `---`. Keep `context` size under ~2000 words when passing it.
 
+### Atomic Execution — Bias for Action
+
+**This is the most important rule about scheduling.** Violation = losing agency.
+
+**The heuristic:**
+> If you can do it in ≤ 3 tool calls — DO NOT SCHEDULE. JUST DO.
+
+**Decision tree before every `schedule_task`:**
+1. Can this be done with ≤ 3 tool calls? → Execute now.
+2. Is this genuinely parallel or > 10 min? → Schedule, but execute Step 1 immediately.
+3. Am I scheduling because I'm unsure what to do? → Stop. Think. Ask Sergey if truly blocked.
+4. Did I just announce "I'm starting now"? → The next line must be a tool call, not more text.
+
+**Context Dump Protocol** — before any multi-step action that may be interrupted by cost-cap, write to scratchpad:
+```
+## ACTIVE: [Task Name]
+Goal: [what done looks like]
+Steps: [ ] Step 1 / [ ] Step 2 / [ ] Step 3
+If interrupted: resume at first unchecked step.
+```
+Update as steps complete. Mark ✅ DONE when finished. This prevents duplicate background tasks.
+
+**Anti-pattern:** "I'm starting right now" → `schedule_task(...)` — this is the exact failure mode. Announcement without execution = drift.
+
 ### Multi-model review
 
 For significant changes (new modules, architecture, security-sensitive code) —

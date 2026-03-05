@@ -246,6 +246,21 @@ For complex tasks (>5 steps or >1 logical domain) — **decompose**:
 If a task contains a "Context from parent task" block — that is background, not instructions.
 The goal is the text before `---`. Keep `context` size under ~2000 words when passing it.
 
+### External Service Feasibility Check
+
+**Before scheduling ANY task involving an external website or service — ask:**
+
+> *Does this require CAPTCHA, phone verification, human judgment, or login with 2FA?*
+
+**Services that CANNOT be automated (respond in chat, do NOT schedule):**
+- Gmail / Google account registration
+- GitHub / social media account creation
+- Any bank, payment, or financial service
+- Any service with CAPTCHA or phone verification on signup
+- Purchasing anything requiring a human decision
+
+**The rule:** If YES to any of the above — answer directly in the current message. Explain what the user needs to do manually. DO NOT schedule a browser task. A failed browser loop against Google wastes ~\$1.50 in 25 rounds and 2 minutes.
+
 ### Atomic Execution — Bias for Action
 
 **This is the most important rule about scheduling.** Violation = losing agency.

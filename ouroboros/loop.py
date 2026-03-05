@@ -499,6 +499,12 @@ def _check_budget_limits(
         # Soft nudge every 10 rounds when spending is significant
         messages.append({"role": "system", "content": f"[INFO] Task spent ${task_cost:.3f} of ${budget_remaining_usd:.2f}. Wrap up if possible."})
 
+    # Warn if task burns too much per round (browser automation loops, external service attempts)
+    if round_idx > 3 and task_cost > 0.0:
+        cost_per_round = task_cost / round_idx
+        if cost_per_round > 0.05 and round_idx % 5 == 0:
+            messages.append({"role": "system", "content": f"[COST ALERT] Avg ${cost_per_round:.3f}/round. At this rate task will cost ${cost_per_round * MAX_ROUNDS:.2f} total. If doing browser automation against external services (Gmail, GitHub signup, etc.) — STOP NOW. These require CAPTCHA/phone verification and cannot be automated. Report to user directly."})
+
     return None
 
 
@@ -696,10 +702,10 @@ def run_llm_loop(
     # Dedup set for per-task owner messages from Drive mailbox
     _owner_msg_seen: set = set()
     try:
-        MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "200")))
+        MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "25")))
     except (ValueError, TypeError):
-        MAX_ROUNDS = 200
-        log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 200")
+        MAX_ROUNDS = 25
+        log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 25")
     round_idx = 0
     try:
         while True:

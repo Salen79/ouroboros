@@ -43,19 +43,23 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
             if isinstance(parsed, list):
                 cmd = parsed
             elif isinstance(parsed, str):
+                # If parsed JSON was a string, try splitting it robustly
                 try:
                     cmd = shlex.split(parsed)
+                    warning = "run_shell_cmd_string_json_string_split"
                 except ValueError:
-                    cmd = parsed.split()
-                warning = "run_shell_cmd_string_json_string_split"
+                    cmd = parsed.split() # Fallback split
+                    warning = "run_shell_cmd_string_json_string_split_fallback"
             else:
+                # If parsed JSON was not str or list, try splitting original string
                 try:
                     cmd = shlex.split(raw_cmd)
+                    warning = "run_shell_cmd_string_non_list_split"
                 except ValueError:
                     cmd = raw_cmd.split()
-                warning = "run_shell_cmd_string_json_non_list_split"
+                    warning = "run_shell_cmd_string_split_fallback"
         else:
-            # Final fallback: try shlex on original string
+            # Final fallback: try shlex on original string if no JSON parsing worked
             try:
                 cmd = shlex.split(raw_cmd)
             except ValueError:
@@ -76,6 +80,7 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
 
     # Recover from LLM passing cmd as a list but with args merged into first element
     # e.g. ["grep, 'pattern'", "file"] or ["grep 'pattern' file"]
+    # OR if cmd is still a string after above parsing attempts.
     if isinstance(cmd, list) and len(cmd) >= 1:
         first = str(cmd[0]) if cmd else ""
         # Heuristic: first element contains comma or multiple spaces — likely merged args
@@ -93,6 +98,7 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
                 except Exception:
                     pass
             except ValueError:
+                # If shlex.split fails on the single element, fall back to simple split
                 cmd = first.split()
         elif ',' in first and first.endswith(','):
             # e.g. ["grep,", "pattern", "file"] — first arg has trailing comma
@@ -107,6 +113,26 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
                 })
             except Exception:
                 pass
+    # Final check: if 'cmd' is still a string at this point, attempt to split it
+    elif isinstance(cmd, str):
+        try:
+            cmd = shlex.split(cmd)
+            warning = "run_shell_final_string_split"
+        except ValueError:
+            cmd = cmd.split() # Fallback split
+            warning = "run_shell_final_string_split_fallback"
+        try:
+            append_jsonl(ctx.drive_logs() / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "tool_warning",
+                "tool": "run_shell",
+                "warning": warning,
+                "cmd_preview": truncate_for_log(cmd, 500),
+            })
+        except Exception:
+            log.debug("Failed to log run_shell warning to events.jsonl", exc_info=True)
+            pass
+
 
     if not isinstance(cmd, list):
         return "⚠️ SHELL_ARG_ERROR: cmd must be a list of strings."

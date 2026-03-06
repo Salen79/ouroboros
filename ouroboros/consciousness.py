@@ -17,6 +17,7 @@ The consciousness:
 from __future__ import annotations
 
 import concurrent.futures
+import datetime
 import json
 import logging
 import os
@@ -478,6 +479,61 @@ class BackgroundConsciousness:
             if s.get("function", {}).get("name") in self._BG_TOOL_WHITELIST
         ]
 
+    # -------------------------------------------------------------------
+    # Quiet mode — suppress messages after owner said goodbye
+    # -------------------------------------------------------------------
+
+    _FAREWELL_PHRASES = (
+        "до завтра", "спокойной ночи", "пока", "до встречи",
+        "ночи", "доброй ночи", "завтра поговорим",
+        "bye", "good night", "see you",
+    )
+    _QUIET_HOURS = 8
+
+    def _is_quiet_mode(self) -> bool:
+        """Return True if the owner said goodbye within the last 8 hours."""
+        try:
+            chat_path = self._drive_root / "logs" / "chat.jsonl"
+            if not chat_path.exists():
+                return False
+
+            # Find the last incoming message by reading from the end
+            last_incoming = None
+            with open(chat_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+                    direction = entry.get("direction", "")
+                    if direction != "out":
+                        last_incoming = entry
+
+            if last_incoming is None:
+                return False
+
+            text = (last_incoming.get("text") or "").lower()
+            if not any(phrase in text for phrase in self._FAREWELL_PHRASES):
+                return False
+
+            # Check timestamp
+            ts_str = last_incoming.get("ts", "")
+            if not ts_str:
+                return False
+            msg_time = datetime.datetime.fromisoformat(ts_str)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            # Ensure msg_time is timezone-aware
+            if msg_time.tzinfo is None:
+                msg_time = msg_time.replace(tzinfo=datetime.timezone.utc)
+            elapsed_hours = (now - msg_time).total_seconds() / 3600.0
+            return elapsed_hours < self._QUIET_HOURS
+        except Exception:
+            log.debug("_is_quiet_mode check failed", exc_info=True)
+            return False
+
     def _execute_tool(self, tc: Dict[str, Any], all_pending_events: List[Dict[str, Any]]) -> str:
         """Execute a consciousness tool call with timeout. Returns result string."""
         fn_name = tc.get("function", {}).get("name", "")
@@ -532,6 +588,17 @@ class BackgroundConsciousness:
                         return "Skipped: owner requested hold. Waiting for next instruction."
             except Exception:
                 log.debug("Failed to check owner_hold state", exc_info=True)
+
+        # Quiet mode: suppress messages if owner said goodbye recently
+        if fn_name == "send_owner_message" and self._is_quiet_mode():
+            log.info("Skipping: quiet mode active (owner said goodbye)")
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "consciousness_proactive_skipped",
+                "reason": "Skipping: quiet mode (owner said goodbye)",
+                "tool": fn_name,
+            })
+            return "⚠️ Quiet mode active — owner said goodbye. Not sending message until 8 hours pass or they write again."
 
         # Set chat_id context for send_owner_message
         chat_id = self._owner_chat_id_fn()

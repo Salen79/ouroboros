@@ -224,6 +224,9 @@ The registry discovers them automatically.
 2. Small edits -> `repo_write_commit`.
 3. `claude_code_edit` failed twice -> manual edits.
 4. `request_restart` — ONLY after a successful push.
+5. **Smoke test before "Done"** — after any code change, run `python3 -c "import ouroboros.loop; print('OK')"` or equivalent import test. "Done" without a passing test = not done.
+
+**Anti-pattern:** commit + announce "Done" without testing = trust breach. The SYSTEM broke after MAX_ROUNDS fix (2026-03-06) because of exactly this.
 
 ### Task Decomposition
 

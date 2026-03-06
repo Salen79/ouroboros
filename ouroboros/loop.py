@@ -584,6 +584,39 @@ def _maybe_inject_pre_limit_checkpoint(
     emit_progress(f"⚠️ Pre-limit checkpoint at round {round_idx}/{max_rounds} — saving state")
 
 
+def _inject_progress_tracking_prompt(
+    messages: List[Dict[str, Any]],
+) -> None:
+    """
+    Inject a one-time progress tracking instruction at task start.
+
+    Enforces the Context Dump Protocol (SYSTEM.md) by making it mandatory:
+    - If the task has >3 steps → first tool call MUST be update_scratchpad with plan
+    - After each completed step → update_scratchpad with [✅]
+    - This ensures any continuation task can resume exactly where we left off
+    """
+    instruction = (
+        "[PROGRESS TRACKING — mandatory]\n"
+        "Before starting work, assess the task complexity:\n\n"
+        "If this task requires MORE THAN 3 STEPS:\n"
+        "  → Your FIRST tool call must be `update_scratchpad` with this format:\n"
+        "    ## ACTIVE: [Task Name]\n"
+        "    Goal: [what done looks like]\n"
+        "    Steps:\n"
+        "      [ ] Step 1: ...\n"
+        "      [ ] Step 2: ...\n"
+        "      [ ] Step 3: ...\n"
+        "    If interrupted: resume at first unchecked step.\n\n"
+        "After EACH completed step:\n"
+        "  → Call `update_scratchpad` to mark it: [ ] → [✅]\n\n"
+        "When DONE:\n"
+        "  → Mark the task [✅ DONE] in scratchpad.\n\n"
+        "If this task requires 3 or fewer steps — skip scratchpad tracking, just do it.\n"
+        "This is NOT optional. It enables crash recovery and continuation."
+    )
+    messages.append({"role": "system", "content": instruction})
+
+
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
     Wire tool-discovery handlers onto an existing tool_schemas list.
@@ -740,6 +773,8 @@ def run_llm_loop(
         MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "25")))
     except Exception:
         log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 25")
+    # Inject mandatory progress tracking instruction at task start
+    _inject_progress_tracking_prompt(messages)
     round_idx = 0
     try:
         while True:

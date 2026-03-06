@@ -88,7 +88,7 @@ CORE_TOOL_NAMES = {
     "request_restart", "promote_to_stable",
     "knowledge_read", "knowledge_write",
     "browse_page", "browser_action", "analyze_screenshot",
-    "run_ops_check",
+    "run_ops_check", "restart_service", "read_service_logs",
 }
 
 

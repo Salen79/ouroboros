@@ -41,7 +41,10 @@ def sha256_text(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 def read_text(path: pathlib.Path) -> str:
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return f"⚠️ File not found: {path}"
 
 
 def write_text(path: pathlib.Path, content: str) -> None:

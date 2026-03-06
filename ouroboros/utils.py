@@ -46,7 +46,14 @@ def read_text(path: pathlib.Path) -> str:
 
 def write_text(path: pathlib.Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    tmp_path = path.parent / f".tmp_{path.name}"
+    try:
+        tmp_path.write_text(content, encoding="utf-8")
+        os.replace(str(tmp_path), str(path))
+        log.debug("atomic write_text OK: %s", path)
+    except Exception:
+        log.warning("atomic write_text failed for %s, falling back to direct write", path, exc_info=True)
+        path.write_text(content, encoding="utf-8")
 
 
 def append_jsonl(path: pathlib.Path, obj: Dict[str, Any]) -> None:

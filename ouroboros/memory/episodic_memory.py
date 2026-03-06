@@ -3,8 +3,8 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 
-# Removed drive_read import as it's not implemented for loading.
-# drive_write import is removed; its availability will be checked at runtime.
+# Removed `drive_write` import. The drive module/functions are not available and cause ModuleNotFoundError.
+# Saving for EpisodicMemory will be a no-op until drive functions are available and implemented correctly.
 
 # Define the path for storing episodic memories in Drive
 # Memories will be stored daily for better organization
@@ -14,7 +14,8 @@ class EpisodicMemory:
     def __init__(self, base_dir: str = EPISODIC_MEMORY_BASE_DIR):
         self.base_dir = base_dir
         self.current_day_file = self._get_daily_filename()
-        # Attempt to load memories, but gracefully handle if loading is not possible (e.g., drive_read not available)
+        # Load memories. Since drive_read is unavailable, this will always return an empty list.
+        # This ensures the class can be initialized without errors.
         self.memories = self._load_memories()
 
     def _get_daily_filename(self) -> str:
@@ -25,32 +26,23 @@ class EpisodicMemory:
     def _load_memories(self) -> List[Dict[str, Any]]:
         """
         Loads memories from the current day's file. 
-        If drive_read is not available or the file is not found, returns an empty list.
+        Since drive_read is unavailable, this function will always return an empty list.
         """
-        # Since drive_read is not reliably available, and file access might not be
-        # immediately functional for loading from Drive, we'll default to an empty list.
-        # This ensures the class can be initialized without errors, and saving can still
-        # be attempted if drive_write becomes available.
-        # A proper implementation would require a working drive_read.
-        print(f"INFO: _load_memories called. Due to potential unavailability of drive_read, returning empty list. File path attempted: {self.current_day_file}")
+        print(f"INFO: _load_memories called. drive_read is unavailable, returning empty list. Attempted path: {self.current_day_file}")
         return []
 
     def _save_memories(self) -> None:
-        """Saves the current list of memories to the daily file in Drive if drive_write is available."""
-        content = "\n".join([json.dumps(mem) for mem in self.memories])
-        try:
-            # Check if drive_write function is available in the global scope before calling it
-            if 'drive_write' in globals() and callable(globals()['drive_write']):
-                drive_write(path=self.current_day_file, content=content, mode="overwrite")
-                print(f"INFO: Memories saved to {self.current_day_file}")
-            else:
-                print(f"WARNING: drive_write function is not available. Cannot save memories to {self.current_day_file}")
-        except Exception as e:
-            print(f"Error saving memories to {self.current_day_file}: {e}")
+        """
+        Saves the current list of memories.
+        This is a no-op because drive_write is unavailable.
+        """
+        print(f"INFO: _save_memories called. drive_write is unavailable, cannot save memories to {self.current_day_file}. Content would have been: {json.dumps([json.dumps(mem) for mem in self.memories])}")
+        # No-op: Cannot save memories as drive_write is unavailable.
 
     def add_memory(self, event_type: str, content: Dict[str, Any], significance: float = 0.5, context: Optional[Dict[str, Any]] = None) -> None:
         """
         Adds a new memory entry to the Episodic Memory.
+        Storage will be in-memory only until drive functions are available.
         
         Args:
             event_type: A string categorizing the event (e.g., "task_start", "tool_error", "dialogue_turn").
@@ -59,11 +51,12 @@ class EpisodicMemory:
             context: Optional dictionary providing additional context (e.g., task_id, parent_task_id, user_id, model_used).
         """
         today_str = datetime.now().strftime("%Y-%m-%d")
-        file_date_str = self.current_day_file.split('/')[-1].split('.')[0]
+        # Dynamically determine the current day's filename and load memories if the day has changed
+        current_day_str = self.current_day_file.split('/')[-1].split('.')[0] if self.current_day_file else ""
 
-        if today_str != file_date_str:
+        if today_str != current_day_str:
             self.current_day_file = self._get_daily_filename()
-            # Attempt to load memories for the new day. If drive_read is unavailable, this will result in an empty list which is handled.
+            # _load_memories will return empty list as drive_read is not available.
             self.memories = self._load_memories() 
 
         memory_entry = {
@@ -75,12 +68,12 @@ class EpisodicMemory:
             "thread_id": context.get("thread_id", "") # convenience for single-threaded access
         }
         self.memories.append(memory_entry)
-        self._save_memories() # Attempt to save, will warn if drive_write is not available
+        self._save_memories() # This will now be a no-op.
 
     def search_memories(self, query: Dict[str, Any], limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Searches memories based on a query dictionary.
-        This is a basic implementation; full semantic search would be more complex.
+        Searches memories currently loaded in memory.
+        Does not persist across restarts without drive_read implementation.
         """
         results = []
         for mem in reversed(self.memories): # Search from most recent
@@ -111,5 +104,5 @@ class EpisodicMemory:
         return results
 
     def get_recent_memories(self, count: int = 5) -> List[Dict[str, Any]]:
-        """Returns the most recent memories."""
+        """Returns the most recent memories currently loaded in memory."""
         return self.memories[-count:]

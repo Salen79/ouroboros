@@ -189,8 +189,8 @@ def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
     1. ANTHROPIC_API_KEY env var (API credits)
     2. Claude Max subscription via claude.ai OAuth (no API key needed)
 
-    If API key is set but returns credit error, automatically retries
-    without the key to use Max subscription if available.
+    Prefers Claude Max subscription (claude.ai OAuth, no API cost).
+    Falls back to ANTHROPIC_API_KEY only if Max is unavailable/not logged in.
     """
     from ouroboros.tools.git import _acquire_git_lock, _release_git_lock
 
@@ -239,18 +239,20 @@ def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
                 env["PATH"] = f"{local_bin}:{env.get('PATH', '')}"
             return env
 
-        # Attempt 1: with API key (if available)
-        res = None
-        if api_key:
-            res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=True))
-            if _is_credit_error(res):
-                log.info("claude_code_edit: API key credit error, retrying with Max subscription (no API key)")
-                ctx.emit_progress_fn("API key credit low — retrying with Claude Max subscription...")
-                res = None  # will retry below
+        # Attempt 1 (primary): without API key — uses Claude Max subscription via claude.ai OAuth
+        res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=False))
 
-        # Attempt 2: without API key (claude.ai Max subscription)
-        if res is None:
-            res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=False))
+        # Attempt 2 (fallback): with API key — uses Anthropic API credits
+        if res.returncode != 0 and api_key:
+            combined = ((res.stdout or "") + "\n" + (res.stderr or "")).lower()
+            # Only fallback to API key if failure looks like auth/subscription issue
+            if any(phrase in combined for phrase in (
+                "not logged in", "unauthorized", "authentication", "please log in",
+                "login required", "subscription", "oauth",
+            )):
+                log.info("claude_code_edit: Max subscription unavailable, retrying with API key")
+                ctx.emit_progress_fn("Max subscription unavailable — retrying with API key...")
+                res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=True))
 
         stdout = (res.stdout or "").strip()
         stderr = (res.stderr or "").strip()

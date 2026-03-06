@@ -74,6 +74,40 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
             log.debug("Failed to log run_shell warning to events.jsonl", exc_info=True)
             pass
 
+    # Recover from LLM passing cmd as a list but with args merged into first element
+    # e.g. ["grep, 'pattern'", "file"] or ["grep 'pattern' file"]
+    if isinstance(cmd, list) and len(cmd) >= 1:
+        first = str(cmd[0]) if cmd else ""
+        # Heuristic: first element contains comma or multiple spaces — likely merged args
+        if len(cmd) == 1 and (' ' in first or ',' in first):
+            try:
+                cmd = shlex.split(first)
+                try:
+                    append_jsonl(ctx.drive_logs() / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "tool_warning",
+                        "tool": "run_shell",
+                        "warning": "run_shell_single_element_list_split",
+                        "cmd_preview": truncate_for_log(first, 500),
+                    })
+                except Exception:
+                    pass
+            except ValueError:
+                cmd = first.split()
+        elif ',' in first and first.endswith(','):
+            # e.g. ["grep,", "pattern", "file"] — first arg has trailing comma
+            cmd[0] = first.rstrip(',').strip()
+            try:
+                append_jsonl(ctx.drive_logs() / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "tool_warning",
+                    "tool": "run_shell",
+                    "warning": "run_shell_trailing_comma_stripped",
+                    "cmd_preview": truncate_for_log(str(cmd), 500),
+                })
+            except Exception:
+                pass
+
     if not isinstance(cmd, list):
         return "⚠️ SHELL_ARG_ERROR: cmd must be a list of strings."
     cmd = [str(x) for x in cmd]
@@ -97,7 +131,10 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
     except subprocess.TimeoutExpired:
         return f"⚠️ TIMEOUT: command exceeded {timeout}s."
     except Exception as e:
-        return f"⚠️ SHELL_ERROR: {e}"
+        hint = ""
+        if "No such file or directory" in str(e) and cmd:
+            hint = f" (Hint: cmd[0]='{cmd[0][:40]}' — ensure cmd is a proper list like [\"grep\", \"pattern\", \"file\"], not a single string)"
+        return f"⚠️ SHELL_ERROR: {e}{hint}"
 
 
 def _run_claude_cli(work_dir: str, prompt: str, env: dict) -> subprocess.CompletedProcess:

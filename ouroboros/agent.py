@@ -674,6 +674,32 @@ class OuroborosAgent:
         except Exception as e:
             log.warning("Failed to store task result: %s", e)
 
+        # Auto-capture to episodic memory for significant tasks
+        try:
+            cost = float(usage.get("cost") or 0)
+            rounds = int(usage.get("rounds") or 0)
+            task_text = task.get("text") or task.get("description") or ""
+            task_type = task.get("type") or ""
+            # Only capture: non-trivial tasks (>1 round), or any owner message, or ops tasks
+            if rounds > 1 or task_type == "direct_chat" or (task_type == "task" and cost > 0.01):
+                from ouroboros.memory.episodic_memory import EpisodicMemory
+                em = EpisodicMemory(pathlib.Path(self.env.drive_root))
+                summary = (text[:300] + "...") if len(text) > 300 else text
+                em.capture(
+                    event_type="task_complete",
+                    content=f"Task: {task_text[:200]}\nResult: {summary}",
+                    metadata={
+                        "task_id": task.get("id"),
+                        "task_type": task_type,
+                        "cost_usd": round(cost, 6),
+                        "rounds": rounds,
+                        "tool_calls": int(llm_trace.get("tool_calls") and len(llm_trace["tool_calls"]) or 0),
+                    },
+                    importance=min(1.0, 0.3 + cost * 10),  # higher cost = more important
+                )
+        except Exception as e:
+            log.debug("Failed to auto-capture episodic memory: %s", e)
+
     # =====================================================================
     # Review context builder
     # =====================================================================

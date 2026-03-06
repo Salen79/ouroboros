@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List
@@ -42,11 +43,72 @@ def _promote_to_stable(ctx: ToolContext, reason: str) -> str:
     return f"Promote to stable requested: {reason}"
 
 
+def _task_descriptions_similar(desc1: str, desc2: str, threshold: float = 0.45) -> bool:
+    """Check if two task descriptions are similar by keyword overlap."""
+    words1 = {w for w in (re.sub(r'[^a-z0-9]', '', w) for w in desc1.lower().split()) if len(w) > 3}
+    words2 = {w for w in (re.sub(r'[^a-z0-9]', '', w) for w in desc2.lower().split()) if len(w) > 3}
+    union = len(words1 | words2)
+    if union == 0:
+        return False
+    overlap = len(words1 & words2) / union
+    return overlap >= threshold
+
+
 def _schedule_task(ctx: ToolContext, description: str, context: str = "", parent_task_id: str = "") -> str:
     current_depth = getattr(ctx, 'task_depth', 0)
     new_depth = current_depth + 1 if parent_task_id else 0
     if new_depth > MAX_SUBTASK_DEPTH:
         return f"ERROR: Subtask depth limit ({MAX_SUBTASK_DEPTH}) exceeded. Simplify your approach."
+
+    # --- Duplicate task detection (fail-safe: errors skip the check) ---
+    try:
+        import datetime as _dt
+
+        cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(minutes=10)
+
+        # Check recent events.jsonl for similar scheduled tasks
+        events_file = ctx.drive_logs() / "events.jsonl"
+        if events_file.exists():
+            lines = events_file.read_text(encoding="utf-8", errors="replace").splitlines()
+            for line in lines[-50:]:
+                try:
+                    evt = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if evt.get("type") != "schedule_task":
+                    continue
+                evt_ts = evt.get("ts", "")
+                try:
+                    evt_time = _dt.datetime.fromisoformat(evt_ts.replace("Z", "+00:00"))
+                    if evt_time < cutoff:
+                        continue
+                except (ValueError, AttributeError):
+                    continue
+                existing_desc = evt.get("description", "")
+                if _task_descriptions_similar(description, existing_desc, threshold=0.45):
+                    mins_ago = int((_dt.datetime.now(_dt.timezone.utc) - evt_time).total_seconds() / 60)
+                    return (
+                        f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already active/recent: "
+                        f"'{existing_desc}' (scheduled {mins_ago}m ago). "
+                        f"Check task status or wait for completion before scheduling again."
+                    )
+
+        # Check currently running tasks from supervisor
+        try:
+            from supervisor.workers import RUNNING
+            for _tid, worker in list(RUNNING.items()):
+                running_desc = getattr(worker, "description", "") or ""
+                if _task_descriptions_similar(description, running_desc, threshold=0.45):
+                    return (
+                        f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already active/recent: "
+                        f"'{running_desc}' (currently running). "
+                        f"Check task status or wait for completion before scheduling again."
+                    )
+        except Exception:
+            pass
+    except Exception:
+        pass  # Fail-safe: if anything breaks, proceed with normal scheduling
+    # --- End duplicate task detection ---
 
     if getattr(ctx, 'is_direct_chat', False):
         from ouroboros.utils import append_jsonl

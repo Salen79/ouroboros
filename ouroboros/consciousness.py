@@ -157,7 +157,7 @@ class BackgroundConsciousness:
 
             # Skip if owner is actively chatting (avoid background work during conversation)
             if self._is_active_dialogue():
-                log.debug("Consciousness: skipping think cycle — active dialogue detected")
+                log.debug("Consciousness: skipping think cycle — active dialogue OR running tasks detected")
                 self._next_wakeup_sec = 60  # Wake up soon to check again
                 continue
 
@@ -658,7 +658,7 @@ class BackgroundConsciousness:
         "bye", "good night", "see you",
     )
     _QUIET_HOURS = 8
-    _ACTIVE_DIALOGUE_MINUTES = 10
+    _ACTIVE_DIALOGUE_MINUTES = 30
 
     def _is_quiet_mode(self) -> bool:
         """Return True if the owner said goodbye within the last 8 hours."""
@@ -705,10 +705,11 @@ class BackgroundConsciousness:
             return False
 
     def _is_active_dialogue(self) -> bool:
-        """Return True if the owner has sent a message in the last 10 minutes.
+        """Return True if owner wrote within 30 min or tasks are RUNNING.
 
-        When the owner is actively chatting, consciousness should not interrupt
-        with proactive messages or schedule new tasks independently.
+        When the owner is actively chatting or workers are busy,
+        consciousness should not interrupt with proactive messages
+        or schedule new tasks independently.
         """
         try:
             chat_path = self._drive_root / "logs" / "chat.jsonl"
@@ -740,6 +741,15 @@ class BackgroundConsciousness:
             if msg_time.tzinfo is None:
                 msg_time = msg_time.replace(tzinfo=datetime.timezone.utc)
             elapsed_minutes = (now - msg_time).total_seconds() / 60.0
+
+            # Also consider active if workers are currently processing tasks
+            try:
+                from supervisor import workers as supervisor_workers
+                if supervisor_workers.RUNNING:
+                    return True
+            except Exception:
+                pass
+
             return elapsed_minutes < self._ACTIVE_DIALOGUE_MINUTES
         except Exception:
             log.debug("_is_active_dialogue check failed", exc_info=True)

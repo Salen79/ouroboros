@@ -117,6 +117,19 @@ def _run_claude_cli(work_dir: str, prompt: str, env: dict) -> subprocess.Complet
     return res
 
 
+def _is_credit_error(res: subprocess.CompletedProcess) -> bool:
+    """Check if failure is due to insufficient API credits."""
+    if res.returncode == 0:
+        return False
+    combined = ((res.stdout or "") + "\n" + (res.stderr or "")).lower()
+    return any(phrase in combined for phrase in (
+        "credit balance is too low",
+        "insufficient_quota",
+        "insufficient credits",
+        "your credit balance",
+    ))
+
+
 def _check_uncommitted_changes(repo_dir: pathlib.Path) -> str:
     """Check git status after edit, return warning string or empty string."""
     try:
@@ -170,12 +183,18 @@ def _parse_claude_output(stdout: str, ctx: ToolContext) -> str:
 
 
 def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
-    """Delegate code edits to Claude Code CLI."""
+    """Delegate code edits to Claude Code CLI.
+
+    Supports two auth modes:
+    1. ANTHROPIC_API_KEY env var (API credits)
+    2. Claude Max subscription via claude.ai OAuth (no API key needed)
+
+    If API key is set but returns credit error, automatically retries
+    without the key to use Max subscription if available.
+    """
     from ouroboros.tools.git import _acquire_git_lock, _release_git_lock
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return "⚠️ ANTHROPIC_API_KEY not set, claude_code_edit unavailable."
 
     work_dir = str(ctx.repo_dir)
     if cwd and cwd.strip() not in ("", ".", "./"):
@@ -185,7 +204,7 @@ def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
 
     claude_bin = shutil.which("claude")
     if not claude_bin:
-        return "⚠️ Claude CLI not found. Ensure ANTHROPIC_API_KEY is set."
+        return "⚠️ Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code"
 
     ctx.emit_progress_fn("Delegating to Claude Code CLI...")
 
@@ -202,19 +221,36 @@ def _claude_code_edit(ctx: ToolContext, prompt: str, cwd: str = "") -> str:
             f"{prompt}"
         )
 
-        env = os.environ.copy()
-        env["ANTHROPIC_API_KEY"] = api_key
-        try:
-            if hasattr(os, "geteuid") and os.geteuid() == 0:
-                env.setdefault("IS_SANDBOX", "1")
-        except Exception:
-            log.debug("Failed to check geteuid for sandbox detection", exc_info=True)
-            pass
         local_bin = str(pathlib.Path.home() / ".local" / "bin")
-        if local_bin not in env.get("PATH", ""):
-            env["PATH"] = f"{local_bin}:{env.get('PATH', '')}"
 
-        res = _run_claude_cli(work_dir, full_prompt, env)
+        def _make_env(include_api_key: bool) -> dict:
+            env = os.environ.copy()
+            if include_api_key and api_key:
+                env["ANTHROPIC_API_KEY"] = api_key
+            else:
+                # Remove API key so Claude CLI falls back to claude.ai OAuth (Max subscription)
+                env.pop("ANTHROPIC_API_KEY", None)
+            try:
+                if hasattr(os, "geteuid") and os.geteuid() == 0:
+                    env.setdefault("IS_SANDBOX", "1")
+            except Exception:
+                pass
+            if local_bin not in env.get("PATH", ""):
+                env["PATH"] = f"{local_bin}:{env.get('PATH', '')}"
+            return env
+
+        # Attempt 1: with API key (if available)
+        res = None
+        if api_key:
+            res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=True))
+            if _is_credit_error(res):
+                log.info("claude_code_edit: API key credit error, retrying with Max subscription (no API key)")
+                ctx.emit_progress_fn("API key credit low — retrying with Claude Max subscription...")
+                res = None  # will retry below
+
+        # Attempt 2: without API key (claude.ai Max subscription)
+        if res is None:
+            res = _run_claude_cli(work_dir, full_prompt, _make_env(include_api_key=False))
 
         stdout = (res.stdout or "").strip()
         stderr = (res.stderr or "").strip()

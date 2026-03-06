@@ -18,7 +18,7 @@ from ouroboros.utils import utc_now_iso, run_cmd, append_jsonl, truncate_for_log
 log = logging.getLogger(__name__)
 
 
-def _run_shell(ctx: ToolContext, cmd, cwd: str = "") -> str:
+def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
     # Recover from LLM sending cmd as JSON string instead of list
     if isinstance(cmd, str):
         raw_cmd = cmd
@@ -87,7 +87,7 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "") -> str:
     try:
         res = subprocess.run(
             cmd, cwd=str(work_dir),
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=timeout,
         )
         out = res.stdout + ("\n--- STDERR ---\n" + res.stderr if res.stderr else "")
         if len(out) > 50000:
@@ -95,7 +95,7 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "") -> str:
         prefix = f"exit_code={res.returncode}\n"
         return prefix + out
     except subprocess.TimeoutExpired:
-        return "⚠️ TIMEOUT: command exceeded 120s."
+        return f"⚠️ TIMEOUT: command exceeded {timeout}s."
     except Exception as e:
         return f"⚠️ SHELL_ERROR: {e}"
 

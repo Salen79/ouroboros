@@ -550,6 +550,40 @@ def _maybe_inject_self_check(
     emit_progress(f"🔄 Checkpoint {checkpoint_num} at round {round_idx}: ~{ctx_tokens} tokens, ${task_cost:.2f} spent")
 
 
+def _maybe_inject_pre_limit_checkpoint(
+    round_idx: int,
+    max_rounds: int,
+    messages: List[Dict[str, Any]],
+    emit_progress: Callable[[str], None],
+) -> None:
+    """
+    Inject a checkpoint warning when approaching MAX_ROUNDS limit.
+
+    Fires at round MAX_ROUNDS - 3 to give the agent 3 rounds to save state.
+    Instructs LLM to commit uncommitted changes and write resume point to scratchpad.
+    """
+    CHECKPOINT_OFFSET = 3  # Trigger this many rounds before hard limit
+    if round_idx != max_rounds - CHECKPOINT_OFFSET:
+        return
+
+    warning = (
+        f"[PRE-LIMIT CHECKPOINT — round {round_idx}/{max_rounds}]\n"
+        f"⚠️ You have {CHECKPOINT_OFFSET} rounds remaining before the task is forcibly stopped.\n\n"
+        f"DO THIS NOW (in order):\n"
+        f"1. If you have uncommitted code changes → run `git_status`, then `repo_commit_push` with message 'WIP: [description] — auto-checkpoint'\n"
+        f"2. Call `update_scratchpad` and add a section:\n"
+        f"   ## RESUME POINT\n"
+        f"   Task: [what you were doing]\n"
+        f"   Done: [what is finished]\n"
+        f"   Next step: [exact next action]\n"
+        f"   Files changed: [list]\n"
+        f"3. Then continue or return your best result.\n\n"
+        f"This ensures work is not lost if the task hits the round limit."
+    )
+    messages.append({"role": "system", "content": warning})
+    emit_progress(f"⚠️ Pre-limit checkpoint at round {round_idx}/{max_rounds} — saving state")
+
+
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
     Wire tool-discovery handlers onto an existing tool_schemas list.
@@ -729,6 +763,9 @@ def run_llm_loop(
 
             # Soft self-check reminder every 50 rounds (LLM-first: agent decides, not code)
             _maybe_inject_self_check(round_idx, MAX_ROUNDS, messages, accumulated_usage, emit_progress)
+
+            # Pre-limit checkpoint: save progress before hitting MAX_ROUNDS
+            _maybe_inject_pre_limit_checkpoint(round_idx, MAX_ROUNDS, messages, emit_progress)
 
             # Apply LLM-driven model/effort switch (via switch_model tool)
             ctx = tools._ctx

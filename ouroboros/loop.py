@@ -503,7 +503,7 @@ def _check_budget_limits(
     if round_idx > 3 and task_cost > 0.0:
         cost_per_round = task_cost / round_idx
         if cost_per_round > 0.05 and round_idx % 5 == 0:
-            messages.append({"role": "system", "content": f"[COST ALERT] Avg ${cost_per_round:.3f}/round. At this rate task will cost ${cost_per_round * MAX_ROUNDS:.2f} total. If doing browser automation against external services (Gmail, GitHub signup, etc.) — STOP NOW. These require CAPTCHA/phone verification and cannot be automated. Report to user directly."})
+            messages.append({"role": "system", "content": f"[COST ALERT] Avg ${cost_per_round:.3f}/round. At this rate task will cost ${cost_per_round * int(os.environ.get('OUROBOROS_MAX_ROUNDS', '25')):.2f} total. If doing browser automation against external services (Gmail, GitHub signup, etc.) — STOP NOW. These require CAPTCHA/phone verification and cannot be automated. Report to user directly."})
 
     return None
 
@@ -701,10 +701,10 @@ def run_llm_loop(
     stateful_executor = _StatefulToolExecutor()
     # Dedup set for per-task owner messages from Drive mailbox
     _owner_msg_seen: set = set()
+    MAX_ROUNDS = 25
     try:
         MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "25")))
-    except (ValueError, TypeError):
-        MAX_ROUNDS = 25
+    except Exception:
         log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 25")
     round_idx = 0
     try:

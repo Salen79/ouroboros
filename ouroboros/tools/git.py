@@ -150,6 +150,20 @@ def _repo_write_commit(ctx: ToolContext, path: str, content: str, commit_message
     finally:
         _release_git_lock(lock)
     ctx.last_push_succeeded = True
+
+    # After push — smoke test for Python files
+    if path.endswith(".py"):
+        try:
+            result = subprocess.run(
+                ["python3", "-c", "import ouroboros.loop; print('SMOKE_OK')"],
+                capture_output=True, text=True, timeout=15,
+                cwd=str(ctx.repo_dir)
+            )
+            if result.returncode != 0 or "SMOKE_OK" not in result.stdout:
+                return f"⚠️ SMOKE TEST FAILED after commit. Output: {result.stderr[:200] or result.stdout[:200]}\nCommit was pushed but system may be broken. Run restart to verify."
+        except Exception as e:
+            pass  # Non-critical — don't block on smoke test failure
+
     return f"OK: committed and pushed to {ctx.branch_dev}: {commit_message}"
 
 
@@ -192,6 +206,20 @@ def _repo_commit_push(ctx: ToolContext, commit_message: str, paths: Optional[Lis
     finally:
         _release_git_lock(lock)
     ctx.last_push_succeeded = True
+
+    # After push — smoke test for Python files
+    if any(p.endswith(".py") for p in (paths or [])):
+        try:
+            smoke = subprocess.run(
+                ["python3", "-c", "import ouroboros.loop; print('SMOKE_OK')"],
+                capture_output=True, text=True, timeout=15,
+                cwd=str(ctx.repo_dir)
+            )
+            if smoke.returncode != 0 or "SMOKE_OK" not in smoke.stdout:
+                return f"⚠️ SMOKE TEST FAILED after commit. Output: {smoke.stderr[:200] or smoke.stdout[:200]}\nCommit was pushed but system may be broken. Run restart to verify."
+        except Exception as e:
+            pass  # Non-critical — don't block on smoke test failure
+
     result = f"OK: committed and pushed to {ctx.branch_dev}: {commit_message}"
     if paths is not None:
         try:

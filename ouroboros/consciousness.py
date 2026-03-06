@@ -479,6 +479,84 @@ class BackgroundConsciousness:
 
         parts.append("## Runtime\n\n" + "\n".join(runtime_lines))
 
+        # Running and pending tasks — to avoid duplicate scheduling
+        try:
+            from supervisor.workers import RUNNING, PENDING
+            running_list = []
+            for tid, meta in list(RUNNING.items()):
+                task_data = meta.get("task", {}) if isinstance(meta, dict) else {}
+                desc = str(task_data.get("text") or task_data.get("description") or task_data.get("type") or "?")
+                started = meta.get("started_at", "")
+                running_list.append(f"  - [{tid}] {desc[:80]}")
+            pending_list = []
+            for item in list(PENDING):
+                desc = item.get("description", "") if isinstance(item, dict) else str(item)
+                pending_list.append(f"  - {desc}")
+            task_lines = []
+            if running_list:
+                task_lines.append("RUNNING:")
+                task_lines.extend(running_list)
+            else:
+                task_lines.append("RUNNING: (none)")
+            if pending_list:
+                task_lines.append("PENDING:")
+                task_lines.extend(pending_list)
+            else:
+                task_lines.append("PENDING: (none)")
+            parts.append("## Active Tasks\n\n" + "\n".join(task_lines))
+        except Exception as e:
+            log.debug("Failed to get running tasks for consciousness context: %s", e)
+
+        # Recent events
+        try:
+            events_path = self._drive_root / "logs" / "events.jsonl"
+            if events_path.exists():
+                lines = read_text(events_path).strip().split("\n")
+                recent = []
+                for line in lines[-5:]:
+                    try:
+                        ev = json.loads(line)
+                        ev_type = ev.get("type", "?")
+                        ev_ts = ev.get("ts", "")[:16]
+                        ev_err = ev.get("error", "")
+                        if ev_err:
+                            recent.append(f"  {ev_ts} [{ev_type}] ERROR: {ev_err[:60]}")
+                        else:
+                            recent.append(f"  {ev_ts} [{ev_type}]")
+                    except Exception:
+                        pass
+                if recent:
+                    parts.append("## Recent Events\n\n" + "\n".join(recent))
+        except Exception as e:
+            log.debug("Failed to read recent events: %s", e)
+
+        # Orphaned task detection
+        try:
+            events_path = self._drive_root / "logs" / "events.jsonl"
+            if events_path.exists():
+                import time as _time
+                cutoff = _time.time() - 1800  # 30 min
+                lines = read_text(events_path).strip().split("\n")
+                # Look for task_started with no task_done in recent events
+                started_tasks = {}
+                for line in lines[-50:]:
+                    try:
+                        ev = json.loads(line)
+                        if ev.get("type") == "task_started":
+                            started_tasks[ev.get("task_id")] = ev.get("description", "")
+                        elif ev.get("type") in ("task_done", "task_failed", "task_cancelled"):
+                            started_tasks.pop(ev.get("task_id"), None)
+                    except Exception:
+                        pass
+                # Check against currently running
+                from supervisor.workers import RUNNING
+                orphaned = {tid: desc for tid, desc in started_tasks.items() if tid not in RUNNING}
+                if orphaned:
+                    orphan_lines = [f"  - [{tid}] {desc[:80]}" for tid, desc in list(orphaned.items())[:3]]
+                    parts.append("## Possibly Orphaned Tasks\n\n" + "\n".join(orphan_lines))
+        except Exception as e:
+            log.debug("Orphan detection failed: %s", e)
+
         return "\n\n".join(parts)
 
     # -------------------------------------------------------------------

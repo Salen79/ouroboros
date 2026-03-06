@@ -253,10 +253,26 @@ def set_budget_limit(limit: float) -> None:
     TOTAL_BUDGET_LIMIT = limit
 
 
+def get_total_budget() -> float:
+    """Re-read TOTAL_BUDGET from .env on every call for hot-reload support."""
+    # Try to re-read from .env file directly
+    try:
+        env_path = pathlib.Path("/home/deploy/ouroboros/.env")
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("TOTAL_BUDGET="):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    return float(val)
+    except Exception:
+        pass
+    return float(os.environ.get("TOTAL_BUDGET", "300"))
+
+
 def budget_remaining(st: Dict[str, Any]) -> float:
     """Calculate remaining budget in USD."""
     spent = float(st.get("spent_usd") or 0.0)
-    total = float(TOTAL_BUDGET_LIMIT or 0.0)
+    total = get_total_budget()
     if total <= 0:
         return float('inf')  # No limit set
     return max(0.0, total - spent)
@@ -294,7 +310,7 @@ def check_openrouter_ground_truth() -> Optional[Dict[str, float]]:
 def budget_pct(st: Dict[str, Any]) -> float:
     """Calculate budget percentage used."""
     spent = float(st.get("spent_usd") or 0.0)
-    total = float(TOTAL_BUDGET_LIMIT or 0.0)
+    total = get_total_budget()
     if total <= 0:
         return 0.0
     return (spent / total) * 100.0

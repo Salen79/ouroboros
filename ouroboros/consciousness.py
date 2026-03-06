@@ -68,6 +68,10 @@ class BackgroundConsciousness:
         # Track last direct-chat task_done to suppress duplicate proactive messages
         self._last_direct_task_done_ts: float = 0.0
 
+        # Periodic ops check (deterministic, no LLM)
+        self._last_ops_check_ts: float = 0.0
+        self._ops_check_interval_sec: float = 600.0  # 10 minutes
+
         # Budget tracking
         self._bg_spent_usd: float = 0.0
         self._bg_budget_pct: float = float(
@@ -148,6 +152,9 @@ class BackgroundConsciousness:
             if self._paused:
                 continue
 
+            # Periodic ops check (deterministic, no LLM)
+            self._maybe_ops_check()
+
             # Skip if owner is actively chatting (avoid background work during conversation)
             if self._is_active_dialogue():
                 log.debug("Consciousness: skipping think cycle — active dialogue detected")
@@ -174,6 +181,84 @@ class BackgroundConsciousness:
 
             # Daily chat backup (runs once per 23h, independent of think() outcome)
             self._maybe_backup_chat()
+
+    def _maybe_ops_check(self) -> None:
+        """Periodic deterministic health check — no LLM, no budget."""
+        now = time.time()
+        if now - self._last_ops_check_ts < self._ops_check_interval_sec:
+            return
+        self._last_ops_check_ts = now
+
+        try:
+            from ouroboros.tools.ops import run_ops_check_internal
+            result = run_ops_check_internal()
+
+            # Log the check
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "ops_check",
+                "summary": result.get("summary", ""),
+            })
+
+            # Find services that are DOWN
+            services = result.get("services", {})
+            down_services = [
+                name for name, info in services.items()
+                if isinstance(info, dict) and info.get("status") == "down"
+            ]
+
+            if not down_services:
+                return  # All good
+
+            # Attempt restart for each down service
+            restarted = []
+            failed = []
+            for svc in down_services:
+                try:
+                    from ouroboros.tools.ops import restart_service_internal
+                    restart_result = restart_service_internal(svc)
+                    if restart_result.get("success"):
+                        restarted.append(svc)
+                    else:
+                        failed.append(svc)
+                except Exception as e:
+                    failed.append(svc)
+                    log.error("Failed to restart service %s: %s", svc, e)
+
+            # Notify owner
+            if self._event_queue is not None and self._owner_chat_id_fn():
+                msg_parts = [f"⚠️ Ops Alert: {len(down_services)} service(s) down."]
+                if restarted:
+                    msg_parts.append(f"✅ Auto-restarted: {', '.join(restarted)}")
+                if failed:
+                    msg_parts.append(f"❌ Failed to restart: {', '.join(failed)} — manual check needed")
+
+                self._event_queue.put({
+                    "type": "proactive_message",
+                    "text": "\n".join(msg_parts),
+                    "chat_id": self._owner_chat_id_fn(),
+                    "ts": utc_now_iso(),
+                })
+
+            # Log the incident
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "ops_incident",
+                "down": down_services,
+                "restarted": restarted,
+                "failed": failed,
+            })
+
+        except ImportError:
+            # ops tools not available yet — skip silently
+            pass
+        except Exception as e:
+            log.error("ops check failed: %s", e)
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "ops_check_error",
+                "error": repr(e),
+            })
 
     def _check_budget(self) -> bool:
         """Check if background consciousness is within its budget allocation."""

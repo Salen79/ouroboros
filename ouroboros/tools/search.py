@@ -16,9 +16,13 @@ def _web_search(ctx: ToolContext, query: str) -> str:
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
+        # OUROBOROS_WEBSEARCH_MODEL должен быть без префикса "openai/" — например gpt-4o-mini
+        raw_model = os.environ.get("OUROBOROS_WEBSEARCH_MODEL", "gpt-4o-mini")
+        # Убираем префикс openai/ если он случайно задан в env
+        model = raw_model.removeprefix("openai/")
         resp = client.responses.create(
-            model=os.environ.get("OUROBOROS_WEBSEARCH_MODEL", "gpt-5"),
-            tools=[{"type": "web_search"}],
+            model=model,
+            tools=[{"type": "web_search_preview"}],
             tool_choice="auto",
             input=query,
         )

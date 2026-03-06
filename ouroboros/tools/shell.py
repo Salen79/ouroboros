@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shlex
 import shutil
 import subprocess
@@ -22,11 +23,25 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "") -> str:
     if isinstance(cmd, str):
         raw_cmd = cmd
         warning = "run_shell_cmd_string"
+        parsed = None
+        # Attempt 1: direct JSON parse
         try:
             parsed = json.loads(cmd)
+            warning = "run_shell_cmd_string_json_list_recovered"
+        except json.JSONDecodeError:
+            # Attempt 2: fix invalid JSON escapes (e.g. \| in regex patterns) then retry
+            cleaned = re.sub(r'\\(?!["\\/bfnrtu0-9])', r'\\\\', cmd)
+            try:
+                parsed = json.loads(cleaned)
+                warning = "run_shell_cmd_string_json_escape_fixed"
+            except json.JSONDecodeError:
+                pass
+        except Exception:
+            pass
+
+        if parsed is not None:
             if isinstance(parsed, list):
                 cmd = parsed
-                warning = "run_shell_cmd_string_json_list_recovered"
             elif isinstance(parsed, str):
                 try:
                     cmd = shlex.split(parsed)
@@ -35,15 +50,16 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "") -> str:
                 warning = "run_shell_cmd_string_json_string_split"
             else:
                 try:
-                    cmd = shlex.split(cmd)
+                    cmd = shlex.split(raw_cmd)
                 except ValueError:
-                    cmd = cmd.split()
+                    cmd = raw_cmd.split()
                 warning = "run_shell_cmd_string_json_non_list_split"
-        except Exception:
+        else:
+            # Final fallback: try shlex on original string
             try:
-                cmd = shlex.split(cmd)
+                cmd = shlex.split(raw_cmd)
             except ValueError:
-                cmd = cmd.split()
+                cmd = raw_cmd.split()
             warning = "run_shell_cmd_string_split_fallback"
 
         try:

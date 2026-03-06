@@ -44,7 +44,8 @@ def read_text(path: pathlib.Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        return f"⚠️ File not found: {path}"
+        # Changed to a more structured error message for LLM to parse
+        return json.dumps({"error": "FileNotFound", "path": str(path)})
 
 
 def write_text(path: pathlib.Path, content: str) -> None:

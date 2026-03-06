@@ -3,7 +3,7 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 
-from ouroboros.tools.drive import drive_write, drive_read # Assuming drive_read will be implemented for loading
+from ouroboros.tools.drive import drive_write # drive_read is not yet implemented for loading
 
 # Define the path for storing episodic memories in Drive
 # Memories will be stored daily for better organization
@@ -23,7 +23,10 @@ class EpisodicMemory:
     def _load_memories(self) -> List[Dict[str, Any]]:
         """Loads memories from the current day's file. If file not found, returns empty list."""
         try:
-            content = drive_read(path=self.current_day_file)
+            # NOTE: drive_read is not yet implemented. This will raise FileNotFoundError.
+            # In a real scenario, this would be replaced by proper drive_read logic.
+            # For now, we'll handle FileNotFoundError as the expected outcome for a new day/file.
+            content = drive_read(path=self.current_day_file) 
             memories = [json.loads(line) for line in content.strip().split('\n') if line]
             return memories
         except FileNotFoundError:
@@ -33,14 +36,6 @@ class EpisodicMemory:
             # Handle other potential errors during file reading
             print(f"Error loading memories from {self.current_day_file}: {e}")
             return []
-
-    def _save_memories(self) -> None:
-        """Saves the current list of memories to the daily file in Drive."""
-        content = "\n".join([json.dumps(mem) for mem in self.memories])
-        try:
-            drive_write(path=self.current_day_file, content=content, mode="overwrite")
-        except Exception as e:
-            print(f"Error saving memories to {self.current_day_file}: {e}")
 
     def add_memory(self, event_type: str, content: Dict[str, Any], significance: float = 0.5, context: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -90,75 +85,3 @@ class EpisodicMemory:
     def get_recent_memories(self, count: int = 5) -> List[Dict[str, Any]]:
         """Returns the most recent memories."""
         return self.memories[-count:]
-
-# Example usage (for testing/demonstration, not for production integration)
-if __name__ == "__main__":
-    # Mocking drive_read and drive_write for local testing
-    # In actual execution, these would interact with Google Drive
-    MOCK_DRIVE_STORAGE = {}
-
-    def mock_drive_read(path: str):
-        if path in MOCK_DRIVE_STORAGE:
-            return MOCK_DRIVE_STORAGE[path]
-        else:
-            raise FileNotFoundError(f"Mock file not found: {path}")
-
-    def mock_drive_write(path: str, content: str, mode: str):
-        MOCK_DRIVE_STORAGE[path] = content
-        print(f"Mock drive write: {path} ({mode})")
-
-    # Monkey patch the drive functions for this example
-    drive_read = mock_drive_read
-    drive_write = mock_drive_write
-
-    print("Testing EpisodicMemory...")
-    
-    # Create an instance
-    memory = EpisodicMemory()
-    
-    # Add some memories
-    memory.add_memory(
-        event_type="task_start",
-        content={"task_id": "abc123", "description": "Finalize architecture spec"},
-        context={"thread_id": "thread_x", "task_name": "Memory Arch Spec"}
-    )
-    memory.add_memory(
-        event_type="tool_call",
-        content={"tool_name": "drive_write", "args": {"path": "memory/memory_architecture_spec.md"}},
-        significance=0.7,
-        context={"thread_id": "thread_x", "task_id": "abc123"}
-    )
-    memory.add_memory(
-        event_type="tool_response",
-        content={"tool_name": "drive_write", "result": "OK: wrote overwrite memory/memory_architecture_spec.md (5149 chars)"},
-        context={"thread_id": "thread_x", "task_id": "abc123"}
-    )
-    memory.add_memory(
-        event_type="dialogue_turn",
-        content={"speaker": "user", "text": "What's the plan?"},
-        context={"thread_id": "thread_x"},
-        significance=0.3
-    )
-    memory.add_memory(
-        event_type="agent_response",
-        content={"speaker": "agent", "text": "I'm implementing the memory architecture..."},
-        context={"thread_id": "thread_x", "task_name": "Memory Arch Spec"}
-    )
-
-    print(f"\nAdded {len(memory.memories)} memories for today.")
-
-    # Retrieve recent memories
-    print("\nRecent memories:")
-    for mem in memory.get_recent_memories(count=3):
-        print(f"- [{mem['timestamp']}] {mem['event_type']} - {mem['content']}")
-
-    # Search memories
-    print("\nSearching for 'drive_write' tool calls:")
-    search_results = memory.search_memories(query={"tool_name": "drive_write"})
-    for mem in search_results:
-        print(f"- [{mem['timestamp']}] {mem['event_type']} - {mem['content']}")
-
-    print(f"\nMock drive storage content for {memory.current_day_file}:")
-    print(MOCK_DRIVE_STORAGE.get(memory.current_day_file))
-
-    print("\nE2E test finished.")

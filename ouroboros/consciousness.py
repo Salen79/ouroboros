@@ -148,6 +148,12 @@ class BackgroundConsciousness:
             if self._paused:
                 continue
 
+            # Skip if owner is actively chatting (avoid background work during conversation)
+            if self._is_active_dialogue():
+                log.debug("Consciousness: skipping think cycle — active dialogue detected")
+                self._next_wakeup_sec = 60  # Wake up soon to check again
+                continue
+
             # Budget check
             if not self._check_budget():
                 self._next_wakeup_sec = 3600  # Sleep long if over budget
@@ -489,6 +495,7 @@ class BackgroundConsciousness:
         "bye", "good night", "see you",
     )
     _QUIET_HOURS = 8
+    _ACTIVE_DIALOGUE_MINUTES = 10
 
     def _is_quiet_mode(self) -> bool:
         """Return True if the owner said goodbye within the last 8 hours."""
@@ -532,6 +539,47 @@ class BackgroundConsciousness:
             return elapsed_hours < self._QUIET_HOURS
         except Exception:
             log.debug("_is_quiet_mode check failed", exc_info=True)
+            return False
+
+    def _is_active_dialogue(self) -> bool:
+        """Return True if the owner has sent a message in the last 10 minutes.
+
+        When the owner is actively chatting, consciousness should not interrupt
+        with proactive messages or schedule new tasks independently.
+        """
+        try:
+            chat_path = self._drive_root / "logs" / "chat.jsonl"
+            if not chat_path.exists():
+                return False
+
+            # Find the last incoming message
+            last_incoming = None
+            with open(chat_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+                    if entry.get("direction", "") != "out":
+                        last_incoming = entry
+
+            if last_incoming is None:
+                return False
+
+            ts_str = last_incoming.get("ts", "")
+            if not ts_str:
+                return False
+            msg_time = datetime.datetime.fromisoformat(ts_str)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if msg_time.tzinfo is None:
+                msg_time = msg_time.replace(tzinfo=datetime.timezone.utc)
+            elapsed_minutes = (now - msg_time).total_seconds() / 60.0
+            return elapsed_minutes < self._ACTIVE_DIALOGUE_MINUTES
+        except Exception:
+            log.debug("_is_active_dialogue check failed", exc_info=True)
             return False
 
     def _execute_tool(self, tc: Dict[str, Any], all_pending_events: List[Dict[str, Any]]) -> str:
@@ -599,6 +647,18 @@ class BackgroundConsciousness:
                 "tool": fn_name,
             })
             return "⚠️ Quiet mode active — owner said goodbye. Not sending message until 8 hours pass or they write again."
+
+        # Active dialogue: suppress all proactive actions when owner is actively chatting
+        if fn_name in ("send_owner_message", "schedule_task"):
+            if self._is_active_dialogue():
+                log.info("Skipping: active dialogue (owner wrote within %dm, tool=%s)", self._ACTIVE_DIALOGUE_MINUTES, fn_name)
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_proactive_skipped",
+                    "reason": "active_dialogue",
+                    "tool": fn_name,
+                })
+                return f"Skipped: owner is actively chatting (wrote within {self._ACTIVE_DIALOGUE_MINUTES}m). Not interrupting."
 
         # Set chat_id context for send_owner_message
         chat_id = self._owner_chat_id_fn()

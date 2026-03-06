@@ -103,6 +103,13 @@ def _build_memory_sections(memory: Memory) -> List[str]:
     identity_raw = memory.load_identity()
     sections.append("## Identity\n\n" + clip_text(identity_raw, 80000))
 
+    # Load wisdom.md (super long-term memory)
+    wisdom_path = memory.drive_root / "memory" / "wisdom.md"
+    if wisdom_path.exists():
+        wisdom_raw = read_text(wisdom_path)
+        if wisdom_raw.strip():
+            sections.append("## Wisdom\n\n" + clip_text(wisdom_raw, 30000))
+
     # Dialogue summary (key moments from chat history)
     summary_path = memory.drive_root / "memory" / "dialogue_summary.md"
     if summary_path.exists():

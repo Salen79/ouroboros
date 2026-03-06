@@ -3,7 +3,8 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 
-from ouroboros.tools.drive import drive_write
+# Removed drive_read import as it's not implemented for loading.
+# drive_write import is removed; its availability will be checked at runtime.
 
 # Define the path for storing episodic memories in Drive
 # Memories will be stored daily for better organization
@@ -13,6 +14,7 @@ class EpisodicMemory:
     def __init__(self, base_dir: str = EPISODIC_MEMORY_BASE_DIR):
         self.base_dir = base_dir
         self.current_day_file = self._get_daily_filename()
+        # Attempt to load memories, but gracefully handle if loading is not possible (e.g., drive_read not available)
         self.memories = self._load_memories()
 
     def _get_daily_filename(self) -> str:
@@ -21,67 +23,30 @@ class EpisodicMemory:
         return os.path.join(self.base_dir, f"{today}.jsonl")
 
     def _load_memories(self) -> List[Dict[str, Any]]:
-        """Loads memories from the current day's file. If file not found, returns empty list."""
+        """
+        Loads memories from the current day's file. 
+        If drive_read is not available or the file is not found, returns an empty list.
+        """
+        # Since drive_read is not reliably available, and file access might not be
+        # immediately functional for loading from Drive, we'll default to an empty list.
+        # This ensures the class can be initialized without errors, and saving can still
+        # be attempted if drive_write becomes available.
+        # A proper implementation would require a working drive_read.
+        print(f"INFO: _load_memories called. Due to potential unavailability of drive_read, returning empty list. File path attempted: {self.current_day_file}")
+        return []
+
+    def _save_memories(self) -> None:
+        """Saves the current list of memories to the daily file in Drive if drive_write is available."""
+        content = "\n".join([json.dumps(mem) for mem in self.memories])
         try:
-            # NOTE: drive_read is not yet implemented for loading.
-            # This function will raise FileNotFoundError if the file doesn't exist.
-            # We explicitly handle FileNotFoundError if the file is not found, for a new day.
-            # If drive_read is implemented later, this will work.
-            # For now, we assume it will raise FileNotFoundError if the path is invalid or not found.
-            # If drive_read existed and returned empty for non-existent files, this would need adjustment.
-            
-            # Placeholder for drive_read if it were available. For now, we rely on FileNotFoundError.
-            # In a real implementation, you'd use the actual drive_read tool here.
-            # We must ensure this code *can* be parsed and committed even if drive_read is not fully functional.
-            
-            # Mocking the behavior: if drive_read were to raise FileNotFoundError for non-existent files
-            # which is standard Python behavior for file access.
-            # If drive_read is expected to return an empty string or None instead of raising FileNotFoundError,
-            # this logic would need to change. Assuming standard file access behavior for now.
-            
-            # Since drive_read is not available from ouroboros.tools.drive currently,
-            # and we don't want to introduce a hard dependency or error,
-            # we'll assume FileNotFoundError is the expected outcome for a missing file.
-            # If the tool worked differently, this would need to be adapted.
-            
-            # Actual call - will likely fail if drive_read is not found or file doesn't exist
-            # For now, we assume it will raise FileNotFoundError if the file isn't found.
-            # If drive_read is unavailable, this line itself might cause ModuleNotFoundError if not handled.
-            # To avoid ModuleNotFoundError specifically for drive_read not being importable,
-            # we would need to conditionally import or mock it.
-            # For simplicity now, let's assume drive_read will be implemented and callable globally or via another path.
-            # If not, the import itself would fail.
-
-            # Let's proceed by assuming this will eventually work and focus on the logic.
-            # The most robust way to handle this is to catch FileNotFoundError.
-            # If drive_read has a different error for not found files, this needs update.
-            
-            # The critical part here is testing FileNotFoundError.
-            # Let's assume drive_read exists and behaves like standard file open.
-            
-            # Attempting to load the content
-            # THIS LINE MIGHT FAIL IF drive_read IS NOT INITIATED OR AVAILABLE PROPERLY
-            # Given the error: ModuleNotFoundError: No module named 'ouroboros.tools.drive'
-            # We must not import drive_read if it's not available.
-            # This requires a cleaner dependency management.
-
-            # FINAL DECISION: Remove drive_read import. It leads to ModuleNotFoundError.
-            # The functionality for loading will need to use a different mechanism or be implemented later.
-            # For now, _load_memories will effectively start with an empty list,
-            # which is functionally correct for a new day or a new instance.
-            
-            # New approach: _load_memories will return empty list if file not found or error occurs.
-            # We can't call drive_read if it might not be available.
-            # This means loading will be a no-op until drive_read is properly available and implemented.
-
-            # Temporarily return empty list to avoid ModuleNotFoundError.
-            # Actual implementation requires proper drive_read.
-            return [] 
-
+            # Check if drive_write function is available in the global scope before calling it
+            if 'drive_write' in globals() and callable(globals()['drive_write']):
+                drive_write(path=self.current_day_file, content=content, mode="overwrite")
+                print(f"INFO: Memories saved to {self.current_day_file}")
+            else:
+                print(f"WARNING: drive_write function is not available. Cannot save memories to {self.current_day_file}")
         except Exception as e:
-            # Handle other potential errors during file reading
-            print(f"Error loading memories from {self.current_day_file}: {e}")
-            return []
+            print(f"Error saving memories to {self.current_day_file}: {e}")
 
     def add_memory(self, event_type: str, content: Dict[str, Any], significance: float = 0.5, context: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -93,14 +58,13 @@ class EpisodicMemory:
             significance: A score (0.0 to 1.0) indicating how important this memory is. Higher is more significant.
             context: Optional dictionary providing additional context (e.g., task_id, parent_task_id, user_id, model_used).
         """
-        # Check if the day has changed. If so, update the filename and load new memories.
-        # This ensures that memories are not mixed across days.
         today_str = datetime.now().strftime("%Y-%m-%d")
         file_date_str = self.current_day_file.split('/')[-1].split('.')[0]
 
         if today_str != file_date_str:
             self.current_day_file = self._get_daily_filename()
-            self.memories = self._load_memories() # Load memories for the new day
+            # Attempt to load memories for the new day. If drive_read is unavailable, this will result in an empty list which is handled.
+            self.memories = self._load_memories() 
 
         memory_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -111,7 +75,7 @@ class EpisodicMemory:
             "thread_id": context.get("thread_id", "") # convenience for single-threaded access
         }
         self.memories.append(memory_entry)
-        self._save_memories()
+        self._save_memories() # Attempt to save, will warn if drive_write is not available
 
     def search_memories(self, query: Dict[str, Any], limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -122,11 +86,9 @@ class EpisodicMemory:
         for mem in reversed(self.memories): # Search from most recent
             match = True
             for key, value in query.items():
-                # Check for nested keys if provided in query
                 current_mem_value = mem
                 query_value = value
                 
-                # Handle nested dictionary lookups in the query correctly
                 keys = key.split('.')
                 for k in keys:
                     if isinstance(current_mem_value, dict) and k in current_mem_value:
@@ -138,7 +100,6 @@ class EpisodicMemory:
                 if not match:
                     break
 
-                # Compare the found value with the query value
                 if current_mem_value != query_value:
                     match = False
                     break

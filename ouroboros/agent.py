@@ -54,10 +54,32 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
     - Deep dialogue: mission, consciousness, identity, constitution, reflection, values
     - Long message (>= 80 chars) with action words
     """
-    if task_type != "direct_chat":
+    # Evolution, review, consciousness — always full model
+    if task_type in ("evolution", "review", "consciousness"):
         return "full"
 
     text_lower = message_text.lower().strip()
+
+    # Scheduled tasks — classify by content complexity
+    if task_type == "task":
+        light_keywords = [
+            "ops:", "check", "status", "health", "monitor",
+            "scratchpad", "update memory", "обнови",
+            "прочитай", "посмотри", "read", "look up", "find",
+        ]
+        heavy_task_keywords = [
+            "implement", "fix", "deploy", "create", "build", "refactor",
+            "код", "создай", "исправь", "реализуй",
+            ".py", ".js", ".yaml", "commit", "push",
+            "architect", "архитектур", "design",
+        ]
+        if any(kw in text_lower for kw in heavy_task_keywords):
+            return "full"
+        if any(kw in text_lower for kw in light_keywords):
+            return "light"
+        if len(message_text) < 60:
+            return "light"
+        return "full"
 
     # Deep dialogue keywords — always full model, regardless of message length
     # These are the most important conversations: identity, mission, constitution

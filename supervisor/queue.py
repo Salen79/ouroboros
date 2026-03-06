@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import threading
 import time
 import uuid
@@ -95,15 +96,28 @@ def sort_pending() -> None:
 # Queue operations
 # ---------------------------------------------------------------------------
 
+_STOPWORDS = frozenset({
+    "a", "an", "the", "of", "to", "and", "or", "in", "on", "at", "by",
+    "for", "with", "from", "is", "it", "be", "as", "was", "are", "been",
+    "has", "have", "had", "do", "does", "did", "but", "not", "no", "so",
+    "if", "this", "that", "these", "those", "then", "than", "up", "out",
+    "all", "its", "into", "can", "will", "just", "should", "would", "could",
+})
+
+
 def _keyword_overlap(desc_a: str, desc_b: str) -> float:
-    """Return word overlap ratio (0.0-1.0) between two descriptions."""
-    words_a = set(desc_a.lower().split())
-    words_b = set(desc_b.lower().split())
+    """Return word overlap ratio (0.0-1.0) between two descriptions (stopwords excluded)."""
+    def _words(text: str) -> set:
+        return {
+            w for raw in text.lower().split()
+            if (w := re.sub(r'[^a-z0-9]', '', raw)) and w not in _STOPWORDS
+        }
+    words_a = _words(desc_a)
+    words_b = _words(desc_b)
     if not words_a or not words_b:
         return 0.0
     intersection = words_a & words_b
-    smaller = min(len(words_a), len(words_b))
-    return len(intersection) / smaller if smaller > 0 else 0.0
+    return len(intersection) / min(len(words_a), len(words_b))
 
 
 def _find_keyword_duplicate(description: str) -> Optional[str]:

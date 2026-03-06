@@ -62,50 +62,27 @@ def _schedule_task(ctx: ToolContext, description: str, context: str = "", parent
 
     # --- Duplicate task detection (fail-safe: errors skip the check) ---
     try:
-        import datetime as _dt
+        from supervisor.queue import PENDING as _PENDING, _find_keyword_duplicate
 
-        cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(minutes=10)
+        # Check PENDING queue via keyword overlap
+        dup_id = _find_keyword_duplicate(description)
+        if dup_id:
+            return (
+                f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already pending/running: "
+                f"id={dup_id}. "
+                f"Check task status or wait for completion before scheduling again."
+            )
 
-        # Check recent events.jsonl for similar scheduled tasks
-        events_file = ctx.drive_logs() / "events.jsonl"
-        if events_file.exists():
-            lines = events_file.read_text(encoding="utf-8", errors="replace").splitlines()
-            for line in lines[-50:]:
-                try:
-                    evt = json.loads(line)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-                if evt.get("type") != "schedule_task":
-                    continue
-                evt_ts = evt.get("ts", "")
-                try:
-                    evt_time = _dt.datetime.fromisoformat(evt_ts.replace("Z", "+00:00"))
-                    if evt_time < cutoff:
-                        continue
-                except (ValueError, AttributeError):
-                    continue
-                existing_desc = evt.get("description", "")
-                if _task_descriptions_similar(description, existing_desc, threshold=0.45):
-                    mins_ago = int((_dt.datetime.now(_dt.timezone.utc) - evt_time).total_seconds() / 60)
-                    return (
-                        f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already active/recent: "
-                        f"'{existing_desc}' (scheduled {mins_ago}m ago). "
-                        f"Check task status or wait for completion before scheduling again."
-                    )
-
-        # Check currently running tasks from supervisor
-        try:
-            from supervisor.workers import RUNNING
-            for _tid, worker in list(RUNNING.items()):
-                running_desc = getattr(worker, "description", "") or ""
-                if _task_descriptions_similar(description, running_desc, threshold=0.45):
-                    return (
-                        f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already active/recent: "
-                        f"'{running_desc}' (currently running). "
-                        f"Check task status or wait for completion before scheduling again."
-                    )
-        except Exception:
-            pass
+        # Check RUNNING tasks directly (dict of {task_id: meta_dict})
+        from supervisor.queue import RUNNING as _RUNNING
+        for _tid, meta in list(_RUNNING.items()):
+            running_desc = meta.get("task", {}).get("text") or meta.get("task", {}).get("description") or ""
+            if _task_descriptions_similar(description, running_desc, threshold=0.45):
+                return (
+                    f"⚠️ DUPLICATE_TASK_BLOCKED: Similar task already active/recent: "
+                    f"'{running_desc}' (currently running). "
+                    f"Check task status or wait for completion before scheduling again."
+                )
     except Exception:
         pass  # Fail-safe: if anything breaks, proceed with normal scheduling
     # --- End duplicate task detection ---

@@ -69,10 +69,22 @@ def _handle_send_message(evt: Dict[str, Any], ctx: Any) -> None:
         log_text = evt.get("log_text")
         fmt = str(evt.get("format") or "")
         is_progress = bool(evt.get("is_progress"))
+        is_worker = bool(evt.get("is_worker"))
+
+        text = str(evt.get("text") or "")
+
+        # Worker messages: add visual label for Telegram and semantic marker for LLM context
+        if is_worker and text and text != "\u200b":
+            display_text = f"ℹ️ ИНФ:\n{text}"
+            log_text_value = f"[BACKGROUND WORKER RESULT]\n{log_text if isinstance(log_text, str) else text}"
+        else:
+            display_text = text
+            log_text_value = str(log_text) if isinstance(log_text, str) else None
+
         ctx.send_with_budget(
             int(evt["chat_id"]),
-            str(evt.get("text") or ""),
-            log_text=(str(log_text) if isinstance(log_text, str) else None),
+            display_text,
+            log_text=log_text_value,
             fmt=fmt,
             is_progress=is_progress,
         )

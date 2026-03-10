@@ -21,6 +21,12 @@ MAX_SUBTASK_DEPTH = 3
 def _request_restart(ctx: ToolContext, reason: str) -> str:
     if str(ctx.current_task_type or "") == "evolution" and not ctx.last_push_succeeded:
         return "⚠️ RESTART_BLOCKED: in evolution mode, commit+push first."
+    # Block restart from direct chat without a prior push
+    if getattr(ctx, 'is_direct_chat', False) and not getattr(ctx, 'last_push_succeeded', False):
+        return (
+            "⚠️ RESTART_BLOCKED: нельзя делать рестарт из прямого чата без предшествующего push. "
+            "Сначала закоммить код (repo_write_commit или repo_commit_push), затем request_restart."
+        )
     # Persist expected SHA for post-restart verification
     try:
         sha = run_cmd(["git", "rev-parse", "HEAD"], cwd=ctx.repo_dir)

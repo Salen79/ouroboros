@@ -249,6 +249,22 @@ def auto_resume_after_restart() -> None:
             if not content_lines:
                 return
 
+        # Build context-aware resume message
+        active_section = ""
+        if "## ACTIVE:" in scratchpad:
+            idx = scratchpad.index("## ACTIVE:")
+            active_section = scratchpad[idx:idx + 600].strip()
+
+        if active_section:
+            resume_msg = (
+                f"[auto-resume after restart] У тебя была активная задача:\n\n"
+                f"{active_section}\n\n"
+                f"Продолжи с первого незавершённого шага ([ ] в списке steps). "
+                f"Не начинай заново — продолжи с того места где остановился."
+            )
+        else:
+            resume_msg = "[auto-resume after restart] Continue your work. Read scratchpad and identity — they contain context of what you were doing."
+
         # Auto-resume: inject synthetic message
         time.sleep(2)  # Let everything initialize
         agent = _get_chat_agent()
@@ -257,7 +273,7 @@ def auto_resume_after_restart() -> None:
             threading.Thread(
                 target=handle_chat_direct,
                 args=(int(chat_id),
-                      "[auto-resume after restart] Continue your work. Read scratchpad and identity — they contain context of what you were doing.",
+                      resume_msg,
                       None),
                 daemon=True,
             ).start()

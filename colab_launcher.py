@@ -395,6 +395,45 @@ def _safe_qsize(q: Any) -> int:
         return -1
 
 
+def stop_all_tasks() -> str:
+    """Stop all pending tasks, running workers, and background consciousness.
+
+    Does NOT kill the main process — stays alive to receive Telegram messages.
+    """
+    from supervisor.queue import _queue_lock, persist_queue_snapshot
+
+    cancelled_pending = 0
+    with _queue_lock:
+        cancelled_pending = len(PENDING)
+        PENDING.clear()
+
+    kill_workers()
+
+    try:
+        _consciousness.stop()
+    except Exception:
+        pass
+
+    persist_queue_snapshot(reason="stop_all")
+
+    append_jsonl(
+        DRIVE_ROOT / "logs" / "supervisor.jsonl",
+        {
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "type": "stop_all",
+            "cancelled_pending": cancelled_pending,
+        },
+    )
+
+    spawn_workers(MAX_WORKERS)
+
+    parts = ["Все процессы остановлены."]
+    if cancelled_pending > 0:
+        parts.append(f"Отменено задач: {cancelled_pending}.")
+    parts.append("Consciousness выключен. Жду команд.")
+    return " ".join(parts)
+
+
 def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
     """Handle supervisor slash-commands.
 
@@ -404,6 +443,11 @@ def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
         ""    — not a recognized command (falsy, caller falls through)
     """
     lowered = text.strip().lower()
+
+    if lowered.startswith("/stop"):
+        msg = stop_all_tasks()
+        send_with_budget(chat_id, f"⏹️ {msg}")
+        return True
 
     if lowered.startswith("/panic"):
         send_with_budget(chat_id, "🛑 PANIC: stopping everything now.")
@@ -468,6 +512,10 @@ def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
     return ""
 
 
+_STOP_PATTERNS = re.compile(
+    r"(?:^|\b)(?:останови|останов|стоп|stop\s+all|остановись|остановите|halt)(?:\b|$|[\s,!.])",
+    re.IGNORECASE
+)
 offset = int(load_state().get("tg_offset") or 0)
 _last_diag_heartbeat_ts = 0.0
 _last_message_ts: float = time.time()  # Start in active mode after restart
@@ -584,6 +632,14 @@ while True:
             log.info("owner_hold SET by message: %s", text[:80])
 
         save_state(st)
+
+        # Natural language stop detection — handled at supervisor level, not sent to LLM
+        if _STOP_PATTERNS.search(_text_lower) and not _text_lower.startswith("/"):
+            _stop_msg = stop_all_tasks()
+            send_with_budget(chat_id, f"⏹️ {_stop_msg}")
+            st["tg_offset"] = offset
+            save_state(st)
+            continue
 
         # --- Supervisor commands ---
         if text.strip().lower().startswith("/"):

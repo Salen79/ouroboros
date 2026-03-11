@@ -684,20 +684,15 @@ class OuroborosAgent:
             task_type = task.get("type") or ""
             # Only capture: non-trivial tasks (>1 round), or any owner message, or ops tasks
             if rounds > 1 or task_type == "direct_chat" or (task_type == "task" and cost > 0.01):
-                from ouroboros.memory.episodic_memory import EpisodicMemory
-                em = EpisodicMemory(pathlib.Path(self.env.drive_root))
+                from ouroboros.tools.episodic_memory import _tool_record_memory
                 summary = (text[:300] + "...") if len(text) > 300 else text
-                em.capture(
-                    event_type="task_complete",
-                    content=f"Task: {task_text[:200]}\nResult: {summary}",
-                    metadata={
-                        "task_id": task.get("id"),
-                        "task_type": task_type,
-                        "cost_usd": round(cost, 6),
-                        "rounds": rounds,
-                        "tool_calls": int(llm_trace.get("tool_calls") and len(llm_trace["tool_calls"]) or 0),
-                    },
-                    importance=min(1.0, 0.3 + cost * 10),  # higher cost = more important
+                importance = min(5, max(1, int(1 + cost * 20)))
+                _tool_record_memory(
+                    title=f"Task: {task_text[:80]}",
+                    content=f"Result: {summary}",
+                    type="milestone" if cost > 0.20 else "insight",
+                    tags=[task_type, task.get("id", "")[:8]],
+                    importance=importance,
                 )
         except Exception as e:
             log.debug("Failed to auto-capture episodic memory: %s", e)

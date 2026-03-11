@@ -302,6 +302,7 @@ def worker_main(wid: int, in_q: Any, out_q: Any, repo_dir: str, drive_root: str)
     import pathlib as _pathlib
     _sys.path.insert(0, repo_dir)
     _drive = _pathlib.Path(drive_root)
+    from supervisor.state import append_jsonl as _append_jsonl
     try:
         from ouroboros.agent import make_agent
         agent = make_agent(repo_dir=repo_dir, drive_root=drive_root, event_queue=out_q)
@@ -313,6 +314,42 @@ def worker_main(wid: int, in_q: Any, out_q: Any, repo_dir: str, drive_root: str)
             task = in_q.get()
             if task is None or task.get("type") == "shutdown":
                 break
+
+            # Guard: destructive operations are forbidden in background workers.
+            # Refactoring, file deletion, renaming — only via claude_code_edit in direct chat.
+            _task_text = str(task.get("text") or "").lower()
+            _DESTRUCTIVE_KEYWORDS = [
+                "удал", "удали", "удаляй", "рефактор", "рефакторинг",
+                "почист", "очист", "перепиши", "переименуй",
+                "delete file", "remove file", "refactor", "cleanup",
+                "clean up", "rename file", "overwrite",
+            ]
+            _is_destructive = any(kw in _task_text for kw in _DESTRUCTIVE_KEYWORDS)
+            if _is_destructive and not task.get("_allow_destructive"):
+                import datetime as _dt
+                _warn_msg = (
+                    "⛔ WORKER GUARD: Эта задача содержит деструктивные операции "
+                    "(удаление/рефакторинг файлов). Воркеры не могут выполнять такие задачи. "
+                    "Используй claude_code_edit в прямом диалоге с Sergey."
+                )
+                out_q.put({
+                    "type": "send_message",
+                    "chat_id": task.get("chat_id"),
+                    "text": _warn_msg,
+                    "worker_id": wid,
+                    "is_worker": True,
+                })
+                _append_jsonl(
+                    _drive / "logs" / "supervisor.jsonl",
+                    {
+                        "ts": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+                        "type": "worker_destructive_blocked",
+                        "task_id": task.get("id"),
+                        "text_snippet": _task_text[:200],
+                    },
+                )
+                continue
+
             events = agent.handle_task(task)
             for e in events:
                 e2 = dict(e)

@@ -332,6 +332,29 @@ Update as steps complete. Mark ✅ DONE when finished. This prevents duplicate b
 
 **Anti-pattern:** "I'm starting right now" → `schedule_task(...)` — this is the exact failure mode. Announcement without execution = drift.
 
+---
+
+### Direct Chat Execution Rule (CRITICAL)
+
+When Sergey says "делай", "реализуй", "приступай", "да", "давай", "начинай" —
+this is an **execution command**, not a task description.
+
+**MANDATORY response pattern:**
+1. First line: what you are doing RIGHT NOW (not "I will", but "I am")
+2. Immediately: tool call (write_file / run_shell / claude_code_edit)
+3. No schedule_task unless the task genuinely needs >3 tool calls AND you explain why
+
+**FORBIDDEN after execution approval:**
+- Responding with [BACKGROUND WORKER RESULT]
+- Calling schedule_task as the FIRST action
+- Saying "I'm scheduling subtask X" without any direct tool call first
+- Asking for confirmation you already have
+
+**Test:** If Sergey's last message was approval and your next action is schedule_task
+with no preceding tool call — STOP. You are in drift mode. Execute directly instead.
+
+---
+
 ### Multi-model review
 
 For significant changes (new modules, architecture, security-sensitive code) —

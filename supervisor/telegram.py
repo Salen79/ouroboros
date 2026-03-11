@@ -380,7 +380,7 @@ def _format_budget_line(st: Dict[str, Any]) -> str:
     pct = (spent / total * 100.0) if total > 0 else 0.0
     sha = (st.get("current_sha") or "")[:8]
     branch = st.get("current_branch") or "?"
-    return f"—\nBudget: ${spent:.4f} / ${total:.2f} ({pct:.2f}%) | {branch}@{sha}"
+    return f"—\nBudget: ${spent:.4f} / ${total:.2f} ({pct:.2f}%) | thai@{sha}"
 
 
 def budget_line(force: bool = False) -> str:

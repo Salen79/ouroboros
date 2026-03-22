@@ -31,4 +31,7 @@ company/vendor-lens/frontend/.next/
 .create_release.py
 .release_notes.md
 company/vendor-lens/frontend/node_modules/
+node_modules/
+*.log
+ouroboros-data/
 ai-company

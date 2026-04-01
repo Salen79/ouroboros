@@ -20,9 +20,13 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+import json
+
 import yaml
 
 log = logging.getLogger(__name__)
+
+DATA_DIR = pathlib.Path(os.environ.get("DRIVE_ROOT", os.path.expanduser("~/ouroboros-data")))
 
 REPO_DIR = pathlib.Path(os.environ.get("OUROBOROS_REPO_DIR", os.path.expanduser("~/ouroboros")))
 ZONES_PATH = REPO_DIR / "config" / "FILE_ZONES.yaml"
@@ -373,3 +377,68 @@ class SelfEvolution:
             return f"Marked {sha[:8]} as stable: {tag_name}"
         except subprocess.CalledProcessError as e:
             return f"Failed to tag: {e.stderr}"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Self-Modification Cooldown (Session 2)
+# ═══════════════════════════════════════════════════════════════════
+
+class SelfModCooldown:
+    """Enforce N normal tasks between self-modifications.
+
+    Prevents the agent from entering a self-improvement loop by requiring
+    REQUIRED_TASKS productive (non-self-mod) tasks between each self-modification.
+
+    State persisted to ~/ouroboros-data/state/self_mod_cooldown.json.
+    """
+
+    REQUIRED_TASKS = 3
+
+    def __init__(self, drive_root: Optional[pathlib.Path] = None):
+        self._drive_root = drive_root or DATA_DIR
+        self._state_path = self._drive_root / "state" / "self_mod_cooldown.json"
+
+    def _load(self) -> Dict[str, Any]:
+        if self._state_path.exists():
+            try:
+                return json.loads(self._state_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        return {"normal_tasks_since_last_mod": 0, "last_self_mod_ts": None, "total_self_mods": 0}
+
+    def _save(self, state: Dict[str, Any]) -> None:
+        self._state_path.parent.mkdir(parents=True, exist_ok=True)
+        self._state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+    def can_self_modify(self) -> bool:
+        """True if enough normal tasks have run since last self-modification."""
+        state = self._load()
+        return state["normal_tasks_since_last_mod"] >= self.REQUIRED_TASKS
+
+    def record_self_mod(self) -> None:
+        """Record that a self-modification was performed."""
+        state = self._load()
+        state["normal_tasks_since_last_mod"] = 0
+        state["last_self_mod_ts"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        state["total_self_mods"] = state.get("total_self_mods", 0) + 1
+        self._save(state)
+        log.info("Self-mod cooldown: recorded self-modification (total: %d)", state["total_self_mods"])
+
+    def record_normal_task(self) -> None:
+        """Record that a normal (non-self-mod) task completed."""
+        state = self._load()
+        state["normal_tasks_since_last_mod"] = state.get("normal_tasks_since_last_mod", 0) + 1
+        self._save(state)
+        log.info("Self-mod cooldown: normal task recorded (%d/%d)",
+                 state["normal_tasks_since_last_mod"], self.REQUIRED_TASKS)
+
+    def status(self) -> Dict[str, Any]:
+        """Return cooldown status."""
+        state = self._load()
+        return {
+            "can_self_modify": self.can_self_modify(),
+            "normal_tasks_since_last_mod": state["normal_tasks_since_last_mod"],
+            "required_tasks": self.REQUIRED_TASKS,
+            "last_self_mod_ts": state.get("last_self_mod_ts"),
+            "total_self_mods": state.get("total_self_mods", 0),
+        }

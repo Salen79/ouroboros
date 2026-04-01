@@ -509,6 +509,104 @@ def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
             send_with_budget(chat_id, f"🧠 Background consciousness: {bg_status}")
         return f"[Supervisor handled /bg {action}]\n"
 
+    # ── Session 2: Strategic Planning + Decision Autonomy commands ──
+
+    if lowered.startswith("/plan"):
+        try:
+            from ouroboros.strategic_planner import StrategicPlanner
+            planner = StrategicPlanner()
+            plan = planner.generate_plan()
+            summary = planner.format_telegram_summary(plan)
+            send_with_budget(chat_id, summary)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Plan generation failed: {e}")
+        return True
+
+    if lowered.startswith("/approve"):
+        try:
+            result = _consciousness.approve_gated_task()
+            send_with_budget(chat_id, result)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Approve failed: {e}")
+        return True
+
+    if lowered.startswith("/reject"):
+        reason = text.strip()[len("/reject"):].strip()
+        try:
+            result = _consciousness.reject_gated_task(reason=reason)
+            send_with_budget(chat_id, result)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Reject failed: {e}")
+        return True
+
+    if lowered.startswith("/budget"):
+        try:
+            from ouroboros.budget import DailyBudget
+            daily = DailyBudget()
+            ds = daily.status()
+            # Also get total budget from state
+            st_b = load_state()
+            total_budget = float(os.environ.get("TOTAL_BUDGET", "1000"))
+            total_spent = float(st_b.get("spent_usd", 0))
+            msg = (
+                f"💰 Budget Status\n\n"
+                f"Daily autonomous: ${ds['spent_today']:.2f} / ${ds['daily_cap']:.2f} "
+                f"(${ds['remaining']:.2f} remaining)\n"
+                f"Total: ${total_spent:.2f} / ${total_budget:.2f} "
+                f"(${max(0, total_budget - total_spent):.2f} remaining)\n"
+                f"Transactions today: {ds['transaction_count']}"
+            )
+            send_with_budget(chat_id, msg)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Budget check failed: {e}")
+        return True
+
+    if lowered.startswith("/zones"):
+        try:
+            from ouroboros.self_evolution import SelfEvolution
+            evo = SelfEvolution()
+            health = evo.health_check()
+            # Show zone summary
+            import yaml as _yaml
+            zones_path = evo.repo_dir / "config" / "FILE_ZONES.yaml"
+            if zones_path.exists():
+                zones_data = _yaml.safe_load(zones_path.read_text())
+                zone_counts = {}
+                for zname, zdata in zones_data.get("zones", {}).items():
+                    paths = zdata.get("paths", [])
+                    patterns = zdata.get("patterns", [])
+                    zone_counts[zname.upper()] = len(paths) + len(patterns)
+                msg = (
+                    f"🗂️ File Zones\n\n"
+                    + "\n".join(f"  {z}: {c} rules" for z, c in zone_counts.items())
+                    + f"\n\nSelf-protection: {'✅' if health.get('zones_self_protection') else '❌'}"
+                    + f"\nDefault for unknown: {zones_data.get('defaults', {}).get('unknown_file', 'yellow')}"
+                )
+            else:
+                msg = "⚠️ FILE_ZONES.yaml not found"
+            send_with_budget(chat_id, msg)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Zones check failed: {e}")
+        return True
+
+    if lowered.startswith("/branches"):
+        try:
+            import subprocess as _sp
+            result = _sp.run(
+                ["git", "branch", "-a", "--no-merged", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+                cwd=os.path.expanduser("~/ouroboros"),
+            )
+            branches = [b.strip() for b in result.stdout.strip().splitlines() if b.strip()]
+            if branches:
+                msg = f"🌿 Pending branches ({len(branches)}):\n\n" + "\n".join(f"  • {b}" for b in branches[:15])
+            else:
+                msg = "🌿 No pending unmerged branches."
+            send_with_budget(chat_id, msg)
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Branch check failed: {e}")
+        return True
+
     return ""
 
 

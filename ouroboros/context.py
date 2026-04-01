@@ -107,7 +107,7 @@ def _check_scratchpad_staleness(scratchpad_text: str) -> str:
     return scratchpad_text
 
 
-def _load_recent_chat(n: int = 10) -> str:
+def _load_recent_chat(n: int = 40) -> str:
     """Load last N chat messages for conversational continuity across restarts."""
     chat_path = pathlib.Path.home() / "ouroboros-data" / "logs" / "chat.jsonl"
     if not chat_path.exists():
@@ -131,10 +131,14 @@ def _load_recent_chat(n: int = 10) -> str:
     for line in recent:
         try:
             msg = json.loads(line)
-            direction = "Sergey" if msg.get("direction") == "in" else "THAI"
+            is_incoming = msg.get("direction") == "in"
+            direction = "Sergey" if is_incoming else "THAI"
             ts = msg.get("ts", "")
             time_str = ts[11:16] if len(ts) > 16 else "??:??"
-            text = msg.get("text", "")[:200]
+            raw_text = msg.get("text", "")
+            # Sergey's messages: no truncation (critical for context retention)
+            # THAI's messages: truncate to 500 chars
+            text = raw_text if is_incoming else raw_text[:500]
             if text.strip():
                 parts.append(f"[{time_str}] {direction}: {text}")
         except (json.JSONDecodeError, KeyError):
@@ -391,7 +395,7 @@ def build_llm_messages(
     semi_stable_parts.extend(_build_memory_sections(memory))
 
     # Recent chat messages for continuity across restarts
-    recent_chat = _load_recent_chat(10)
+    recent_chat = _load_recent_chat(40)
     if recent_chat:
         semi_stable_parts.append(recent_chat)
 

@@ -1,0 +1,74 @@
+# FILE_ZONES.yaml — File zone classification for self-evolution safety
+#
+# GREEN  = safe to auto-modify, auto-merge after smoke tests pass
+# YELLOW = can modify, requires owner approval before merge
+# RED    = critical files, requires explicit owner permission to touch
+#
+# Rules:
+#   1. File deletion is ALWAYS RED regardless of location
+#   2. Unknown files default to YELLOW
+#   3. This file itself is RED (self-protection)
+
+zones:
+  red:
+    description: "Critical infrastructure — requires explicit owner permission"
+    paths:
+      - "ouroboros/agent.py"
+      - "ouroboros/loop.py"
+      - "ouroboros/llm.py"
+      - "supervisor/**"
+      - "BIBLE.md"
+      - "docs/**"
+      - ".env"
+      - "config/FILE_ZONES.yaml"
+      - "colab_launcher.py"
+      - "pyproject.toml"
+      - "VERSION"
+    patterns:
+      - "*.key"
+      - "*.pem"
+      - "*.secret"
+
+  yellow:
+    description: "Important but modifiable — auto-modify OK, owner approval before merge"
+    paths:
+      - "ouroboros/context.py"
+      - "ouroboros/memory.py"
+      - "ouroboros/review.py"
+      - "ouroboros/utils.py"
+      - "ouroboros/consciousness.py"
+      - "ouroboros/tools/registry.py"
+      - "ouroboros/tools/core.py"
+      - "ouroboros/tools/git.py"
+      - "ouroboros/tools/shell.py"
+      - "ouroboros/owner_inject.py"
+      - "tests/**"
+      - "scripts/**"
+      - "ouroboros/self_evolution.py"
+
+  green:
+    description: "Safe for autonomous modification — auto-merge after smoke tests"
+    paths:
+      - "prompts/SYSTEM.md"
+      - "prompts/**"
+      - "ouroboros/tools/episodic_memory.py"
+      - "ouroboros/tools/semantic_memory.py"
+      - "ouroboros/tools/knowledge.py"
+      - "ouroboros/tools/evolution_stats.py"
+      - "ouroboros/tools/evolution.py"
+      - "ouroboros/tools/search.py"
+      - "ouroboros/tools/browser.py"
+      - "ouroboros/tools/vision.py"
+      - "ouroboros/tools/health.py"
+      - "ouroboros/tools/ops.py"
+      - "ouroboros/tools/review.py"
+      - "ouroboros/tools/compact_context.py"
+      - "ouroboros/tools/tool_discovery.py"
+      - "ouroboros/tools/github.py"
+      - "ouroboros/tools/control.py"
+      - "company/**"
+      - "README.md"
+
+defaults:
+  unknown_file: "yellow"
+  file_deletion: "red"

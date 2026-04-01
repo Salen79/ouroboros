@@ -1,9 +1,11 @@
 """
 Episodic Memory tools for THAI.
 
-Two tools:
+Tools:
 1. memory_search — search episodic memory by keywords/tags
 2. record_memory — record a new entry to episodic memory
+3. save_skill — save a learned procedure/skill
+4. find_skills — search for learned skills
 """
 
 from __future__ import annotations
@@ -14,6 +16,8 @@ import pathlib
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
+
+from ouroboros.tools.registry import ToolContext, ToolEntry
 
 log = logging.getLogger(__name__)
 
@@ -111,17 +115,8 @@ def _format_entry(entry: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _tool_memory_search(query: str, days: int = 60, limit: int = 10) -> str:
-    """Search episodic memory for relevant entries.
-
-    Args:
-        query: Search query — keywords, tags, or topic description
-        days: How many days back to search (default: 60)
-        limit: Max entries to return (default: 10)
-
-    Returns:
-        Formatted list of matching memory entries, most relevant first.
-    """
+def _tool_memory_search(ctx: ToolContext, query: str, days: int = 60, limit: int = 10, **kwargs) -> str:
+    """Search episodic memory for relevant entries."""
     if not query or not query.strip():
         return "⚠️ query is required"
 
@@ -155,33 +150,21 @@ def _tool_memory_search(query: str, days: int = 60, limit: int = 10) -> str:
 
 
 def _tool_record_memory(
+    ctx: ToolContext,
     title: str,
     content: str,
     type: str = "insight",
     tags: List[str] = None,
     importance: int = 3,
+    **kwargs,
 ) -> str:
-    """Record an important memory to the episodic layer.
-
-    Use when: significant insight, key decision, important conversation,
-    pattern noticed, milestone reached, lesson learned.
-
-    Args:
-        title: Short, descriptive title (1 line)
-        content: What happened, what was understood, why it matters
-        type: One of: insight, decision, conversation, milestone, error_pattern
-        tags: List of topic tags for search (e.g. ["prism", "budget", "sergey"])
-        importance: 1-5 scale (5 = wisdom-worthy, 1 = useful but minor)
-
-    Returns:
-        Confirmation with entry details.
-    """
+    """Record an important memory to the episodic layer."""
     if not title or not title.strip():
         return "⚠️ title is required"
     if not content or not content.strip():
         return "⚠️ content is required"
 
-    valid_types = {"insight", "decision", "conversation", "milestone", "error_pattern"}
+    valid_types = {"insight", "decision", "conversation", "milestone", "error_pattern", "skill"}
     if type not in valid_types:
         type = "insight"
 
@@ -215,76 +198,231 @@ def _tool_record_memory(
     return f"✅ Memory recorded [{type}] {stars}\nTitle: {title}\nTags: {tag_str}\nFile: {ep_file.name}"
 
 
-def get_tools() -> List[Dict[str, Any]]:
+def _tool_save_skill(
+    ctx: ToolContext,
+    name: str,
+    description: str,
+    steps: List[str] = None,
+    tools_used: List[str] = None,
+    pitfalls: List[str] = None,
+    **kwargs,
+) -> str:
+    """Save a learned procedure/skill to episodic memory.
+
+    Use after completing a multi-step task successfully to remember how to do it next time.
+    """
+    if not name or not name.strip():
+        return "⚠️ name is required"
+    if not description or not description.strip():
+        return "⚠️ description is required"
+
+    if steps is None:
+        steps = []
+    if tools_used is None:
+        tools_used = []
+    if pitfalls is None:
+        pitfalls = []
+
+    content_parts = [description.strip()]
+    if steps:
+        content_parts.append("\nSteps:\n" + "\n".join(f"  {i+1}. {s}" for i, s in enumerate(steps)))
+    if tools_used:
+        content_parts.append("\nTools used: " + ", ".join(tools_used))
+    if pitfalls:
+        content_parts.append("\nPitfalls:\n" + "\n".join(f"  - {p}" for p in pitfalls))
+
+    return _tool_record_memory(
+        ctx=ctx,
+        title=f"SKILL: {name.strip()}",
+        content="\n".join(content_parts),
+        type="skill",
+        tags=["skill"] + tools_used[:5],
+        importance=4,
+    )
+
+
+def _tool_find_skills(ctx: ToolContext, query: str, limit: int = 3, **kwargs) -> str:
+    """Search for learned skills/procedures in episodic memory.
+
+    Searches only skill-type entries from the last 365 days.
+    """
+    if not query or not query.strip():
+        return "⚠️ query is required"
+
+    query_terms = re.split(r'[\s,;]+', query.strip())
+    query_terms = [t for t in query_terms if len(t) >= 2]
+
+    if not query_terms:
+        return "⚠️ query must contain at least one term"
+
+    entries = _read_episodic_entries(days=365)
+    # Filter to skill-type only
+    entries = [e for e in entries if e.get("type") == "skill"]
+
+    if not entries:
+        return "No skills found in episodic memory."
+
+    scored = [(e, _score_entry(e, query_terms)) for e in entries]
+    scored = [(e, s) for e, s in scored if s > 0]
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    if not scored:
+        return f"No skills matching '{query}'"
+
+    top = scored[:limit]
+    lines = [f"Found {len(scored)} matching skills (showing top {len(top)}):\n"]
+    for i, (entry, score) in enumerate(top, 1):
+        lines.append(f"--- {i}. (relevance: {score}) ---")
+        lines.append(_format_entry(entry))
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def get_tools() -> List[ToolEntry]:
     """Return tool definitions for episodic memory."""
     return [
-        {
-            "name": "memory_search",
-            "description": (
-                "Search episodic memory for relevant entries. "
-                "Use to recall past decisions, conversations, insights, patterns. "
-                "Example: memory_search('prism jtbd') or memory_search('budget sergey support')"
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search terms — keywords, tags, or topic description"
+        ToolEntry(
+            name="memory_search",
+            schema={
+                "name": "memory_search",
+                "description": (
+                    "Search episodic memory for relevant entries. "
+                    "Use to recall past decisions, conversations, insights, patterns. "
+                    "Example: memory_search('prism jtbd') or memory_search('budget sergey support')"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search terms — keywords, tags, or topic description"
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "How many days back to search (default: 60)",
+                            "default": 60
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max entries to return (default: 10)",
+                            "default": 10
+                        }
                     },
-                    "days": {
-                        "type": "integer",
-                        "description": "How many days back to search (default: 60)",
-                        "default": 60
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max entries to return (default: 10)",
-                        "default": 10
-                    }
+                    "required": ["query"]
                 },
-                "required": ["query"]
             },
-            "handler": _tool_memory_search,
-        },
-        {
-            "name": "record_memory",
-            "description": (
-                "Record an important entry to episodic memory. "
-                "Use when: significant insight realized, key decision made, "
-                "important conversation happened, pattern noticed, milestone reached. "
-                "High importance (4-5) = worth distilling to wisdom layer later."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Short, descriptive title (1 line)"
+            handler=_tool_memory_search,
+        ),
+        ToolEntry(
+            name="record_memory",
+            schema={
+                "name": "record_memory",
+                "description": (
+                    "Record an important entry to episodic memory. "
+                    "Use when: significant insight realized, key decision made, "
+                    "important conversation happened, pattern noticed, milestone reached. "
+                    "High importance (4-5) = worth distilling to wisdom layer later."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Short, descriptive title (1 line)"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "What happened, what was understood, why it matters"
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["insight", "decision", "conversation", "milestone", "error_pattern", "skill"],
+                            "description": "Type of memory entry",
+                            "default": "insight"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Topic tags for search (e.g. ['prism', 'budget', 'sergey'])"
+                        },
+                        "importance": {
+                            "type": "integer",
+                            "description": "1-5 scale: 5=wisdom-worthy, 3=useful, 1=minor",
+                            "default": 3
+                        }
                     },
-                    "content": {
-                        "type": "string",
-                        "description": "What happened, what was understood, why it matters"
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": ["insight", "decision", "conversation", "milestone", "error_pattern"],
-                        "description": "Type of memory entry",
-                        "default": "insight"
-                    },
-                    "tags": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Topic tags for search (e.g. ['prism', 'budget', 'sergey'])"
-                    },
-                    "importance": {
-                        "type": "integer",
-                        "description": "1-5 scale: 5=wisdom-worthy, 3=useful, 1=minor",
-                        "default": 3
-                    }
+                    "required": ["title", "content"]
                 },
-                "required": ["title", "content"]
             },
-            "handler": _tool_record_memory,
-        }
+            handler=_tool_record_memory,
+        ),
+        ToolEntry(
+            name="save_skill",
+            schema={
+                "name": "save_skill",
+                "description": (
+                    "Save a learned procedure/skill to episodic memory. "
+                    "Use after completing a multi-step task successfully to remember "
+                    "how to do it next time. Wraps record_memory with type='skill'."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Short skill name (e.g. 'deploy-prism', 'fix-registry-crash')"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "What this skill does and when to use it"
+                        },
+                        "steps": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Ordered list of steps to execute"
+                        },
+                        "tools_used": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Tools involved (e.g. ['claude_code_edit', 'run_shell'])"
+                        },
+                        "pitfalls": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Known pitfalls and things to avoid"
+                        }
+                    },
+                    "required": ["name", "description"]
+                },
+            },
+            handler=_tool_save_skill,
+        ),
+        ToolEntry(
+            name="find_skills",
+            schema={
+                "name": "find_skills",
+                "description": (
+                    "Search for learned skills/procedures in episodic memory. "
+                    "Use BEFORE starting a task to check if a similar procedure was already learned. "
+                    "Searches only skill-type entries from the last 365 days."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search terms — skill name, tools, or task description"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max skills to return (default: 3)",
+                            "default": 3
+                        }
+                    },
+                    "required": ["query"]
+                },
+            },
+            handler=_tool_find_skills,
+        ),
     ]

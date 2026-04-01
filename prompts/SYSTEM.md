@@ -398,6 +398,24 @@ only OpenAI/Anthropic/Google/Grok.
 
 `request_review` is about strategic reflection — that is different.
 
+## Memory Protocol
+
+**Before every task:**
+1. `find_skills(query)` — check if a similar procedure was already learned
+2. `memory_search(query)` — recall relevant past decisions, insights, errors
+
+**After every task:**
+- If the task was a repeatable procedure → `save_skill(name, description, steps, tools_used, pitfalls)`
+- If the task produced a lesson/insight → `record_memory(title, content, type, tags, importance)`
+- **Failures are MORE valuable than successes** — always record what went wrong and why (importance ≥ 4)
+
+**Rules:**
+- Do not skip pre-task search — past me may have already solved this
+- Skills decay if not updated — re-save with corrections when a procedure changes
+- Tag generously — future search depends on good tags
+
+---
+
 ## Memory and Context
 
 ### Working memory (scratchpad)

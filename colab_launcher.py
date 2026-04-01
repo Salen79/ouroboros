@@ -410,7 +410,8 @@ def _snapshot_scratchpad_before_shutdown(reason: str) -> None:
                     tid = ev.get("task_id", "?")[:8]
                     cost = ev.get("cost_usd", 0)
                     rounds = ev.get("total_rounds", 0)
-                    task_dones.append(f"  - {tid}: {rounds}R, ${cost:.3f}")
+                    desc = ev.get("description", "")[:80]
+                    task_dones.append(f"  - {tid}: {rounds}R, ${cost:.3f} — {desc}")
                     if len(task_dones) >= 3:
                         break
             except (json.JSONDecodeError, KeyError):
@@ -419,35 +420,48 @@ def _snapshot_scratchpad_before_shutdown(reason: str) -> None:
     except Exception:
         last_tasks = "  (couldn't read events)"
 
-    # Get last topic from chat.jsonl (last outgoing message)
-    last_topic = ""
+    # Get last 10 chat messages in human-readable format
+    recent_chat_lines = []
     try:
         lines = chat_path.read_text().strip().split("\n")
-        for line in reversed(lines):
+        recent = lines[-10:] if len(lines) >= 10 else lines
+        for line in recent:
             try:
                 msg = json.loads(line)
-                if msg.get("direction") == "out" and len(msg.get("text", "")) > 20:
-                    last_topic = msg["text"][:150]
-                    break
+                is_incoming = msg.get("direction") == "in"
+                direction = "← Sergey" if is_incoming else "→ THAI"
+                ts = msg.get("ts", "")
+                time_str = ts[11:16] if len(ts) > 16 else "??:??"
+                raw_text = msg.get("text", "")
+                # Sergey's messages: no truncation; THAI's: 300 chars
+                text = raw_text if is_incoming else raw_text[:300]
+                if text.strip():
+                    recent_chat_lines.append(f"[{time_str}] {direction}: {text}")
             except (json.JSONDecodeError, KeyError):
                 continue
     except Exception:
-        last_topic = "(couldn't read chat)"
+        recent_chat_lines = ["(couldn't read chat)"]
+
+    recent_chat = "\n".join(recent_chat_lines) if recent_chat_lines else "(no messages)"
 
     now = _dt.now().strftime("%Y-%m-%d %H:%M")
     content = f"""## Shutdown snapshot ({now})
 Reason: {reason}
 
+\u26a0\ufe0f POST-RESTART INSTRUCTIONS:
+- Do NOT regenerate /plan unless Sergey explicitly asks
+- Do NOT repeat diagnostics already done
+- Resume the conversation naturally: "\u0412\u0435\u0440\u043d\u0443\u043b\u0441\u044f. [brief summary]. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u044e."
+- Check 'Recent conversation' section below for full context
+
 ### Last tasks:
 {last_tasks}
 
-### Last conversation topic:
-{last_topic}
+### Last 10 messages:
+{recent_chat}
 
 ---
-\u26a0\ufe0f IMPORTANT: Everything in scratchpad from BEFORE this snapshot is outdated.
-Check "Recent conversation" section in context for what was happening before restart.
-Do NOT reference old tasks or blockers that are not in the snapshot above.
+Context above is the most recent state. The 'Recent conversation' section in system context has the full history.
 """
     try:
         scratchpad_path.write_text(content)

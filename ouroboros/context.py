@@ -93,11 +93,62 @@ def _build_runtime_section(env: Any, task: Dict[str, Any]) -> str:
     return "## Runtime context\n\n" + runtime_ctx
 
 
+def _check_scratchpad_staleness(scratchpad_text: str) -> str:
+    """Add warning if scratchpad doesn't contain today's date."""
+    from datetime import date as _date
+
+    today = _date.today().isoformat()
+    if today not in scratchpad_text and len(scratchpad_text) > 50:
+        return (
+            "\u26a0\ufe0f Scratchpad may be outdated. "
+            "Prioritize 'Recent conversation' below.\n\n"
+            + scratchpad_text
+        )
+    return scratchpad_text
+
+
+def _load_recent_chat(n: int = 10) -> str:
+    """Load last N chat messages for conversational continuity across restarts."""
+    chat_path = pathlib.Path.home() / "ouroboros-data" / "logs" / "chat.jsonl"
+    if not chat_path.exists():
+        return ""
+
+    try:
+        lines = chat_path.read_text().strip().split("\n")
+        recent = lines[-n:] if len(lines) >= n else lines
+    except Exception:
+        return ""
+
+    if not recent:
+        return ""
+
+    parts = [
+        "## Recent conversation (before last restart)",
+        "Use this to understand what was happening. "
+        "Don't repeat answers already given.\n",
+    ]
+
+    for line in recent:
+        try:
+            msg = json.loads(line)
+            direction = "Sergey" if msg.get("direction") == "in" else "THAI"
+            ts = msg.get("ts", "")
+            time_str = ts[11:16] if len(ts) > 16 else "??:??"
+            text = msg.get("text", "")[:200]
+            if text.strip():
+                parts.append(f"[{time_str}] {direction}: {text}")
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    return "\n".join(parts)
+
+
 def _build_memory_sections(memory: Memory) -> List[str]:
     """Build scratchpad, identity, dialogue summary sections."""
     sections = []
 
     scratchpad_raw = memory.load_scratchpad()
+    scratchpad_raw = _check_scratchpad_staleness(scratchpad_raw)
     sections.append("## Scratchpad\n\n" + clip_text(scratchpad_raw, 90000))
 
     identity_raw = memory.load_identity()
@@ -338,6 +389,11 @@ def build_llm_messages(
     # These change ~once per task, not per round
     semi_stable_parts = []
     semi_stable_parts.extend(_build_memory_sections(memory))
+
+    # Recent chat messages for continuity across restarts
+    recent_chat = _load_recent_chat(10)
+    if recent_chat:
+        semi_stable_parts.append(recent_chat)
 
     # Only load knowledge index (~200 tokens), not all knowledge/*.md files.
     # THAI uses knowledge_read tool when a specific topic is needed.

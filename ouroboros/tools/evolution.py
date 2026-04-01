@@ -79,14 +79,22 @@ def _tool_apply_change(
     files: Optional[List[str]] = None,
     auto_merge: bool = False,
     target_branch: str = "ouroboros",
+    use_claude_code: Optional[bool] = None,
+    task_description: str = "",
+    constraints: Optional[List[str]] = None,
     **kwargs,
 ) -> str:
-    """Apply a code change: commit to branch, run smoke tests, optionally auto-merge.
+    """Apply a code change: optionally delegate to Claude Code CLI, commit, smoke test, merge.
+
+    When use_claude_code is True (or auto-detected), THAI provides what to change
+    and why via task_description, and Claude Code CLI handles the actual edits.
+    For non-code files (.md, .yaml) in GREEN zone, write_file is used directly.
 
     Steps:
-    1. Commit changes to the specified branch
-    2. Run smoke tests
-    3. If auto_merge=True and zone is GREEN, merge to target branch
+    1. (Optional) Invoke Claude Code CLI for code files
+    2. Commit changes to the specified branch
+    3. Run smoke tests
+    4. If auto_merge=True and zone is GREEN, merge to target branch
     """
     if not branch_name or not branch_name.strip():
         return "⚠️ branch_name is required"
@@ -95,6 +103,46 @@ def _tool_apply_change(
 
     evo = _get_evolution()
     lines = []
+
+    # ── Auto-detect whether to use Claude Code CLI ──────────────
+    from ouroboros.self_evolution import CODE_EXTENSIONS, FileZone
+
+    if use_claude_code is None and files:
+        has_code_files = any(
+            any(f.endswith(ext) for ext in CODE_EXTENSIONS)
+            for f in files
+        )
+        zone = evo.classify_changeset(files)
+        use_claude_code = has_code_files or zone in (FileZone.YELLOW, FileZone.RED)
+
+    # ── Claude Code CLI delegation ──────────────────────────────
+    if use_claude_code and task_description:
+        code_files = [f for f in (files or []) if evo._is_code_file(f)]
+        if code_files:
+            cc_result = evo.claude_code_execute(
+                task_description=task_description,
+                files=code_files,
+                constraints=constraints,
+            )
+            if cc_result["success"]:
+                lines.append(
+                    f"✅ Claude Code CLI: {len(cc_result['files_changed'])} files changed"
+                )
+                if cc_result.get("cost_usd"):
+                    lines.append(f"   Cost: ${cc_result['cost_usd']:.4f}")
+            elif cc_result["fallback"]:
+                lines.append(
+                    "⚠️ Claude Code CLI unavailable — using write_file fallback"
+                )
+            else:
+                lines.append(
+                    f"⚠️ Claude Code CLI failed: {cc_result['output'][:200]}"
+                )
+    elif use_claude_code and not task_description:
+        lines.append(
+            "⚠️ use_claude_code=True but no task_description provided — "
+            "skipping CLI delegation"
+        )
 
     # Commit changes
     try:
@@ -201,8 +249,11 @@ def get_tools() -> List[ToolEntry]:
             schema={
                 "name": "apply_change",
                 "description": (
-                    "Apply a code change: commit, run smoke tests, optionally auto-merge. "
-                    "Use after making code modifications. Smoke tests must pass before merge. "
+                    "Apply a code change: optionally delegate edits to Claude Code CLI, "
+                    "commit, run smoke tests, optionally auto-merge. "
+                    "For code files (.py/.js/.ts): provide task_description and Claude Code "
+                    "CLI handles the actual edits. For non-code files: write them first with "
+                    "write_file, then call apply_change to commit. "
                     "Auto-merge only works for GREEN zone changes."
                 ),
                 "parameters": {
@@ -230,7 +281,30 @@ def get_tools() -> List[ToolEntry]:
                             "type": "string",
                             "description": "Branch to merge into (default: ouroboros)",
                             "default": "ouroboros"
-                        }
+                        },
+                        "use_claude_code": {
+                            "type": "boolean",
+                            "description": (
+                                "Whether to delegate edits to Claude Code CLI. "
+                                "Auto-detected if omitted: True for code files (.py/.js/.ts) "
+                                "or YELLOW/RED zone. False for non-code GREEN zone files."
+                            ),
+                        },
+                        "task_description": {
+                            "type": "string",
+                            "description": (
+                                "WHAT to change and WHY — Claude Code CLI handles HOW. "
+                                "Required when use_claude_code is True."
+                            ),
+                        },
+                        "constraints": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Constraints for Claude Code CLI: patterns to follow, "
+                                "tests that must pass, files to avoid, etc."
+                            ),
+                        },
                     },
                     "required": ["branch_name", "commit_message"]
                 },

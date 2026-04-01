@@ -21,10 +21,16 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 import json
+import shutil
 
 import yaml
 
 log = logging.getLogger(__name__)
+
+# File extensions that should be routed through Claude Code CLI
+CODE_EXTENSIONS = frozenset((
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs",
+))
 
 DATA_DIR = pathlib.Path(os.environ.get("DRIVE_ROOT", os.path.expanduser("~/ouroboros-data")))
 
@@ -193,16 +199,45 @@ class SelfEvolution:
         log.info("Self-evolution: began modification on branch %s (base: %s)", branch_name, base_sha[:8])
         return self._active_mod
 
-    def commit_changes(self, message: str, files: Optional[List[str]] = None) -> str:
+    def commit_changes(
+        self,
+        message: str,
+        files: Optional[List[str]] = None,
+        task_description: Optional[str] = None,
+        constraints: Optional[List[str]] = None,
+    ) -> str:
         """Stage and commit changes.
+
+        If task_description is provided and the changeset includes code files,
+        Claude Code CLI is invoked first to perform the actual edits.  THAI
+        decides WHAT and WHY; Claude Code handles HOW.
 
         Args:
             message: Commit message
             files: Specific files to stage (None = all tracked changes)
+            task_description: If set, delegate code edits to Claude Code CLI
+            constraints: Constraints to pass to Claude Code CLI
 
         Returns:
             Commit SHA
         """
+        # ── Claude Code delegation for code files ──────────────────
+        if task_description and files:
+            code_files = [f for f in files if self._is_code_file(f)]
+            if code_files:
+                cc_result = self.claude_code_execute(
+                    task_description=task_description,
+                    files=code_files,
+                    constraints=constraints,
+                )
+                if cc_result["fallback"]:
+                    log.warning(
+                        "Claude Code CLI unavailable/failed — expecting files "
+                        "already written via write_file"
+                    )
+                elif not cc_result["success"]:
+                    log.error("Claude Code CLI failed: %s", cc_result["output"][:300])
+
         if files:
             for f in files:
                 self._git("add", f)
@@ -356,6 +391,186 @@ class SelfEvolution:
         ]) else "degraded"
 
         return checks
+
+    # ── Claude Code CLI integration ───────────────────────────────
+
+    @staticmethod
+    def _is_code_file(filepath: str) -> bool:
+        """Return True if the file extension indicates source code."""
+        return pathlib.PurePosixPath(filepath).suffix.lower() in CODE_EXTENSIONS
+
+    @staticmethod
+    def _claude_cli_available() -> bool:
+        """Check whether the Claude Code CLI binary is on PATH."""
+        return shutil.which("claude") is not None
+
+    def claude_code_execute(
+        self,
+        task_description: str,
+        files: List[str],
+        constraints: Optional[List[str]] = None,
+        timeout: int = 300,
+    ) -> Dict[str, Any]:
+        """Invoke Claude Code CLI to make code changes.
+
+        THAI decides WHAT to change and WHY; Claude Code handles HOW.
+
+        Args:
+            task_description: What the change should accomplish and why.
+            files: List of file paths (relative to repo root) to modify.
+            constraints: Optional list of constraints / patterns to follow.
+            timeout: Maximum seconds for the CLI invocation.
+
+        Returns:
+            {success: bool, output: str, files_changed: list, fallback: bool}
+        """
+        if not self._claude_cli_available():
+            log.warning("Claude Code CLI not available — falling back to write_file")
+            return {
+                "success": False,
+                "output": "Claude Code CLI not found on server. Falling back to write_file.",
+                "files_changed": [],
+                "fallback": True,
+            }
+
+        # Build a clear prompt for Claude Code
+        file_list = "\n".join(f"  - {f}" for f in files)
+        prompt_parts = [
+            f"Task: {task_description}",
+            f"\nFiles to modify:\n{file_list}",
+        ]
+        if constraints:
+            constraint_list = "\n".join(f"  - {c}" for c in constraints)
+            prompt_parts.append(f"\nConstraints:\n{constraint_list}")
+        prompt_parts.append(
+            f"\nIMPORTANT: Only modify the listed files inside {self.repo_dir}. "
+            f"Do NOT create new files unless absolutely necessary. "
+            f"Do NOT commit or push."
+        )
+        prompt = "\n".join(prompt_parts)
+
+        claude_bin = shutil.which("claude")
+        cmd = [
+            claude_bin, "-p", prompt,
+            "--output-format", "json",
+            "--max-turns", "12",
+            "--tools", "Read,Edit,Grep,Glob",
+        ]
+
+        # Permission mode
+        perm_mode = os.environ.get(
+            "OUROBOROS_CLAUDE_CODE_PERMISSION_MODE", "bypassPermissions"
+        ).strip()
+        cmd += ["--permission-mode", perm_mode]
+
+        env = os.environ.copy()
+        env.pop("ANTHROPIC_API_KEY", None)
+        local_bin = str(pathlib.Path.home() / ".local" / "bin")
+        if local_bin not in env.get("PATH", ""):
+            env["PATH"] = f"{local_bin}:{env.get('PATH', '')}"
+
+        log.info(
+            "Claude Code CLI: executing task (%d files, timeout=%ds)",
+            len(files), timeout,
+        )
+
+        try:
+            res = subprocess.run(
+                cmd,
+                cwd=str(self.repo_dir),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=env,
+            )
+
+            stdout = (res.stdout or "").strip()
+            stderr = (res.stderr or "").strip()
+
+            if res.returncode != 0:
+                combined = (stdout + "\n" + stderr).lower()
+                if "--permission-mode" in combined and any(
+                    m in combined
+                    for m in ("unknown option", "unknown argument", "unrecognized option")
+                ):
+                    fallback_cmd = [
+                        claude_bin, "-p", prompt,
+                        "--output-format", "json",
+                        "--max-turns", "12",
+                        "--tools", "Read,Edit,Grep,Glob",
+                        "--dangerously-skip-permissions",
+                    ]
+                    res = subprocess.run(
+                        fallback_cmd,
+                        cwd=str(self.repo_dir),
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        env=env,
+                    )
+                    stdout = (res.stdout or "").strip()
+                    stderr = (res.stderr or "").strip()
+
+            if res.returncode != 0:
+                log.error("Claude Code CLI failed (exit=%d): %s", res.returncode, stderr[:500])
+                return {
+                    "success": False,
+                    "output": f"exit={res.returncode}\nSTDOUT:\n{stdout[:2000]}\nSTDERR:\n{stderr[:2000]}",
+                    "files_changed": [],
+                    "fallback": True,
+                }
+
+            # Detect which files were actually changed via git status
+            changed = self._detect_changed_files()
+
+            # Parse cost from JSON output
+            cost = 0.0
+            try:
+                payload = json.loads(stdout)
+                result_text = payload.get("result", stdout)
+                if isinstance(payload.get("total_cost_usd"), (int, float)):
+                    cost = float(payload["total_cost_usd"])
+            except (json.JSONDecodeError, TypeError):
+                result_text = stdout
+
+            log.info(
+                "Claude Code CLI: success — %d files changed, cost=$%.4f",
+                len(changed), cost,
+            )
+            return {
+                "success": True,
+                "output": result_text[:5000] if isinstance(result_text, str) else str(result_text)[:5000],
+                "files_changed": changed,
+                "fallback": False,
+                "cost_usd": cost,
+            }
+
+        except subprocess.TimeoutExpired:
+            log.error("Claude Code CLI timed out after %ds", timeout)
+            return {
+                "success": False,
+                "output": f"Claude Code CLI timed out after {timeout}s",
+                "files_changed": [],
+                "fallback": True,
+            }
+        except Exception as e:
+            log.error("Claude Code CLI error: %s", e)
+            return {
+                "success": False,
+                "output": f"Claude Code CLI error: {type(e).__name__}: {e}",
+                "files_changed": [],
+                "fallback": True,
+            }
+
+    def _detect_changed_files(self) -> List[str]:
+        """Return list of files with uncommitted changes (relative to repo root)."""
+        try:
+            result = self._git("diff", "--name-only")
+            staged = self._git("diff", "--name-only", "--cached")
+            files = set(result.stdout.strip().splitlines() + staged.stdout.strip().splitlines())
+            return [f for f in files if f]
+        except Exception:
+            return []
 
     def mark_stable(self, sha: Optional[str] = None) -> str:
         """Mark a commit as stable (tag it).

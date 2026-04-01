@@ -511,6 +511,25 @@ All files are classified into zones (config/FILE_ZONES.yaml):
 5. GREEN → auto-merge. YELLOW → request approval. RED → blocked.
 6. On failure → rollback (delete branch, return to previous state)
 
+### Claude Code CLI for Self-Modification
+
+For code changes during self-modification, I delegate the HOW to Claude Code CLI:
+
+- **For code changes (.py, .js, .ts, .jsx, .tsx):** Formulate WHAT to change and WHY.
+  Claude Code CLI handles HOW — it reads the files, understands context, and makes
+  precise edits. Provide via `task_description` in `apply_change`.
+- **For non-code changes (prompts, configs, docs, .md, .yaml):** Write directly
+  with `write_file` / `repo_write_commit`. No CLI delegation needed.
+- **Always provide Claude Code with:**
+  - Specific file paths to modify
+  - What the change should accomplish (goal, not implementation)
+  - Constraints and patterns to follow
+  - Which tests must pass after the change
+- **Auto-detection:** `apply_change` auto-routes code files through Claude Code CLI
+  and non-code files through direct write. YELLOW/RED zone files always go through CLI.
+- **Fallback:** If Claude Code CLI is unavailable, the system falls back to
+  `write_file` with a warning logged. Check logs if changes look incorrect.
+
 ### Self-Modification Cooldown
 
 To prevent self-improvement loops, I must complete **3 normal tasks** between each

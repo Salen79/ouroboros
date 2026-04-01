@@ -388,6 +388,74 @@ _event_ctx = types.SimpleNamespace(
 )
 
 
+def _snapshot_scratchpad_before_shutdown(reason: str) -> None:
+    """Overwrite scratchpad with current state before restart.
+    Prevents the amnesia loop where THAI wakes up with days-old context."""
+    from datetime import datetime as _dt
+    from pathlib import Path as _Path
+
+    scratchpad_path = _Path.home() / "ouroboros-data" / "memory" / "scratchpad.md"
+    chat_path = _Path.home() / "ouroboros-data" / "logs" / "chat.jsonl"
+    events_path = _Path.home() / "ouroboros-data" / "logs" / "events.jsonl"
+
+    # Get last 3 completed tasks from events.jsonl
+    last_tasks = ""
+    try:
+        lines = events_path.read_text().strip().split("\n")
+        task_dones = []
+        for line in reversed(lines):
+            try:
+                ev = json.loads(line)
+                if ev.get("type") == "task_done":
+                    tid = ev.get("task_id", "?")[:8]
+                    cost = ev.get("cost_usd", 0)
+                    rounds = ev.get("total_rounds", 0)
+                    task_dones.append(f"  - {tid}: {rounds}R, ${cost:.3f}")
+                    if len(task_dones) >= 3:
+                        break
+            except (json.JSONDecodeError, KeyError):
+                continue
+        last_tasks = "\n".join(task_dones) if task_dones else "  (no recent tasks)"
+    except Exception:
+        last_tasks = "  (couldn't read events)"
+
+    # Get last topic from chat.jsonl (last outgoing message)
+    last_topic = ""
+    try:
+        lines = chat_path.read_text().strip().split("\n")
+        for line in reversed(lines):
+            try:
+                msg = json.loads(line)
+                if msg.get("direction") == "out" and len(msg.get("text", "")) > 20:
+                    last_topic = msg["text"][:150]
+                    break
+            except (json.JSONDecodeError, KeyError):
+                continue
+    except Exception:
+        last_topic = "(couldn't read chat)"
+
+    now = _dt.now().strftime("%Y-%m-%d %H:%M")
+    content = f"""## Shutdown snapshot ({now})
+Reason: {reason}
+
+### Last tasks:
+{last_tasks}
+
+### Last conversation topic:
+{last_topic}
+
+---
+\u26a0\ufe0f IMPORTANT: Everything in scratchpad from BEFORE this snapshot is outdated.
+Check "Recent conversation" section in context for what was happening before restart.
+Do NOT reference old tasks or blockers that are not in the snapshot above.
+"""
+    try:
+        scratchpad_path.write_text(content)
+        log.info("Scratchpad snapshot saved (%s)", reason)
+    except Exception as e:
+        log.warning("Failed to snapshot scratchpad: %s", e)
+
+
 def _safe_qsize(q: Any) -> int:
     try:
         return int(q.qsize())
@@ -445,12 +513,14 @@ def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
     lowered = text.strip().lower()
 
     if lowered.startswith("/stop"):
+        _snapshot_scratchpad_before_shutdown("stop")
         msg = stop_all_tasks()
         send_with_budget(chat_id, f"⏹️ {msg}")
         return True
 
     if lowered.startswith("/panic"):
         send_with_budget(chat_id, "🛑 PANIC: stopping everything now.")
+        _snapshot_scratchpad_before_shutdown("panic")
         kill_workers()
         st2 = load_state()
         st2["tg_offset"] = tg_offset
@@ -733,6 +803,7 @@ while True:
 
         # Natural language stop detection — handled at supervisor level, not sent to LLM
         if _STOP_PATTERNS.search(_text_lower) and not _text_lower.startswith("/"):
+            _snapshot_scratchpad_before_shutdown("natural_stop")
             _stop_msg = stop_all_tasks()
             send_with_budget(chat_id, f"⏹️ {_stop_msg}")
             st["tg_offset"] = offset

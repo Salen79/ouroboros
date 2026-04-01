@@ -72,6 +72,11 @@ class BackgroundConsciousness:
         self._last_ops_check_ts: float = 0.0
         self._ops_check_interval_sec: float = 600.0  # 10 minutes
 
+        # Strategic planning state
+        self._last_plan_ts: float = 0.0
+        self._plan_interval_sec: float = 1800.0  # 30 min between plan attempts
+        self._pending_gated_tasks: list = []  # Tasks waiting for /approve
+
         # Budget tracking
         self._bg_spent_usd: float = 0.0
         self._bg_budget_pct: float = float(
@@ -154,6 +159,9 @@ class BackgroundConsciousness:
 
             # Periodic ops check (deterministic, no LLM)
             self._maybe_ops_check()
+
+            # Strategic planning when queue is empty
+            self._maybe_strategic_plan()
 
             # Skip if owner is actively chatting (avoid background work during conversation)
             if self._is_active_dialogue():
@@ -259,6 +267,138 @@ class BackgroundConsciousness:
                 "type": "ops_check_error",
                 "error": repr(e),
             })
+
+    def _maybe_strategic_plan(self) -> None:
+        """Run strategic planner when task queue is empty. No LLM budget — planner handles that."""
+        now = time.time()
+        if now - self._last_plan_ts < self._plan_interval_sec:
+            return
+
+        # Only plan when queue is empty and no tasks running
+        try:
+            from supervisor.workers import RUNNING, PENDING
+            if RUNNING or PENDING:
+                return
+        except Exception:
+            return
+
+        self._last_plan_ts = now
+        log.info("Consciousness: task queue empty — running strategic planner")
+
+        try:
+            from ouroboros.strategic_planner import StrategicPlanner
+            planner = StrategicPlanner(repo_dir=self._repo_dir, drive_root=self._drive_root)
+            plan = planner.generate_plan()
+
+            if not plan.tasks:
+                return
+
+            # Send plan summary to shareholder via Telegram
+            summary = planner.format_telegram_summary(plan)
+            chat_id = self._owner_chat_id_fn()
+            if chat_id and self._event_queue is not None:
+                self._event_queue.put({
+                    "type": "proactive_message",
+                    "text": summary,
+                    "chat_id": chat_id,
+                    "ts": utc_now_iso(),
+                })
+
+            # Queue non-gated tasks, hold gated ones for /approve
+            for task in plan.tasks:
+                if task.requires_gate:
+                    self._pending_gated_tasks.append(task)
+                    # Notify shareholder about gate
+                    if chat_id and self._event_queue is not None:
+                        self._event_queue.put({
+                            "type": "proactive_message",
+                            "text": (
+                                f"🔒 Gate required: {task.title}\n"
+                                f"Reason: {task.gate_reason}\n"
+                                f"Send /approve or /reject"
+                            ),
+                            "chat_id": chat_id,
+                            "ts": utc_now_iso(),
+                        })
+                else:
+                    # Queue as a task
+                    if self._event_queue is not None:
+                        self._event_queue.put({
+                            "type": "planned_task",
+                            "description": f"[Plan] {task.title}: {task.description}",
+                            "category": task.category,
+                            "est_cost": task.est_cost,
+                            "ts": utc_now_iso(),
+                        })
+
+            # Post-plan health check
+            try:
+                from ouroboros.self_evolution import SelfEvolution
+                evo = SelfEvolution(repo_dir=self._repo_dir)
+                health = evo.health_check()
+                if health.get("status") != "ok":
+                    log.warning("Post-plan health check: %s", health.get("status"))
+                    if chat_id and self._event_queue is not None:
+                        self._event_queue.put({
+                            "type": "proactive_message",
+                            "text": f"⚠️ Health check after planning: {health.get('status')}\n{json.dumps(health, indent=2)[:500]}",
+                            "chat_id": chat_id,
+                            "ts": utc_now_iso(),
+                        })
+            except Exception as e:
+                log.debug("Post-plan health check failed: %s", e)
+
+            # Log the plan
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "strategic_plan_generated",
+                "task_count": len(plan.tasks),
+                "gated_count": sum(1 for t in plan.tasks if t.requires_gate),
+                "total_est_cost": sum(t.est_cost for t in plan.tasks),
+            })
+
+        except ImportError:
+            log.debug("Strategic planner not available yet")
+        except Exception as e:
+            log.error("Strategic planning failed: %s", e)
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "strategic_plan_error",
+                "error": repr(e),
+            })
+
+    def approve_gated_task(self, index: int = 0) -> str:
+        """Approve a pending gated task. Called from /approve command."""
+        if not self._pending_gated_tasks:
+            return "No pending gated tasks."
+        if index >= len(self._pending_gated_tasks):
+            return f"Invalid index {index}. {len(self._pending_gated_tasks)} pending."
+
+        task = self._pending_gated_tasks.pop(index)
+        task.approved = True
+
+        # Queue the approved task
+        if self._event_queue is not None:
+            self._event_queue.put({
+                "type": "planned_task",
+                "description": f"[Approved] {task.title}: {task.description}",
+                "category": task.category,
+                "est_cost": task.est_cost,
+                "ts": utc_now_iso(),
+            })
+
+        return f"✅ Approved: {task.title}"
+
+    def reject_gated_task(self, index: int = 0, reason: str = "") -> str:
+        """Reject a pending gated task. Called from /reject command."""
+        if not self._pending_gated_tasks:
+            return "No pending gated tasks."
+        if index >= len(self._pending_gated_tasks):
+            return f"Invalid index {index}. {len(self._pending_gated_tasks)} pending."
+
+        task = self._pending_gated_tasks.pop(index)
+        reason_text = f" — {reason}" if reason else ""
+        return f"❌ Rejected: {task.title}{reason_text}"
 
     def _check_budget(self) -> bool:
         """Check if background consciousness is within its budget allocation."""

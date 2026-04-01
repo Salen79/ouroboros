@@ -775,6 +775,8 @@ def run_llm_loop(
         log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 25")
     # Inject mandatory progress tracking instruction at task start
     _inject_progress_tracking_prompt(messages)
+    # Inject memory protocol instruction (find_skills + recall before, save_skill after)
+    _inject_memory_lookup_prompt(messages, task_type=task_type)
     round_idx = 0
     try:
         while True:

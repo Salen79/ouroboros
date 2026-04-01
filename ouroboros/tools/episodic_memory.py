@@ -193,6 +193,13 @@ def _tool_record_memory(
     with ep_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    # Sync to ChromaDB (best-effort, JSONL remains source of truth)
+    try:
+        from ouroboros.tools.semantic_memory import upsert_episode
+        upsert_episode(entry)
+    except Exception as e:
+        log.debug("ChromaDB sync failed (non-critical): %s", e)
+
     stars = "★" * importance
     tag_str = " ".join(f"#{t}" for t in tags) if tags else "(no tags)"
     return f"✅ Memory recorded [{type}] {stars}\nTitle: {title}\nTags: {tag_str}\nFile: {ep_file.name}"

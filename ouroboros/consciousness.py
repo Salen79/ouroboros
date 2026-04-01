@@ -399,12 +399,227 @@ class BackgroundConsciousness:
                 "model": model,
             })
 
+            # Auto-reflection on completed tasks (budget-aware)
+            try:
+                reflection_cost = self._auto_reflect()
+                total_cost += reflection_cost
+                self._bg_spent_usd += reflection_cost
+            except Exception as e:
+                log.debug("Auto-reflection failed: %s", e)
+
         except Exception as e:
             append_jsonl(self._drive_root / "logs" / "events.jsonl", {
                 "ts": utc_now_iso(),
                 "type": "consciousness_llm_error",
                 "error": repr(e),
             })
+
+    # -------------------------------------------------------------------
+    # Auto-reflection on completed tasks
+    # -------------------------------------------------------------------
+
+    def _auto_reflect(self) -> float:
+        """Reflect on recently completed tasks. Returns total cost spent."""
+        cost_spent = 0.0
+
+        # Find new task_done events not yet reflected
+        events_path = self._drive_root / "logs" / "events.jsonl"
+        reflected_path = self._drive_root / "state" / "reflected_tasks.json"
+
+        if not events_path.exists():
+            return 0.0
+
+        # Load already-reflected task IDs
+        reflected_ids = set()
+        if reflected_path.exists():
+            try:
+                reflected_ids = set(json.loads(read_text(reflected_path)))
+            except Exception:
+                reflected_ids = set()
+
+        # Find task_done events with cost >= $0.01 (skip trivial tasks)
+        candidates = []
+        lines = read_text(events_path).strip().split("\n")
+        for line in lines[-200:]:  # Only look at recent events
+            try:
+                ev = json.loads(line)
+                if ev.get("type") != "task_done":
+                    continue
+                task_id = ev.get("task_id")
+                cost = float(ev.get("cost_usd", 0))
+                if not task_id or task_id in reflected_ids or cost < 0.01:
+                    continue
+                candidates.append(ev)
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+        if not candidates:
+            return 0.0
+
+        # Cap: max 3 reflections per cycle
+        candidates = candidates[-3:]
+
+        for ev in candidates:
+            task_id = ev.get("task_id", "")
+
+            # Check per-cycle cost cap
+            try:
+                consciousness_cost_cap = float(
+                    os.environ.get("OUROBOROS_CONSCIOUSNESS_COST_CAP", "0.10")
+                )
+            except (ValueError, TypeError):
+                consciousness_cost_cap = 0.10
+            if cost_spent > consciousness_cost_cap * 0.5:
+                break  # Reserve half the cap for regular thinking
+
+            # Load task result
+            result_path = self._drive_root / "task_results" / f"{task_id}.json"
+            if not result_path.exists():
+                reflected_ids.add(task_id)
+                continue
+
+            try:
+                task_data = json.loads(read_text(result_path))
+            except Exception:
+                reflected_ids.add(task_id)
+                continue
+
+            task_result = task_data.get("result", "")[:1500]
+            task_cost = task_data.get("cost_usd", 0)
+            task_rounds = task_data.get("total_rounds", 0)
+
+            # Generate reflection via light model
+            reflection_prompt = (
+                f"You are THAI, an autonomous AI CEO. A task just completed.\n"
+                f"Task ID: {task_id}\n"
+                f"Cost: ${task_cost:.4f}, Rounds: {task_rounds}\n"
+                f"Result:\n{task_result}\n\n"
+                f"Write a brief reflection (2-4 sentences):\n"
+                f"1. What was learned?\n"
+                f"2. Any error patterns to avoid next time?\n"
+                f"3. If this was a procedural task, describe the steps as a reusable skill.\n\n"
+                f"Respond in JSON: {{\"type\": \"insight\" or \"error_pattern\" or \"skill\", "
+                f"\"title\": \"...\", \"content\": \"...\", \"tags\": [...]}}\n"
+                f"If nothing worth noting, respond: {{\"type\": \"skip\"}}"
+            )
+
+            try:
+                msg, usage = self._llm.chat(
+                    messages=[
+                        {"role": "system", "content": "You are a concise reflection engine."},
+                        {"role": "user", "content": reflection_prompt},
+                    ],
+                    model=self._model,
+                    reasoning_effort="low",
+                    max_tokens=512,
+                )
+                call_cost = float(usage.get("cost") or 0)
+                cost_spent += call_cost
+
+                content = msg.get("content", "")
+                # Parse JSON from response
+                reflection = self._parse_reflection_json(content)
+
+                if reflection and reflection.get("type") != "skip":
+                    self._save_reflection(reflection, task_id)
+            except Exception as e:
+                log.debug("Reflection LLM call failed for task %s: %s", task_id, e)
+
+            reflected_ids.add(task_id)
+
+        # Save reflected IDs (keep last 500 to avoid unbounded growth)
+        reflected_list = list(reflected_ids)[-500:]
+        try:
+            reflected_path.parent.mkdir(parents=True, exist_ok=True)
+            reflected_path.write_text(json.dumps(reflected_list), encoding="utf-8")
+        except Exception as e:
+            log.debug("Failed to save reflected_tasks.json: %s", e)
+
+        return cost_spent
+
+    def _parse_reflection_json(self, text: str) -> dict | None:
+        """Extract JSON from LLM reflection response."""
+        text = text.strip()
+        # Try direct parse
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+        # Try extracting from markdown code block
+        import re
+        m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group(1))
+            except json.JSONDecodeError:
+                pass
+        # Try finding first { ... }
+        start = text.find('{')
+        end = text.rfind('}')
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+        return None
+
+    def _save_reflection(self, reflection: dict, task_id: str) -> None:
+        """Save a reflection as episodic memory entry."""
+        ref_type = reflection.get("type", "insight")
+        title = reflection.get("title", f"Reflection on task {task_id}")
+        content = reflection.get("content", "")
+        tags = reflection.get("tags", [])
+
+        if not content:
+            return
+
+        if ref_type not in ("insight", "error_pattern", "skill"):
+            ref_type = "insight"
+
+        # Add task_id to tags
+        if task_id not in tags:
+            tags.append(task_id)
+        tags.append("auto_reflection")
+
+        from ouroboros.utils import utc_now_iso as _utc_now
+        entry = {
+            "ts": _utc_now(),
+            "type": ref_type,
+            "title": title[:200],
+            "content": content[:2000],
+            "tags": tags[:10],
+            "importance": 3,
+        }
+
+        # Write to today's episodic file
+        ep_dir = self._drive_root / "memory" / "episodic"
+        ep_dir.mkdir(parents=True, exist_ok=True)
+        today = entry["ts"][:10]
+        ep_file = ep_dir / f"{today}.jsonl"
+        with ep_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+        # Sync to ChromaDB
+        try:
+            from ouroboros.tools.semantic_memory import upsert_episode
+            upsert_episode(entry)
+        except Exception:
+            pass
+
+        # If skill type, also save as a proper skill entry
+        if ref_type == "skill":
+            entry["importance"] = 4
+            entry["tags"] = list(set(entry["tags"] + ["skill"]))
+
+        append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+            "ts": entry["ts"],
+            "type": "auto_reflection",
+            "task_id": task_id,
+            "reflection_type": ref_type,
+            "title": title[:100],
+        })
+
+        log.info("Auto-reflection saved: [%s] %s (task %s)", ref_type, title[:60], task_id)
 
     # -------------------------------------------------------------------
     # Context building (lightweight)
@@ -616,6 +831,8 @@ class BackgroundConsciousness:
         "chat_history",
         # GitHub Issues
         "list_github_issues", "get_github_issue",
+        # Semantic memory (read-only)
+        "semantic_search", "recall",
     })
 
     def _build_registry(self) -> "ToolRegistry":

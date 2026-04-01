@@ -617,6 +617,14 @@ def _inject_progress_tracking_prompt(
     messages.append({"role": "system", "content": instruction})
 
 
+
+def _inject_memory_lookup_prompt(
+    messages,
+    task_type: str = "task",
+) -> None:
+    """Inject memory protocol instruction. TODO: implement in Session 2."""
+    pass  # disabled: broken string literal from auto-rescue commit
+
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
     Wire tool-discovery handlers onto an existing tool_schemas list.
@@ -776,7 +784,7 @@ def run_llm_loop(
     # Inject mandatory progress tracking instruction at task start
     _inject_progress_tracking_prompt(messages)
     # Inject memory protocol instruction (find_skills + recall before, save_skill after)
-    _inject_memory_lookup_prompt(messages, task_type=task_type)
+    # _inject_memory_lookup_prompt(messages, task_type=task_type)  # disabled: broken string literal, will implement in Session 2
     round_idx = 0
     try:
         while True:

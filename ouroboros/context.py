@@ -339,11 +339,13 @@ def build_llm_messages(
     semi_stable_parts = []
     semi_stable_parts.extend(_build_memory_sections(memory))
 
+    # Only load knowledge index (~200 tokens), not all knowledge/*.md files.
+    # THAI uses knowledge_read tool when a specific topic is needed.
     kb_index_path = env.drive_path("memory/knowledge/_index.md")
     if kb_index_path.exists():
         kb_index = kb_index_path.read_text(encoding="utf-8")
         if kb_index.strip():
-            semi_stable_parts.append("## Knowledge base\n\n" + clip_text(kb_index, 50000))
+            semi_stable_parts.append("## Knowledge base (use knowledge_read for details)\n\n" + clip_text(kb_index, 4000))
 
     semi_stable_text = "\n\n".join(semi_stable_parts)
 

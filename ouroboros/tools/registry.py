@@ -89,6 +89,9 @@ CORE_TOOL_NAMES = {
     "knowledge_read", "knowledge_write",
     "browse_page", "browser_action", "analyze_screenshot",
     "run_ops_check", "restart_service", "read_service_logs",
+    # Memory tools (always available — no need for enable_tools)
+    "memory_search", "record_memory", "save_skill", "find_skills",
+    "semantic_search", "semantic_find_skills", "recall",
 }
 
 

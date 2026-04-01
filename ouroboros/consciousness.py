@@ -276,8 +276,124 @@ class BackgroundConsciousness:
     # Think cycle
     # -------------------------------------------------------------------
 
+    def _maybe_consolidate_scratchpad(self) -> float:
+        """Consolidate scratchpad if it exceeds ~2000 tokens (~8000 chars).
+
+        Uses light model to extract durable facts, saves them via record_memory,
+        then compresses scratchpad to essentials. Returns cost spent.
+        """
+        scratchpad_path = self._drive_root / "memory" / "scratchpad.md"
+        if not scratchpad_path.exists():
+            return 0.0
+
+        content = read_text(scratchpad_path)
+        if len(content) < 8000:
+            return 0.0
+
+        log.info("Scratchpad consolidation triggered: %d chars", len(content))
+
+        prompt = (
+            "You are a memory consolidation engine for an autonomous AI agent.\n"
+            "The agent's scratchpad has grown too large. Extract the durable facts "
+            "(decisions, insights, important state) and return them as JSON.\n\n"
+            "SCRATCHPAD CONTENT:\n" + content[:12000] + "\n\n"
+            "Return JSON:\n"
+            '{"durable_facts": [{"title": "...", "content": "...", "tags": ["..."]}], '
+            '"compressed_scratchpad": "# Scratchpad\\n\\n(compressed essentials here)"}\n\n'
+            "Rules:\n"
+            "- durable_facts: 3-8 most important facts worth remembering long-term\n"
+            "- compressed_scratchpad: keep ONLY active tasks, current focus, and recent decisions (under 3000 chars)\n"
+            "- Preserve any TODO items or action items in the compressed scratchpad"
+        )
+
+        try:
+            model = self._model
+            msg, usage = self._llm.chat(
+                messages=[
+                    {"role": "system", "content": "You are a concise memory consolidation engine."},
+                    {"role": "user", "content": prompt},
+                ],
+                model=model,
+                reasoning_effort="low",
+                max_tokens=2048,
+            )
+            cost = float(usage.get("cost") or 0)
+
+            response_text = msg.get("content", "")
+            parsed = self._parse_reflection_json(response_text)
+            if not parsed:
+                log.warning("Scratchpad consolidation: failed to parse LLM response")
+                return cost
+
+            # Save durable facts as episodic memories
+            durable_facts = parsed.get("durable_facts", [])
+            for fact in durable_facts[:8]:
+                title = fact.get("title", "Scratchpad fact")
+                fact_content = fact.get("content", "")
+                tags = fact.get("tags", [])
+                if not fact_content:
+                    continue
+
+                entry = {
+                    "ts": utc_now_iso(),
+                    "type": "insight",
+                    "title": title[:200],
+                    "content": fact_content[:2000],
+                    "tags": (tags + ["scratchpad_consolidation"])[:10],
+                    "importance": 3,
+                }
+
+                # Write to episodic memory
+                ep_dir = self._drive_root / "memory" / "episodic"
+                ep_dir.mkdir(parents=True, exist_ok=True)
+                today = entry["ts"][:10]
+                ep_file = ep_dir / f"{today}.jsonl"
+                with ep_file.open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+                # Sync to ChromaDB
+                try:
+                    from ouroboros.tools.semantic_memory import upsert_episode
+                    upsert_episode(entry)
+                except Exception:
+                    pass
+
+            # Write compressed scratchpad
+            compressed = parsed.get("compressed_scratchpad", "")
+            if compressed and len(compressed) < len(content):
+                from ouroboros.utils import write_text
+                write_text(scratchpad_path, compressed)
+                log.info("Scratchpad consolidated: %d -> %d chars, %d facts extracted",
+                         len(content), len(compressed), len(durable_facts))
+            else:
+                log.warning("Scratchpad consolidation: compressed version not smaller, skipping write")
+
+            # Log to scratchpad_journal.jsonl
+            journal_path = self._drive_root / "memory" / "scratchpad_journal.jsonl"
+            append_jsonl(journal_path, {
+                "ts": utc_now_iso(),
+                "type": "consolidation",
+                "original_chars": len(content),
+                "compressed_chars": len(compressed) if compressed else 0,
+                "facts_extracted": len(durable_facts),
+                "cost_usd": cost,
+            })
+
+            return cost
+
+        except Exception as e:
+            log.warning("Scratchpad consolidation failed: %s", e)
+            return 0.0
+
     def _think(self) -> None:
         """One thinking cycle: build context, call LLM, execute tools iteratively."""
+        # Auto-consolidate scratchpad if too large
+        try:
+            consolidation_cost = self._maybe_consolidate_scratchpad()
+            self._bg_spent_usd += consolidation_cost
+        except Exception as e:
+            log.debug("Scratchpad consolidation error: %s", e)
+
         context = self._build_context()
         model = self._model
 

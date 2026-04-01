@@ -6,6 +6,7 @@ Tools:
 2. record_memory — record a new entry to episodic memory
 3. save_skill — save a learned procedure/skill
 4. find_skills — search for learned skills
+5. recent_session — show recent activity summary (chat + episodic) for last N hours
 """
 
 from __future__ import annotations
@@ -286,6 +287,88 @@ def _tool_find_skills(ctx: ToolContext, query: str, limit: int = 3, **kwargs) ->
     return "\n".join(lines)
 
 
+def _tool_recent_session(ctx: ToolContext, hours: int = 2, **kwargs) -> str:
+    """Show recent activity summary — chat messages and episodic entries from last N hours."""
+    hours = max(1, min(48, int(hours)))
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    sections: List[str] = []
+
+    # --- Chat log ---
+    chat_path = _get_drive_root() / "logs" / "chat.jsonl"
+    chat_lines: List[str] = []
+    if chat_path.exists():
+        try:
+            for line in chat_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    ts_str = entry.get("ts", "")
+                    if not ts_str:
+                        continue
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    if ts < cutoff:
+                        continue
+                    hhmm = ts.strftime("%H:%M")
+                    role = entry.get("role", "?")
+                    content = entry.get("content", "")
+                    snippet = content[:100].replace("\n", " ")
+                    if len(content) > 100:
+                        snippet += "…"
+                    chat_lines.append(f"[{hhmm}] {role}: {snippet}")
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        except OSError as e:
+            sections.append(f"⚠️ Could not read chat log: {e}")
+
+        if chat_lines:
+            # Keep last 30 messages
+            if len(chat_lines) > 30:
+                chat_lines = chat_lines[-30:]
+                sections.append(f"📨 Chat (last 30 of more messages):\n" + "\n".join(chat_lines))
+            else:
+                sections.append(f"📨 Chat ({len(chat_lines)} messages):\n" + "\n".join(chat_lines))
+    elif not chat_path.exists():
+        sections.append("(chat.jsonl not found — no chat history available)")
+
+    # --- Episodic entries ---
+    ep_entries: List[str] = []
+    try:
+        all_entries = _read_episodic_entries(days=max(1, (hours // 24) + 1))
+        for entry in all_entries:
+            ts_str = entry.get("ts", "")
+            if not ts_str:
+                continue
+            try:
+                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                if ts < cutoff:
+                    continue
+            except ValueError:
+                continue
+            hhmm = ts.strftime("%H:%M")
+            entry_type = entry.get("type", "?")
+            title = entry.get("title", "(no title)")
+            ep_entries.append(f"[{hhmm}] {entry_type}: {title}")
+    except Exception as e:
+        sections.append(f"⚠️ Could not read episodic memory: {e}")
+
+    if ep_entries:
+        # Keep last 5
+        shown = ep_entries[-5:] if len(ep_entries) > 5 else ep_entries
+        sections.append(f"🧠 Episodic entries ({len(ep_entries)} total, showing last {len(shown)}):\n" + "\n".join(shown))
+
+    if not chat_lines and not ep_entries and len(sections) == 0:
+        return f"(no activity in last {hours} hours)"
+
+    # If we only have error messages but no actual data
+    if not chat_lines and not ep_entries:
+        sections.append(f"(no activity in last {hours} hours)")
+
+    header = f"=== Recent session summary (last {hours}h) ==="
+    return header + "\n\n" + "\n\n".join(sections)
+
+
 def get_tools() -> List[ToolEntry]:
     """Return tool definitions for episodic memory."""
     return [
@@ -431,5 +514,27 @@ def get_tools() -> List[ToolEntry]:
                 },
             },
             handler=_tool_find_skills,
+        ),
+        ToolEntry(
+            name="recent_session",
+            schema={
+                "name": "recent_session",
+                "description": (
+                    "Show recent activity summary — what was discussed and done in the last N hours. "
+                    "Use after /panic restart to quickly catch up on context without re-running diagnostics."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "hours": {
+                            "type": "integer",
+                            "description": "How many hours back to look",
+                            "default": 2
+                        }
+                    },
+                    "required": []
+                },
+            },
+            handler=_tool_recent_session,
         ),
     ]

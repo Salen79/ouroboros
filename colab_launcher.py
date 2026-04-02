@@ -824,6 +824,17 @@ while True:
 
         save_state(st)
 
+        # --- Directive extraction (Shareholder compliance) ---
+        try:
+            from ouroboros.memory import extract_directive, save_directive
+            _directive = extract_directive(text)
+            if _directive:
+                _state_dir = pathlib.Path.home() / "ouroboros-data" / "state"
+                save_directive(_directive, _state_dir)
+                log.info("Directive extracted: %s", _directive[:80])
+        except Exception as _de:
+            log.debug("Directive extraction failed: %s", _de)
+
         # Natural language stop detection — handled at supervisor level, not sent to LLM
         if _STOP_PATTERNS.search(_text_lower) and not _text_lower.startswith("/"):
             _snapshot_scratchpad_before_shutdown("natural_stop")

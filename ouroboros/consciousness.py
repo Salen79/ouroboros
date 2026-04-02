@@ -724,6 +724,27 @@ class BackgroundConsciousness:
             else:
                 self._stuck_detector._alerted = False
 
+            # Commitment accountability check
+            try:
+                from supervisor.queue import CommitmentTracker
+                _tracker = CommitmentTracker(self._drive_root / "state")
+                _expired = _tracker.get_expired()
+                for _c in _expired:
+                    _desc = _c["description"][:80]
+                    _overdue = _c.get("minutes_overdue", 0)
+                    if self._event_queue is not None and self._owner_chat_id_fn():
+                        self._event_queue.put({
+                            "type": "proactive_message",
+                            "text": (
+                                f"⏰ Commitment overdue: \"{_desc}\" — "
+                                f"{_overdue}min past deadline. Starting now or dropping?"
+                            ),
+                            "chat_id": self._owner_chat_id_fn(),
+                            "ts": utc_now_iso(),
+                        })
+            except Exception as _ce:
+                log.debug("Commitment check failed: %s", _ce)
+
             # Auto-reflection on completed tasks (budget-aware)
             try:
                 reflection_cost = self._auto_reflect()

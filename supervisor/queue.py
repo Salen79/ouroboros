@@ -472,3 +472,96 @@ def enqueue_evolution_task_if_needed() -> None:
     st["last_evolution_task_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     save_state(st)
     send_with_budget(int(owner_chat_id), f"🧬 Evolution #{cycle}: {tid}")
+
+
+# ---------------------------------------------------------------------------
+# Commitment Tracker — accountability for announced plans
+# ---------------------------------------------------------------------------
+
+class Commitment:
+    __slots__ = ("description", "announced_at", "deadline_minutes", "status", "task_id")
+
+    def __init__(self, description: str, announced_at: str, deadline_minutes: int = 60,
+                 status: str = "pending", task_id: Optional[str] = None):
+        self.description = description
+        self.announced_at = announced_at
+        self.deadline_minutes = deadline_minutes
+        self.status = status
+        self.task_id = task_id
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "description": self.description,
+            "announced_at": self.announced_at,
+            "deadline_minutes": self.deadline_minutes,
+            "status": self.status,
+            "task_id": self.task_id,
+        }
+
+
+class CommitmentTracker:
+    """Track announced plans and detect overdue commitments."""
+
+    def __init__(self, state_dir: pathlib.Path):
+        self.state_file = state_dir / "commitments.json"
+
+    def add(self, description: str, deadline_minutes: int = 60) -> Commitment:
+        """Add a new commitment."""
+        c = Commitment(
+            description=description[:200],
+            announced_at=datetime.datetime.now().isoformat(),
+            deadline_minutes=deadline_minutes,
+        )
+        commitments = self._load()
+        commitments.append(c.to_dict())
+        self._save(commitments)
+        return c
+
+    def mark_done(self, description_fragment: str) -> None:
+        """Mark a commitment as done if description matches."""
+        frag = description_fragment.lower()
+        commitments = self._load()
+        for c in commitments:
+            if c["status"] == "pending" and frag in c["description"].lower():
+                c["status"] = "done"
+        self._save(commitments)
+
+    def get_expired(self) -> List[Dict[str, Any]]:
+        """Get commitments past their deadline that are still pending."""
+        now = datetime.datetime.now()
+        expired: List[Dict[str, Any]] = []
+        commitments = self._load()
+        for c in commitments:
+            if c["status"] != "pending":
+                continue
+            try:
+                announced = datetime.datetime.fromisoformat(c["announced_at"])
+                deadline = announced + datetime.timedelta(minutes=c["deadline_minutes"])
+                if now > deadline:
+                    c["status"] = "expired"
+                    c["minutes_overdue"] = int((now - deadline).total_seconds() / 60)
+                    expired.append(c)
+            except (KeyError, ValueError):
+                continue
+        if expired:
+            self._save(commitments)
+        return expired
+
+    def get_active(self) -> List[Dict[str, Any]]:
+        """Get all pending commitments."""
+        return [c for c in self._load() if c["status"] == "pending"]
+
+    def _load(self) -> list:
+        if not self.state_file.exists():
+            return []
+        try:
+            return json.loads(self.state_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, Exception):
+            return []
+
+    def _save(self, data: list) -> None:
+        # Keep only last 20 commitments
+        data = data[-20:]
+        self.state_file.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )

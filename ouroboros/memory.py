@@ -290,3 +290,74 @@ class Memory:
             "This file is read at every dialogue and influences my responses.\n"
             "I update it when I feel the need, via drive_write.\n"
         )
+
+
+# ---------------------------------------------------------------------------
+# Shareholder Directive Extraction & Persistence
+# ---------------------------------------------------------------------------
+
+_DIRECTIVE_TRIGGERS_RU = [
+    "останови", "не трогай", "забудь", "отложи", "прекрати",
+    "не делай", "пауза", "стоп", "хватит", "не надо",
+]
+_DIRECTIVE_TRIGGERS_EN = [
+    "stop", "don't", "forget", "pause", "halt",
+    "do not", "skip", "abandon", "drop",
+]
+_DIRECTIVE_TRIGGERS = _DIRECTIVE_TRIGGERS_RU + _DIRECTIVE_TRIGGERS_EN
+
+
+def extract_directive(message: str) -> Optional[str]:
+    """Check if a Shareholder message contains a directive.
+    Returns the directive text if found, None otherwise."""
+    lower = message.lower()
+    for trigger in _DIRECTIVE_TRIGGERS:
+        if trigger in lower:
+            return message.strip()[:300]
+    return None
+
+
+def save_directive(directive: str, state_dir: pathlib.Path) -> None:
+    """Save a directive to persistent storage with 24h expiry."""
+    directives_path = state_dir / "directives.json"
+    directives: list = []
+    if directives_path.exists():
+        try:
+            directives = json.loads(directives_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, Exception):
+            directives = []
+
+    directives.append({
+        "text": directive,
+        "created_at": datetime.datetime.now().isoformat(),
+        "expires_at": (datetime.datetime.now() + datetime.timedelta(hours=24)).isoformat(),
+    })
+
+    # Keep only last 10 directives
+    directives = directives[-10:]
+    directives_path.write_text(
+        json.dumps(directives, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def load_active_directives(state_dir: pathlib.Path) -> list:
+    """Load directives that haven't expired."""
+    directives_path = state_dir / "directives.json"
+    if not directives_path.exists():
+        return []
+
+    try:
+        directives = json.loads(directives_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, Exception):
+        return []
+
+    now = datetime.datetime.now()
+    active = []
+    for d in directives:
+        try:
+            expires = datetime.datetime.fromisoformat(d["expires_at"])
+            if now < expires:
+                active.append(d)
+        except (KeyError, ValueError):
+            continue
+    return active

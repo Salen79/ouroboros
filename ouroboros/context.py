@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ouroboros.utils import (
     utc_now_iso, read_text, clip_text, estimate_tokens, get_git_info,
 )
-from ouroboros.memory import Memory
+from ouroboros.memory import Memory, load_active_directives
 
 log = logging.getLogger(__name__)
 
@@ -555,6 +555,23 @@ def build_llm_messages(
     health_section = _build_health_invariants(env)
     if health_section:
         dynamic_parts.append(health_section)
+
+    # Active Shareholder directives — MUST override task plans
+    try:
+        state_dir = pathlib.Path(env.drive_root) / "state"
+        active_directives = load_active_directives(state_dir)
+        if active_directives:
+            directive_lines = ["## ⚠️ Active Shareholder Directives (OVERRIDE task plans)\n"]
+            for d in active_directives:
+                created = d.get("created_at", "")[:16]
+                directive_lines.append(f"- [{created}] {d['text']}")
+            directive_lines.append(
+                "\nThese directives are from the Shareholder and MUST be respected. "
+                "Do NOT work on topics that contradict these directives."
+            )
+            dynamic_parts.append("\n".join(directive_lines))
+    except Exception:
+        pass
 
     dynamic_parts.extend(_build_recent_sections(memory, env, task_id=task.get("id", "")))
 

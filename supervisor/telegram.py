@@ -9,6 +9,8 @@ from __future__ import annotations
 import datetime
 import logging
 import re
+import time as _time
+from collections import deque
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -16,6 +18,38 @@ import requests
 from supervisor.state import load_state, save_state, append_jsonl
 
 log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Message dedup — suppress >80% similar outgoing messages within 5 min
+# ---------------------------------------------------------------------------
+_recent_outgoing: deque = deque(maxlen=5)
+
+# Prefixes that must NEVER be deduped (panic, stop, system-critical)
+_NODEDUP_PREFIXES = ("🛑", "⏹️")
+
+
+def _is_duplicate_message(text: str, window_sec: int = 300) -> bool:
+    """Check if message is >80% similar to any message sent in last N seconds."""
+    now = _time.time()
+    text_words = set(text.lower().split())
+    if not text_words:
+        return False
+
+    for prev_time, prev_text in _recent_outgoing:
+        if now - prev_time > window_sec:
+            continue
+        prev_words = set(prev_text.lower().split())
+        if not prev_words:
+            continue
+        overlap = len(text_words & prev_words) / max(len(text_words | prev_words), 1)
+        if overlap > 0.8:
+            return True
+    return False
+
+
+def _record_outgoing(text: str):
+    """Record a sent message for dedup tracking."""
+    _recent_outgoing.append((_time.time(), text[:500]))
 
 
 # ---------------------------------------------------------------------------
@@ -420,6 +454,16 @@ def log_chat(direction: str, chat_id: int, user_id: int, text: str) -> None:
 def send_with_budget(chat_id: int, text: str, log_text: Optional[str] = None,
                      force_budget: bool = False, fmt: str = "",
                      is_progress: bool = False) -> None:
+    # --- Dedup check (skip system-critical messages) ---
+    _text_str = str(text or "")
+    if _text_str and not any(_text_str.startswith(p) for p in _NODEDUP_PREFIXES):
+        try:
+            if _is_duplicate_message(_text_str):
+                log.info("Dedup: skipping duplicate message (>80%% similar to recent)")
+                return
+        except Exception:
+            pass  # Never block sends on dedup errors
+
     st = load_state()
     owner_id = int(st.get("owner_id") or 0)
     # Progress messages go to progress.jsonl instead of chat.jsonl
@@ -458,6 +502,11 @@ def send_with_budget(chat_id: int, text: str, log_text: Optional[str] = None,
                     "format": "markdown",
                 },
             )
+        else:
+            try:
+                _record_outgoing(full)
+            except Exception:
+                pass
         return
 
     tg = get_tg()
@@ -475,3 +524,9 @@ def send_with_budget(chat_id: int, text: str, log_text: Optional[str] = None,
                 },
             )
             break
+    else:
+        # All parts sent successfully — record for dedup
+        try:
+            _record_outgoing(full)
+        except Exception:
+            pass

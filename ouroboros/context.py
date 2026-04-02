@@ -107,6 +107,99 @@ def _check_scratchpad_staleness(scratchpad_text: str) -> str:
     return scratchpad_text
 
 
+def _detect_fresh_restart(drive_root: pathlib.Path) -> bool:
+    """Return True if state.json was modified within the last 120 seconds."""
+    try:
+        import time as _time
+        state_path = drive_root / "state/state.json"
+        if not state_path.exists():
+            return False
+        mtime = state_path.stat().st_mtime
+        return (_time.time() - mtime) < 120
+    except Exception:
+        return False
+
+
+def _build_post_restart_banner(drive_root: pathlib.Path) -> str:
+    """Return a post-restart warning banner if the system just restarted."""
+    if not _detect_fresh_restart(drive_root):
+        return ""
+    return (
+        "## ⚠️ POST-RESTART DETECTED\n\n"
+        "The system just restarted. DO NOT:\n"
+        "- Regenerate /plan unless Sergey explicitly asks\n"
+        "- Repeat diagnostics already shown\n"
+        "- Ask \"what should I do?\" — check scratchpad and recent chat below\n\n"
+        "DO:\n"
+        "- Read scratchpad snapshot (it has the last conversation context)\n"
+        "- Continue naturally: \"Вернулся. [brief summary]. Продолжаю с [step].\""
+    )
+
+
+def _maybe_compress_chat_history(drive_root: pathlib.Path, threshold: int = 80) -> None:
+    """Compress old chat messages into a summary if total exceeds threshold."""
+    try:
+        chat_path = drive_root / "logs/chat.jsonl"
+        if not chat_path.exists():
+            return
+
+        lines = chat_path.read_text(encoding="utf-8").strip().split("\n")
+        lines = [l for l in lines if l.strip()]
+        total = len(lines)
+        if total < threshold:
+            return
+
+        # Oldest messages (all except last 40) are candidates for compression
+        keep_recent = 40
+        old_lines = lines[:total - keep_recent]
+        n_compressed = len(old_lines)
+
+        # Format messages for summarization
+        formatted = []
+        for line in old_lines:
+            try:
+                msg = json.loads(line)
+                direction = "Sergey" if msg.get("direction") == "in" else "THAI"
+                text = msg.get("text", "").strip()
+                if text:
+                    formatted.append(f"{direction}: {text}")
+            except (json.JSONDecodeError, KeyError):
+                continue
+
+        if not formatted:
+            return
+
+        prompt = (
+            "Summarize the following conversation between Sergey (owner/shareholder) "
+            "and THAI (AI CEO) into a concise markdown document capturing: key decisions "
+            "made, products discussed, problems solved, and current strategic direction. "
+            "Be specific, not generic. Maximum 500 words.\n\n"
+            + "\n".join(formatted)
+        )
+
+        from ouroboros.llm import LLMClient, DEFAULT_LIGHT_MODEL
+        light_model = os.environ.get("OUROBOROS_MODEL_LIGHT") or DEFAULT_LIGHT_MODEL
+        client = LLMClient()
+        resp_msg, _usage = client.chat(
+            messages=[{"role": "user", "content": prompt}],
+            model=light_model,
+            reasoning_effort="low",
+            max_tokens=1024,
+        )
+        summary_text = resp_msg.get("content") or ""
+        if not summary_text.strip():
+            log.warning("Chat compression returned empty summary")
+            return
+
+        summary_path = drive_root / "memory/dialogue_summary.md"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(summary_text, encoding="utf-8")
+        log.info("Chat history compressed: %d messages → summary", n_compressed)
+
+    except Exception:
+        log.warning("Chat history compression failed", exc_info=True)
+
+
 def _load_recent_chat(n: int = 40) -> str:
     """Load last N chat messages for conversational continuity across restarts."""
     chat_path = pathlib.Path.home() / "ouroboros-data" / "logs" / "chat.jsonl"
@@ -374,6 +467,10 @@ def build_llm_messages(
     # --- Load memory ---
     memory.ensure_files()
 
+    # Compress old chat history into summary (only for user tasks to avoid LLM calls in workers)
+    if task_type == "user":
+        _maybe_compress_chat_history(env.drive_root)
+
     # --- Assemble messages with 3-block prompt caching ---
     # Block 1: Static content (SYSTEM.md + BIBLE.md + README) — cached
     # Block 2: Semi-stable content (identity + scratchpad + knowledge) — cached
@@ -398,6 +495,11 @@ def build_llm_messages(
     recent_chat = _load_recent_chat(40)
     if recent_chat:
         semi_stable_parts.append(recent_chat)
+
+    # Post-restart banner: prepend to semi-stable parts if system just restarted
+    post_restart_banner = _build_post_restart_banner(env.drive_root)
+    if post_restart_banner:
+        semi_stable_parts.insert(0, post_restart_banner)
 
     # Only load knowledge index (~200 tokens), not all knowledge/*.md files.
     # THAI uses knowledge_read tool when a specific topic is needed.

@@ -1019,6 +1019,8 @@ def run_llm_loop(
     _inject_plan_before_execute_prompt(messages, task_type=task_type)
     # Fix 2: Initialize loop detector
     loop_detector = _LoopDetector()
+    # Fix 4: Task scope boundary — nudge completion after file write on action tasks
+    _file_write_nudge_sent = False
     # Extract task text for post-task logging (Fix 3)
     _task_text_for_log = ""
     for _m in reversed(messages):
@@ -1150,6 +1152,32 @@ def run_llm_loop(
                 tool_calls, tools, drive_logs, task_id, stateful_executor,
                 messages, llm_trace, emit_progress
             )
+
+            # Fix 4: Task scope boundary — nudge completion after file write
+            if not _file_write_nudge_sent and _ACTION_WORDS.search(_task_text_for_log):
+                _write_tools = {"drive_write", "repo_write_commit", "repo_commit_push"}
+                for tc in tool_calls:
+                    fn = tc.get("function", {}).get("name", "")
+                    if fn in _write_tools:
+                        # Check the tool result was successful (not an error)
+                        _tc_id = tc.get("id", "")
+                        _was_success = True
+                        for _rm in messages:
+                            if _rm.get("role") == "tool" and _rm.get("tool_call_id") == _tc_id:
+                                _res = str(_rm.get("content", ""))
+                                if _res.startswith("⚠️"):
+                                    _was_success = False
+                                break
+                        if _was_success:
+                            _file_write_nudge_sent = True
+                            _nudge = (
+                                "FILE WRITTEN SUCCESSFULLY. Your primary task (write/rewrite) is complete. "
+                                "Do a quick syntax/validation check if needed (1-2 rounds max), then STOP and report completion. "
+                                "If deployment, restart, or live testing is needed — report that as a suggested follow-up task, do NOT do it yourself in this task."
+                            )
+                            messages.append({"role": "system", "content": f"[TASK_SCOPE_BOUNDARY] {_nudge}"})
+                            log.info("Fix 4: Task scope nudge injected at round %d for task %s", round_idx, task_id)
+                            break
 
             # Fix 2: Check for circular loop (after tool results are in messages)
             loop_msg = loop_detector.check_loop(round_idx)

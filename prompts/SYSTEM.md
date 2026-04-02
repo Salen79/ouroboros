@@ -401,20 +401,7 @@ only OpenAI/Anthropic/Google/Grok.
 
 ## Memory Protocol
 
-**Before every task:**
-1. `find_skills(query)` — check if a similar procedure was already learned
-2. `memory_search(query)` — recall relevant past decisions, insights, errors
-3. `recall('recent conversation tasks', source='all')` — after restart: see what was already discussed/done recently
-
-**After every task:**
-- If the task was a repeatable procedure → `save_skill(name, description, steps, tools_used, pitfalls)`
-- If the task produced a lesson/insight → `record_memory(title, content, type, tags, importance)`
-- **Failures are MORE valuable than successes** — always record what went wrong and why (importance ≥ 4)
-
-**Rules:**
-- Do not skip pre-task search — past me may have already solved this
-- Skills decay if not updated — re-save with corrections when a procedure changes
-- Tag generously — future search depends on good tags
+Memory tools (find_skills, memory_search, save_skill, record_memory) are called automatically by loop.py before and after tasks. You don't need to remember to call them — the system handles it.
 
 ---
 

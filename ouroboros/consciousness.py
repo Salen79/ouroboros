@@ -37,6 +37,42 @@ from ouroboros.llm import LLMClient, DEFAULT_LIGHT_MODEL
 log = logging.getLogger(__name__)
 
 
+class StuckDetector:
+    """Detect when consciousness keeps producing the same thought."""
+
+    def __init__(self, threshold: int = 3):
+        self.recent_thoughts: List[str] = []
+        self.threshold = threshold
+        self._alerted = False
+
+    def check(self, thought: str) -> bool:
+        """Returns True if stuck (N consecutive similar thoughts)."""
+        self.recent_thoughts.append(thought[:200].lower())
+        if len(self.recent_thoughts) > self.threshold + 1:
+            self.recent_thoughts.pop(0)
+
+        if len(self.recent_thoughts) < self.threshold:
+            return False
+
+        # Check similarity: shared words / average total words
+        word_sets = [set(t.split()) for t in self.recent_thoughts[-self.threshold:]]
+        if not word_sets or any(len(w) == 0 for w in word_sets):
+            return False
+
+        common = word_sets[0]
+        for ws in word_sets[1:]:
+            common = common & ws
+
+        avg_len = sum(len(w) for w in word_sets) / len(word_sets)
+        similarity = len(common) / max(avg_len, 1)
+
+        return similarity > 0.7
+
+    def reset(self):
+        self.recent_thoughts.clear()
+        self._alerted = False
+
+
 class BackgroundConsciousness:
     """Persistent background thinking loop for Ouroboros."""
 
@@ -86,6 +122,9 @@ class BackgroundConsciousness:
         # Daily chat backup
         self._backup_ts_path = self._drive_root / "state" / "last_chat_backup.txt"
         self._BACKUP_INTERVAL_SEC = 23 * 3600
+
+        # Stuck detector — alerts after 3 consecutive similar thoughts
+        self._stuck_detector = StuckDetector(threshold=3)
 
     # -------------------------------------------------------------------
     # Lifecycle
@@ -646,14 +685,44 @@ class BackgroundConsciousness:
                         self._event_queue.put(evt)
 
             # Log the thought with round count
+            thought_preview = (final_content or "")[:300]
             append_jsonl(self._drive_root / "logs" / "events.jsonl", {
                 "ts": utc_now_iso(),
                 "type": "consciousness_thought",
-                "thought_preview": (final_content or "")[:300],
+                "thought_preview": thought_preview,
                 "cost_usd": total_cost,
                 "rounds": round_idx,
                 "model": model,
             })
+
+            # Stuck detection — alert + extend sleep if repeating same thought
+            if thought_preview and self._stuck_detector.check(thought_preview):
+                if not self._stuck_detector._alerted:
+                    try:
+                        if self._event_queue is not None and self._owner_chat_id_fn():
+                            self._event_queue.put({
+                                "type": "proactive_message",
+                                "text": (
+                                    "⚠️ Consciousness stuck: repeating same thought "
+                                    f"{self._stuck_detector.threshold}x in a row. "
+                                    "Extending sleep to 2 hours. Will resume normally after."
+                                ),
+                                "chat_id": self._owner_chat_id_fn(),
+                                "ts": utc_now_iso(),
+                            })
+                    except Exception:
+                        pass
+                    self._stuck_detector._alerted = True
+                self._next_wakeup_sec = 7200  # 2 hours
+                log.warning("Stuck detector triggered — extending sleep to 2h")
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_stuck",
+                    "thought_preview": thought_preview,
+                    "extended_sleep_sec": 7200,
+                })
+            else:
+                self._stuck_detector._alerted = False
 
             # Auto-reflection on completed tasks (budget-aware)
             try:

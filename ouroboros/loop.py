@@ -619,11 +619,42 @@ def _inject_progress_tracking_prompt(
 
 
 def _inject_memory_lookup_prompt(
-    messages,
+    messages: List[Dict[str, Any]],
     task_type: str = "task",
 ) -> None:
-    """Inject memory protocol instruction. TODO: implement in Session 2."""
-    pass  # disabled: broken string literal from auto-rescue commit
+    """Inject memory protocol instruction before task execution.
+
+    Tells the LLM to call find_skills and memory_search as first actions.
+    This is code-enforced, not just a SYSTEM.md instruction that gets ignored.
+    """
+    if task_type not in ("task", "direct_chat"):
+        return  # Skip for consciousness, system tasks
+
+    # Extract task text from last user message for search hints
+    task_hint = ""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                task_hint = content[:100]
+            break
+
+    search_query = task_hint[:60].replace('"', "'")
+
+    instruction = (
+        "[MEMORY PROTOCOL — mandatory before starting work]\n"
+        "Before doing ANYTHING else, call these two tools:\n\n"
+        '1. find_skills("' + search_query + '")\n'
+        "   → Check if a proven procedure exists for this type of task\n\n"
+        '2. memory_search("' + search_query + '")\n'
+        "   → Check for relevant past experiences, decisions, errors\n\n"
+        "If skills are found → follow the procedure, don't reinvent.\n"
+        "If memories are found → use lessons learned, avoid past mistakes.\n"
+        "If nothing found → proceed normally, but SAVE results after:\n"
+        "   → save_skill() if task took >3 rounds (reusable procedure)\n"
+        "   → record_memory(type='error_pattern') if task failed\n"
+    )
+    messages.append({"role": "system", "content": instruction})
 
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
@@ -784,7 +815,7 @@ def run_llm_loop(
     # Inject mandatory progress tracking instruction at task start
     _inject_progress_tracking_prompt(messages)
     # Inject memory protocol instruction (find_skills + recall before, save_skill after)
-    # _inject_memory_lookup_prompt(messages, task_type=task_type)  # disabled: broken string literal, will implement in Session 2
+    _inject_memory_lookup_prompt(messages, task_type=task_type)
     round_idx = 0
     try:
         while True:
@@ -908,6 +939,20 @@ def run_llm_loop(
                 task_id, event_queue, llm_trace, task_type
             )
             if budget_result is not None:
+                # POST-TASK: Log when memory save is warranted
+                try:
+                    if round_idx > 3 and task_type in ("task", "direct_chat"):
+                        task_text = ""
+                        for m in messages:
+                            if m.get("role") == "user":
+                                c = m.get("content", "")
+                                if isinstance(c, str):
+                                    task_text = c[:200]
+                                break
+                        log.info("Memory save warranted: task '%s' took %d rounds",
+                                 task_text[:50], round_idx)
+                except Exception:
+                    pass  # Never break task completion for memory
                 return budget_result
 
     finally:

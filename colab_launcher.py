@@ -469,6 +469,15 @@ Context above is the most recent state. The 'Recent conversation' section in sys
     except Exception as e:
         log.warning("Failed to snapshot scratchpad: %s", e)
 
+    # Write explicit restart marker for context.py detection
+    marker_path = _Path.home() / "ouroboros-data" / "memory" / ".restart_marker"
+    try:
+        import time as _time_mod
+        marker_path.write_text(str(_time_mod.time()))
+        log.info("Restart marker written (%s)", reason)
+    except Exception as e:
+        log.warning("Failed to write restart marker: %s", e)
+
 
 def _safe_qsize(q: Any) -> int:
     try:

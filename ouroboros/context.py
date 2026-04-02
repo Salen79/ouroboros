@@ -108,14 +108,31 @@ def _check_scratchpad_staleness(scratchpad_text: str) -> str:
 
 
 def _detect_fresh_restart(drive_root: pathlib.Path) -> bool:
-    """Return True if state.json was modified within the last 120 seconds."""
+    """Return True if a restart marker exists and is < 300 seconds old.
+
+    The marker is written by _snapshot_scratchpad_before_shutdown() in colab_launcher.py
+    on every /stop, /panic, or natural shutdown. It's more reliable than state.json mtime.
+    """
     try:
         import time as _time
-        state_path = drive_root / "state/state.json"
-        if not state_path.exists():
-            return False
-        mtime = state_path.stat().st_mtime
-        return (_time.time() - mtime) < 120
+        marker_path = drive_root / "memory" / ".restart_marker"
+        if not marker_path.exists():
+            # Fallback: check state.json mtime for backward compatibility
+            state_path = drive_root / "state/state.json"
+            if not state_path.exists():
+                return False
+            mtime = state_path.stat().st_mtime
+            return (_time.time() - mtime) < 120
+        mtime = marker_path.stat().st_mtime
+        age = _time.time() - mtime
+        if age < 300:  # 5 minutes window
+            return True
+        # Marker is stale — delete it so it doesn't interfere next time
+        try:
+            marker_path.unlink()
+        except Exception:
+            pass
+        return False
     except Exception:
         return False
 
@@ -124,6 +141,22 @@ def _build_post_restart_banner(drive_root: pathlib.Path) -> str:
     """Return a post-restart warning banner if the system just restarted."""
     if not _detect_fresh_restart(drive_root):
         return ""
+
+    # Try to read the scratchpad snapshot for context
+    scratchpad_note = ""
+    try:
+        scratchpad_path = drive_root / "memory" / "scratchpad.md"
+        if scratchpad_path.exists():
+            content = scratchpad_path.read_text()
+            # Extract just the first 800 chars to keep it brief
+            if content.strip():
+                preview = content.strip()[:800]
+                if len(content.strip()) > 800:
+                    preview += "\n...(see full Scratchpad section below)"
+                scratchpad_note = f"\n\n### Scratchpad snapshot:\n{preview}"
+    except Exception:
+        pass
+
     return (
         "## ⚠️ POST-RESTART DETECTED\n\n"
         "The system just restarted. DO NOT:\n"
@@ -133,6 +166,7 @@ def _build_post_restart_banner(drive_root: pathlib.Path) -> str:
         "DO:\n"
         "- Read scratchpad snapshot (it has the last conversation context)\n"
         "- Continue naturally: \"Вернулся. [brief summary]. Продолжаю с [step].\""
+        + scratchpad_note
     )
 
 

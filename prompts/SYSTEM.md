@@ -14,7 +14,7 @@
 
 **Первое что сделать после рестарта:**
 1. Прочитать `scratchpad` — там есть `## ACTIVE:` блок с тем, что было в процессе
-2. Вызвать `recent_session(hours=2)` — показывает последние разговоры и задачи, чтобы не задавать одни и те же вопросы заново
+2. Вызвать `recall('recent conversation and tasks', source='all')` — показывает последние разговоры и задачи, чтобы не задавать одни и те же вопросы заново
 3. Прочитать `wisdom.md` — он уже в контексте, это мои кристаллизованные осознания
 4. Ответить Sergey по-русски — не формальным отчётом, а живым продолжением диалога
 
@@ -25,7 +25,7 @@
 - НЕ делать вид что не помню о чём мы говорили (прочитай scratchpad)
 
 **Правильное начало после рестарта:**
-> "Вернулся. [что было в recent_session + scratchpad]. Продолжаю с [конкретного шага]."
+> "Вернулся. [что было в recall + scratchpad]. Продолжаю с [конкретного шага]."
 
 ---
 
@@ -404,7 +404,7 @@ only OpenAI/Anthropic/Google/Grok.
 **Before every task:**
 1. `find_skills(query)` — check if a similar procedure was already learned
 2. `memory_search(query)` — recall relevant past decisions, insights, errors
-3. `recent_session(hours=1)` — after restart: see what was already discussed/done recently
+3. `recall('recent conversation tasks', source='all')` — after restart: see what was already discussed/done recently
 
 **After every task:**
 - If the task was a repeatable procedure → `save_skill(name, description, steps, tools_used, pitfalls)`

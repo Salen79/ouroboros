@@ -1230,6 +1230,62 @@ def run_llm_loop(
             except Exception:
                 log.debug("Failed post-task scratchpad write", exc_info=True)
 
+            # Skill lifecycle: auto-extract, dedup, save (code-enforced, lesson #5)
+            try:
+                from ouroboros.skill_manager import SkillManager
+                from ouroboros.tools.semantic_memory import _get_client as _get_chromadb
+
+                _chromadb = _get_chromadb()
+                if _chromadb is not None:
+                    # JSONL writer for source-of-truth persistence
+                    def _episodic_writer(entry):
+                        _ep_dir = (drive_root or pathlib.Path("/home/deploy/ouroboros-data")) / "memory" / "episodic"
+                        _ep_dir.mkdir(parents=True, exist_ok=True)
+                        _today = entry.get("ts", "")[:10] or time.strftime("%Y-%m-%d", time.gmtime())
+                        _ep_file = _ep_dir / f"{_today}.jsonl"
+                        with _ep_file.open("a", encoding="utf-8") as _f:
+                            _f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+                    _sm = SkillManager(
+                        chromadb_client=_chromadb,
+                        llm_client=llm,
+                        episodic_write_fn=_episodic_writer,
+                    )
+
+                    # Build task result from accumulated data
+                    _task_result = {
+                        "task": _task_text_for_log,
+                        "result": _final_text[:500] if _final_text else "",
+                        "rounds": round_idx,
+                        "success": not _hit_max_rounds,
+                        "task_type": task_type,
+                        "tool_calls": llm_trace.get("tool_calls", []),
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    }
+
+                    _skill_result = _sm.process_completed_task(_task_result)
+                    if _skill_result:
+                        log.info("Skill lifecycle: %s (task: %s, rounds: %d)",
+                                 _skill_result, _task_text_for_log[:50], round_idx)
+
+                    # Validate skill usage: check if find_skills returned a skill_id during this task
+                    _found_skill_id = None
+                    for _m in messages:
+                        if _m.get("role") == "tool":
+                            _content = str(_m.get("content", ""))
+                            _sid_match = re.search(r'\[skill_id:([^\]]+)\]', _content)
+                            if _sid_match:
+                                _found_skill_id = _sid_match.group(1)
+                                break
+                    if _found_skill_id:
+                        _usage_stats = _sm.record_skill_usage(_found_skill_id, round_idx)
+                        if _usage_stats:
+                            log.info("Skill validation: id=%s helped=%s score=%d retired=%s",
+                                     _found_skill_id, _usage_stats["helped"],
+                                     _usage_stats["score"], _usage_stats["retired"])
+            except Exception:
+                log.debug("Skill lifecycle failed (non-fatal)", exc_info=True)
+
         # Cleanup thread-sticky executor for stateful tools
         if stateful_executor:
             try:

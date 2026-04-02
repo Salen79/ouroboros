@@ -249,10 +249,39 @@ def _tool_save_skill(
     )
 
 
+def _chromadb_skill_ids(query: str, limit: int = 3) -> dict:
+    """Query ChromaDB thai_skills for skill IDs matching query.
+
+    Returns dict mapping skill title prefix → ChromaDB document ID.
+    Used to enrich find_skills output with IDs for record_skill_usage tracking.
+    """
+    try:
+        from ouroboros.tools.semantic_memory import _get_client
+        client = _get_client()
+        if client is None:
+            return {}
+        col = client.get_or_create_collection("thai_skills")
+        if col.count() == 0:
+            return {}
+        results = col.query(query_texts=[query], n_results=limit)
+        mapping = {}
+        for i, doc_id in enumerate(results.get("ids", [[]])[0]):
+            meta = (results.get("metadatas", [[]])[0] or [{}])[i] if i < len(results.get("metadatas", [[]])[0]) else {}
+            name = meta.get("name", "")
+            title = meta.get("title", "")
+            key = name or title
+            if key:
+                mapping[key.lower()] = doc_id
+        return mapping
+    except Exception:
+        return {}
+
+
 def _tool_find_skills(ctx: ToolContext, query: str, limit: int = 3, **kwargs) -> str:
     """Search for learned skills/procedures in episodic memory.
 
     Searches only skill-type entries from the last 365 days.
+    Returns skill_id markers from ChromaDB for post-task validation tracking.
     """
     if not query or not query.strip():
         return "⚠️ query is required"
@@ -278,9 +307,23 @@ def _tool_find_skills(ctx: ToolContext, query: str, limit: int = 3, **kwargs) ->
         return f"No skills matching '{query}'"
 
     top = scored[:limit]
+
+    # Enrich with ChromaDB skill IDs for post-task validation
+    skill_id_map = _chromadb_skill_ids(query, limit)
+
     lines = [f"Found {len(scored)} matching skills (showing top {len(top)}):\n"]
     for i, (entry, score) in enumerate(top, 1):
-        lines.append(f"--- {i}. (relevance: {score}) ---")
+        # Try to find ChromaDB ID for this skill
+        title = entry.get("title", "").lower()
+        skill_id = None
+        for key, sid in skill_id_map.items():
+            if key in title or title and key in title.replace("skill: ", ""):
+                skill_id = sid
+                break
+        if skill_id:
+            lines.append(f"--- {i}. (relevance: {score}) [skill_id:{skill_id}] ---")
+        else:
+            lines.append(f"--- {i}. (relevance: {score}) ---")
         lines.append(_format_entry(entry))
         lines.append("")
 

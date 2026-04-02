@@ -11,8 +11,10 @@ import json
 import os
 import pathlib
 import queue
+import re
 import threading
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -656,6 +658,203 @@ def _inject_memory_lookup_prompt(
     )
     messages.append({"role": "system", "content": instruction})
 
+# --- Fix 1: Plan-Before-Execute ---
+# Action words that signal "do something" tasks requiring a plan first
+_ACTION_WORDS = re.compile(
+    r'\b(действуй|implement|build|rewrite|напиши|сделай|создай|deploy|refactor|'
+    r'migrate|develop|write|fix|настрой|установи|переделай|разверни|запусти|'
+    r'create|setup|configure|redesign|rebuild|add|remove|delete|update|change)\b',
+    re.IGNORECASE
+)
+
+
+def _inject_plan_before_execute_prompt(
+    messages: List[Dict[str, Any]],
+    task_type: str = "task",
+) -> bool:
+    """Inject plan-first instruction when task contains action words.
+
+    Forces the LLM to write a numbered plan BEFORE making any tool calls.
+    Code-enforced (lesson #5: text instructions get ignored, code works 100%).
+
+    Returns True if plan prompt was injected.
+    """
+    if task_type not in ("task", "direct_chat"):
+        return False
+
+    # Extract task text from last user message
+    task_text = ""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                task_text = content
+            break
+
+    if not task_text:
+        return False
+
+    # Check if task contains action words
+    if not _ACTION_WORDS.search(task_text):
+        return False
+
+    instruction = (
+        "[PLAN-BEFORE-EXECUTE — mandatory for action tasks]\n"
+        "This task requires ACTION. Before making ANY tool calls, you MUST:\n\n"
+        "1. Write a numbered plan (3-7 steps) as your FIRST response text.\n"
+        "   Format:\n"
+        "   ## Plan\n"
+        "   1. [Step]: [what and why]\n"
+        "   2. [Step]: [what and why]\n"
+        "   ...\n"
+        "   Expected result: [what done looks like]\n\n"
+        "2. THEN start executing step 1.\n\n"
+        "Why: Plans prevent circular loops, wasted rounds, and budget burns.\n"
+        "Skip this ONLY for trivial 1-step tasks (status check, simple read).\n"
+        "If the task is complex (>3 steps), save the plan to scratchpad via update_scratchpad."
+    )
+    messages.append({"role": "system", "content": instruction})
+    return True
+
+
+# --- Fix 2: Circular Loop Detector ---
+
+class _LoopDetector:
+    """Tracks file access and token patterns to detect circular loops.
+
+    Two detection signals:
+    1. File re-reads: round >= 5 and 2+ files already read in earlier rounds
+    2. Low-output loop: 3 consecutive rounds with completion_tokens < 200
+       and prompt_tokens > 30K
+    """
+
+    def __init__(self):
+        # file_path -> set of rounds it was read in
+        self.files_read: Dict[str, set] = defaultdict(set)
+        # List of (prompt_tokens, completion_tokens) per round
+        self.round_tokens: List[tuple] = []
+
+    def track_file_access(self, tool_calls: List[Dict[str, Any]], round_idx: int) -> None:
+        """Record which files were accessed in this round."""
+        for tc in tool_calls:
+            fn_name = tc.get("function", {}).get("name", "")
+            if fn_name in ("repo_read", "repo_list", "drive_read"):
+                try:
+                    args = json.loads(tc["function"].get("arguments", "{}"))
+                    path = args.get("path") or args.get("file_path") or args.get("filename", "")
+                    if path:
+                        self.files_read[path].add(round_idx)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+    def track_tokens(self, usage: Dict[str, Any]) -> None:
+        """Record token usage for this round."""
+        prompt = int(usage.get("prompt_tokens") or 0)
+        completion = int(usage.get("completion_tokens") or 0)
+        self.round_tokens.append((prompt, completion))
+
+    def check_loop(self, round_idx: int) -> Optional[str]:
+        """Check for loop signals. Returns injection message or None."""
+        reasons = []
+
+        # Signal 1: File re-reads after round 5
+        if round_idx >= 5:
+            re_read_files = [
+                f for f, rounds in self.files_read.items()
+                if len(rounds) >= 2 and min(rounds) < round_idx
+            ]
+            if len(re_read_files) >= 2:
+                reasons.append(
+                    f"Re-reading files already seen: {', '.join(re_read_files[:5])}"
+                )
+
+        # Signal 2: 3 consecutive low-output rounds with bloated context
+        if len(self.round_tokens) >= 3:
+            last_3 = self.round_tokens[-3:]
+            if all(
+                comp < 200 and prompt > 30000
+                for prompt, comp in last_3
+            ):
+                reasons.append(
+                    f"3 consecutive low-output rounds (completion < 200 tokens, "
+                    f"context > 30K tokens) — classic loop signature"
+                )
+
+        if not reasons:
+            return None
+
+        return (
+            "[LOOP DETECTED — STOP NOW]\n"
+            "⚠️ Circular loop detected. Signals:\n"
+            + "\n".join(f"  • {r}" for r in reasons) + "\n\n"
+            "You are going in circles. IMMEDIATELY:\n"
+            "1. STOP reading/re-reading files.\n"
+            "2. Summarize what you have learned so far.\n"
+            "3. Produce your FINAL output with the best result you have.\n"
+            "4. If you need more work, use schedule_task to create a follow-up.\n\n"
+            "Do NOT make another tool call unless it is update_scratchpad or send_owner_message."
+        )
+
+
+# --- Fix 3: Post-Task Scratchpad Write ---
+
+def _post_task_scratchpad_write(
+    drive_root: Optional[pathlib.Path],
+    task_text: str,
+    round_idx: int,
+    accumulated_usage: Dict[str, Any],
+    final_text: str,
+    hit_max_rounds: bool,
+) -> None:
+    """Append task summary to scratchpad.md after every task completion.
+
+    Code-enforced post-task logging (lesson #5).
+    Logs: task description, rounds, cost, result length, status.
+    Warns on possible silent failures (short result + many rounds).
+    """
+    if drive_root is None:
+        return
+
+    scratchpad_path = drive_root / "memory" / "scratchpad.md"
+    if not scratchpad_path.parent.exists():
+        return
+
+    cost = accumulated_usage.get("cost", 0)
+    result_len = len(final_text) if final_text else 0
+    status = "MAX_ROUNDS" if hit_max_rounds else "completed"
+    task_short = (task_text or "unknown")[:120].replace("\n", " ")
+
+    ts = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
+
+    entry = (
+        f"\n### Task Log [{ts}]\n"
+        f"- **Task:** {task_short}\n"
+        f"- **Rounds:** {round_idx} | **Cost:** ${cost:.3f} | "
+        f"**Result:** {result_len} chars | **Status:** {status}\n"
+    )
+
+    # Warn on possible silent failure
+    if result_len < 100 and round_idx > 10:
+        entry += (
+            f"- ⚠️ **WARNING: possible silent failure** — "
+            f"result < 100 chars after {round_idx} rounds\n"
+        )
+
+    try:
+        existing = ""
+        if scratchpad_path.exists():
+            existing = scratchpad_path.read_text(encoding="utf-8")
+        # Append to end
+        scratchpad_path.write_text(
+            existing.rstrip() + "\n" + entry,
+            encoding="utf-8",
+        )
+        log.info("Post-task scratchpad write: %s, %d rounds, $%.3f, %d chars, %s",
+                 task_short[:50], round_idx, cost, result_len, status)
+    except Exception as e:
+        log.warning("Failed to write post-task scratchpad: %s", e)
+
+
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
     Wire tool-discovery handlers onto an existing tool_schemas list.
@@ -816,13 +1015,27 @@ def run_llm_loop(
     _inject_progress_tracking_prompt(messages)
     # Inject memory protocol instruction (find_skills + recall before, save_skill after)
     _inject_memory_lookup_prompt(messages, task_type=task_type)
+    # Fix 1: Plan-Before-Execute for action tasks
+    _inject_plan_before_execute_prompt(messages, task_type=task_type)
+    # Fix 2: Initialize loop detector
+    loop_detector = _LoopDetector()
+    # Extract task text for post-task logging (Fix 3)
+    _task_text_for_log = ""
+    for _m in reversed(messages):
+        if _m.get("role") == "user":
+            _c = _m.get("content", "")
+            if isinstance(_c, str):
+                _task_text_for_log = _c[:200]
+            break
     round_idx = 0
+    _hit_max_rounds = False  # Fix 3: track if we hit MAX_ROUNDS
     try:
         while True:
             round_idx += 1
 
             # Hard limit on rounds to prevent runaway tasks
             if round_idx > MAX_ROUNDS:
+                _hit_max_rounds = True
                 finish_reason = f"⚠️ Task exceeded MAX_ROUNDS ({MAX_ROUNDS}). Consider decomposing into subtasks via schedule_task."
                 messages.append({"role": "system", "content": f"[ROUND_LIMIT] {finish_reason}"})
                 try:
@@ -915,9 +1128,16 @@ def run_llm_loop(
 
             tool_calls = msg.get("tool_calls") or []
             content = msg.get("content")
+
+            # Fix 2: Track token usage for loop detection
+            loop_detector.track_tokens(accumulated_usage)
+
             # No tool calls — final response
             if not tool_calls:
                 return _handle_text_response(content, llm_trace, accumulated_usage)
+
+            # Fix 2: Track file access for loop detection
+            loop_detector.track_file_access(tool_calls, round_idx)
 
             # Process tool calls
             messages.append({"role": "assistant", "content": content or "", "tool_calls": tool_calls})
@@ -930,6 +1150,13 @@ def run_llm_loop(
                 tool_calls, tools, drive_logs, task_id, stateful_executor,
                 messages, llm_trace, emit_progress
             )
+
+            # Fix 2: Check for circular loop (after tool results are in messages)
+            loop_msg = loop_detector.check_loop(round_idx)
+            if loop_msg:
+                messages.append({"role": "system", "content": loop_msg})
+                emit_progress(f"🔄 Loop detected at round {round_idx} — forcing completion")
+                log.warning("Loop detected at round %d for task %s", round_idx, task_id)
 
             # --- Budget guard ---
             # LLM decides when to stop (Bible P0, P3). We only enforce hard budget limit.
@@ -956,6 +1183,25 @@ def run_llm_loop(
                 return budget_result
 
     finally:
+        # Fix 3: Post-task scratchpad write (code-enforced logging)
+        if task_type in ("task", "direct_chat"):
+            try:
+                _final_text = ""
+                for _m in reversed(messages):
+                    if _m.get("role") == "assistant":
+                        _final_text = str(_m.get("content", ""))[:500]
+                        break
+                _post_task_scratchpad_write(
+                    drive_root=drive_root,
+                    task_text=_task_text_for_log,
+                    round_idx=round_idx,
+                    accumulated_usage=accumulated_usage,
+                    final_text=_final_text,
+                    hit_max_rounds=_hit_max_rounds,
+                )
+            except Exception:
+                log.debug("Failed post-task scratchpad write", exc_info=True)
+
         # Cleanup thread-sticky executor for stateful tools
         if stateful_executor:
             try:

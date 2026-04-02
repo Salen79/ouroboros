@@ -106,6 +106,8 @@ ssh -p 2222 deploy@38.180.135.77
 - **Agent code:** `ouroboros/`, `supervisor/`, `prompts/`
 - **Archived:** ~/ai-company/ (CrewAI experiment, frozen)
 
+**Warning:** `colab_launcher.py` runs `git checkout ouroboros && git reset --hard origin/ouroboros` on startup. All uncommitted changes will be wiped. Always commit and push before starting THAI.
+
 ## THAI Configuration
 
 ### Environment (~/ouroboros/.env)
@@ -221,6 +223,11 @@ THAI can autonomously modify its own code through a safety pipeline.
 - **Directive extraction** in memory.py: auto-detects stop/pause/forget in Shareholder messages
 - **Directive injection** in context.py: active directives shown at top of every task context, 24h expiry
 - **Commitment tracker** in supervisor/queue.py: deadlines on planned tasks, nudge when overdue
+
+### Execution Quality (Session 4)
+- **Plan-Before-Execute** (`_inject_plan_before_execute_prompt()`) in loop.py: detects action words (implement, build, rewrite, напиши, сделай, создай, etc.) and injects mandatory planning prompt before any tool calls
+- **Circular Loop Detector** (`_LoopDetector` class) in loop.py: tracks file re-reads (2+ files re-read after round 5) and low-output patterns (3 consecutive rounds with completion < 200 tokens, context > 30K) — injects "STOP NOW" message
+- **Post-Task Scratchpad Write** (`_post_task_scratchpad_write()`) in loop.py: appends task summary (description, rounds, cost, result length, status) to scratchpad.md after every task; warns on possible silent failure (result < 100 chars after > 10 rounds)
 
 ### Results (Caddy check control task)
 | Stage | Rounds | Cost |

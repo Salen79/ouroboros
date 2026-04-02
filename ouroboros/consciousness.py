@@ -753,6 +753,60 @@ class BackgroundConsciousness:
             except Exception as e:
                 log.debug("Auto-reflection failed: %s", e)
 
+            # Experiment engine cycle: detect patterns → hypothesize → start experiment
+            try:
+                from ouroboros.experiment_engine import ExperimentEngine
+                from ouroboros.skill_manager import SkillManager
+                from ouroboros.tools.semantic_memory import _get_client as _get_chromadb
+
+                _chromadb = _get_chromadb()
+                _sm = SkillManager(chromadb_client=_chromadb, llm_client=self._llm) if _chromadb else None
+                _exp_engine = ExperimentEngine(
+                    data_dir=self._drive_root,
+                    skill_manager=_sm,
+                    llm_client=self._llm,
+                )
+
+                _new_exp = _exp_engine.run_full_cycle()
+                if _new_exp:
+                    _exp_data = _exp_engine.get_experiment(_new_exp)
+                    _hyp = _exp_data["hypothesis"][:200] if _exp_data else "?"
+                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "experiment_started",
+                        "experiment_id": _new_exp,
+                        "hypothesis": _hyp,
+                    })
+                    if self._event_queue is not None and self._owner_chat_id_fn():
+                        self._event_queue.put({
+                            "type": "proactive_message",
+                            "text": f"🧪 Started experiment {_new_exp}: {_hyp}",
+                            "chat_id": self._owner_chat_id_fn(),
+                            "ts": utc_now_iso(),
+                        })
+
+                # Report recently concluded experiments
+                for _concluded in _exp_engine.get_recently_concluded(hours=24):
+                    _cid = _concluded["id"]
+                    _verdict = _concluded.get("verdict", "?")
+                    _status = _concluded.get("status", "?")
+                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "experiment_concluded",
+                        "experiment_id": _cid,
+                        "status": _status,
+                        "verdict": _verdict,
+                    })
+                    if self._event_queue is not None and self._owner_chat_id_fn():
+                        self._event_queue.put({
+                            "type": "proactive_message",
+                            "text": f"🧪 Experiment {_cid} → {_status}: {_verdict}",
+                            "chat_id": self._owner_chat_id_fn(),
+                            "ts": utc_now_iso(),
+                        })
+            except Exception as e:
+                log.debug("Experiment engine cycle failed (non-fatal): %s", e)
+
         except Exception as e:
             append_jsonl(self._drive_root / "logs" / "events.jsonl", {
                 "ts": utc_now_iso(),

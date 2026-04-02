@@ -1286,6 +1286,25 @@ def run_llm_loop(
             except Exception:
                 log.debug("Skill lifecycle failed (non-fatal)", exc_info=True)
 
+            # Experiment tracking: record task for active experiments
+            try:
+                from ouroboros.experiment_engine import ExperimentEngine
+                _exp_data_dir = drive_root or pathlib.Path("/home/deploy/ouroboros-data")
+                _exp_engine = ExperimentEngine(
+                    data_dir=_exp_data_dir,
+                    skill_manager=_sm if '_sm' in dir() else None,
+                    llm_client=llm,
+                )
+                _exp_engine.record_task_for_experiments({
+                    "task": _task_text_for_log,
+                    "rounds": round_idx,
+                    "cost": total_cost,
+                    "success": not _hit_max_rounds,
+                    "task_id": task_id,
+                })
+            except Exception:
+                log.debug("Experiment tracking failed (non-fatal)", exc_info=True)
+
         # Cleanup thread-sticky executor for stateful tools
         if stateful_executor:
             try:

@@ -91,7 +91,7 @@ scripts/
 ```bash
 sudo systemctl status vendorlens-backend vendorlens-frontend caddy prism-backend prism-bot
 sudo journalctl -u vendorlens-backend -f
-docker compose -f ~/ai-company/docker-compose.yml ps
+docker compose -f ~/ouroboros/infra/docker-compose.yml ps
 ```
 
 ### SSH Access
@@ -104,7 +104,7 @@ ssh -p 2222 deploy@38.180.135.77
 - **Remote:** github.com:Salen79/ouroboros, branch `ouroboros`
 - **Product code:** `company/vendor-lens/` (backend + frontend)
 - **Agent code:** `ouroboros/`, `supervisor/`, `prompts/`
-- **Archived:** ~/ai-company/ (CrewAI experiment, frozen)
+- **Archived:** ~/archive/ai-company-2026-02.tar.gz (CrewAI experiment, compressed)
 
 **Warning:** `colab_launcher.py` runs `git checkout ouroboros && git reset --hard origin/ouroboros` on startup. All uncommitted changes will be wiped. Always commit and push before starting THAI.
 

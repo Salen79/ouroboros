@@ -1,0 +1,105 @@
+# =============================================================================
+# AI Company — Docker Compose Infrastructure
+# =============================================================================
+# Phase 1: PostgreSQL + Redis + ChromaDB
+# Phase 2+: add Langfuse, Nginx, monitoring
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down
+# =============================================================================
+
+services:
+
+  # --- PostgreSQL (audit logs, project data) ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-company-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_company
+      POSTGRES_USER: ai_company
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"  # localhost only — not exposed to internet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_company"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Redis (task queue, caching) ---
+  redis:
+    image: redis:7-alpine
+    container_name: ai-company-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"  # localhost only
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- ChromaDB (vector store for Knowledge Base / RAG) ---
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ai-company-chromadb
+    restart: unless-stopped
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "127.0.0.1:8000:8000"  # localhost only
+    healthcheck:
+      test: ["CMD-SHELL", "chroma --version || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chroma_data:
+    driver: local
+
+# =============================================================================
+# Phase 2 additions (uncomment when ready):
+# =============================================================================
+#
+#  langfuse:
+#    image: langfuse/langfuse:latest
+#    container_name: ai-company-langfuse
+#    restart: unless-stopped
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    environment:
+#      DATABASE_URL: postgresql://ai_company:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_company
+#      NEXTAUTH_URL: http://localhost:3000
+#      NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-generate_a_random_secret}
+#      SALT: ${LANGFUSE_SALT:-generate_a_random_salt}
+#    ports:
+#      - "127.0.0.1:3000:3000"
+#
+#  nginx:
+#    image: nginx:alpine
+#    container_name: ai-company-nginx
+#    restart: unless-stopped
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#      - ./nginx/certs:/etc/nginx/certs:ro

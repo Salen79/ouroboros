@@ -22,64 +22,16 @@
 | Redis 7 | localhost:6379 | Кеш, pub/sub, очереди |
 | ChromaDB | localhost:8000 | Vector storage для RAG |
 
-## AI Company codebase (~/ai-company/)
+## Docker Compose (~/ouroboros/infra/)
 
-Мульти-агентная система на CrewAI. Твои "сотрудники" — 4 Discovery агента
-уже работают. Development crew (Architect, Sr Dev, Frontend Dev, QA)
-готов к запуску.
-
-```
-~/ai-company/
-├── src/ai_company/
-│   ├── main.py                  # CLI + pipeline runner
-│   ├── circuit_breaker.py       # CircuitBreaker + PipelineTimeout
-│   ├── config/
-│   │   ├── agents.yaml          # 4 agent definitions (Discovery crew)
-│   │   └── tasks.yaml           # 4 task definitions
-│   ├── crews/discovery/crew.py  # DiscoveryCrew implementation
-│   └── utils/
-│       ├── budget.py            # BudgetController (3-tier thresholds)
-│       ├── crewai_callbacks.py  # Event handlers → budget + bridge
-│       ├── dashboard_bridge.py  # FastAPI bridge on :8001
-│       ├── report_generator.py  # PDF generation
-│       └── briefing_engine.py   # Mission briefing engine
-├── ceo-dashboard/               # Next.js CEO Dashboard v2.0
-├── tests/                       # 30 tests
-├── outputs/                     # Results of 4 Discovery runs
-├── docker-compose.yml           # PostgreSQL, Redis, ChromaDB
-└── .env                         # API keys
-```
-
-### CrewAI Discovery Crew (твои агенты)
-- Market Researcher (Sonnet 4.5) — web research, trend analysis
-- Opportunity Analyst (GPT-5.2) — scoring and ranking product ideas
-- Product Strategist (Opus 4.6) — detailed product brief generation
-- Risk Assessor (Opus 4.6) — risk analysis on selected product
-
-### CEO Dashboard (Next.js + React Flow)
-- Граф агентов с real-time статусом
-- Deep Observability: prompt inspector, response log, chain-of-thought
-- Active Control: start/stop/pause/resume pipeline
-- Mission Briefing: 5-step wizard
-- Доступ: localhost:3000
-
-### Как запустить CrewAI Discovery
 ```bash
-cd ~/ai-company
-source .venv/bin/activate  # или uv run
-python -m ai_company.main --crew discovery
+docker compose -f ~/ouroboros/infra/docker-compose.yml ps
 ```
-Стоимость одного прогона: ~$0.24-3.00
 
-### Результаты предыдущих Discovery runs
-| # | Дата | Продукт | Стоимость |
-|---|------|---------|-----------|
-| 1 | 2026-02-16 | VendorLens | ~$2-3 |
-| 2 | 2026-02-21 | CodeLens Docs | ~$0.24 |
-| 3 | 2026-02-21 | CodeSensei | $0.24 |
-| 4 | 2026-02-22 | Integration test | $0.26 |
+## AI Company (archived)
 
-Полные отчёты: ~/ai-company/outputs/
+Мульти-агентная система на CrewAI — archived 2026-04-02.
+Archive: `~/archive/ai-company-2026-02.tar.gz` (447M)
 
 ---
 
@@ -94,14 +46,9 @@ python -m ai_company.main --crew discovery
 | 8000 | ChromaDB (localhost only) |
 | 8001 | FastAPI Bridge |
 
-## Environment Variables (~/ai-company/.env)
+## Environment Variables
 
-```
-ANTHROPIC_API_KEY=       # Claude models
-OPENAI_API_KEY=          # GPT-5.2
-SERPER_API_KEY=          # Web search
-DASHBOARD_API_PORT=8001  # FastAPI bridge
-```
+API keys managed in `~/ouroboros/.env`
 
 ---
 
@@ -133,4 +80,4 @@ vendorlens.app (Cloudflare DNS, SSL Full Strict)
 CEO может делать всё на сервере кроме:
 - Менять SSH-конфигурацию или firewall
 - Открывать порты наружу без согласования с акционером
-- Удалять ~/ai-company/ (можно модифицировать, нельзя удалять)
+- Удалять архив ~/archive/ (историческая ценность)

@@ -106,7 +106,7 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
         "strategy", "philosophy", "ethics", "moral",
         "p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7",
         # English — deep dialogue
-        "CEO", "review", "plan", "think", "opinion",
+        "ceo", "review", "plan", "think", "opinion",
     ]
 
     if any(kw in text_lower for kw in deep_dialogue_keywords):

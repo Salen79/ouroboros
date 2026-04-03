@@ -180,6 +180,7 @@ function renderDashboard(data) {
   const eff = latest.efficiency;
   const mem = latest.memory;
   const beh = latest.behavior;
+  const ic = latest.inner_critic || {};
 
   const budgetPct = s.budget_total > 0 ? ((s.budget_remaining / s.budget_total) * 100).toFixed(0) : 0;
   const budgetColor = budgetPct > 30 ? '#00b894' : budgetPct > 15 ? '#fdcb6e' : '#e17055';
@@ -284,6 +285,22 @@ function renderDashboard(data) {
         <div class="metric-row"><span class="metric-label">Proactive skipped</span><span class="metric-value">${beh.proactive_skipped}</span></div>
         <div class="metric-row"><span class="metric-label">Avg pause</span><span class="metric-value">${fmt(beh.avg_pause_before_action_sec)}s</span></div>
       </div>
+
+      <!-- Inner Critic -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Inner Critic</span>
+          <span class="card-score" style="color:var(--red)">${ic.checkpoints_today || 0}</span>
+        </div>
+        <div class="metric-row"><span class="metric-label">Checkpoints today</span><span class="metric-value">${ic.checkpoints_today || 0}</span></div>
+        <div class="metric-row"><span class="metric-label">Off-track alerts</span><span class="metric-value">${ic.off_track_alerts || 0}</span></div>
+        <div class="metric-row"><span class="metric-label">Course corrections</span><span class="metric-value">${ic.course_corrections || 0}</span></div>
+        <div class="metric-row"><span class="metric-label">Correction rate</span><span class="metric-value">${pct(ic.correction_success_rate || 0)}</span></div>
+        <div class="metric-row"><span class="metric-label">Critic cost</span><span class="metric-value">$${fmt(ic.total_critic_cost || 0, 3)}</span></div>
+        <div class="metric-row"><span class="metric-label">Skills from corrections</span><span class="metric-value">${ic.skills_created_from_corrections || 0}</span></div>
+        <div class="metric-row"><span class="metric-label">Patterns matched</span><span class="metric-value">${(ic.patterns_matched || []).length}</span></div>
+        <div class="metric-row"><span class="metric-label">Skipped (high conf)</span><span class="metric-value">${ic.skipped_high_confidence || 0}</span></div>
+      </div>
     </div>
 
     <!-- 30-Day Timeline -->
@@ -345,6 +362,15 @@ function renderDashboard(data) {
           data: snapshots.map(s => s.behavior.score),
           borderColor: '#fdcb6e',
           borderWidth: 1.5,
+          tension: 0.3,
+          pointRadius: 1,
+        },
+        {
+          label: 'Critic Alerts',
+          data: snapshots.map(s => (s.inner_critic || {}).off_track_alerts || 0),
+          borderColor: '#e17055',
+          borderWidth: 1,
+          borderDash: [4, 4],
           tension: 0.3,
           pointRadius: 1,
         },

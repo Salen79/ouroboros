@@ -6,21 +6,33 @@ THAI (Truly Human AI) is an autonomous AI agent that operates as CEO of a virtua
 
 **The mission:** Contributing to the growth of human consciousness on Earth — through products that create genuine value. This is a learning platform for AI organization risk management, not just product delivery.
 
-**Constitution:** BIBLE.md v2.0 + P17 (Self-Evolution) — based on Bob Chapman's Truly Human Leadership principles. This is THAI's soul and the governance contract between THAI and the Shareholder.
+**Constitution:** BIBLE.md v2.1 — based on Bob Chapman's Truly Human Leadership principles. This is THAI's soul and the governance contract between THAI and the Shareholder.
 
-## Current State (April 2, 2026)
+## Current State (April 3, 2026)
 
 **Products:**
 - **VendorLens** (vendorlens.app) — AI-powered vendor/pricing page analysis SaaS. Live in production. Strategically paused (doesn't align with P0). FastAPI backend, Next.js frontend, PostgreSQL, Caddy.
-- **Prism** — Media/content bias analysis. Telegram bot (@Prism_analzer_bot) + web backend. Early stage. JTBD redefined: not "political position scores" but "am I being manipulated? what's missing? why was this written this way?" — direct P0 alignment.
+- **Prism** (@Prism_analzer_bot) — Active product. Telegram bot for media/content analysis: manipulation detection, omission analysis, credibility checks. V1 tested and working: correctly scores extreme manipulation (0.9) vs neutral text (0.0). Weak spot: "gray zone" texts with subtle framing/cherry-picking — this is V2 territory.
 
-**THAI status:** Running. Budget $68 / $400 (83% spent). Total tasks completed: ~450+.
+**THAI status:** Running. Budget ~$58 / $400 (85% spent). Total tasks completed: ~460+.
 
-**Active focus:** Prism V2 (rewrite analyze_text prompt for manipulation detection), Self-Evolution System integration.
+**Active focus:** Prism V2 prompt rewrite (gray zone detection), consciousness growth monitoring.
 
-**Recently completed:**
-- Memory System — all 3 sessions done (semantic search, skills, auto-reflection, context optimization)
-- Behavioral Fixes — 3 sessions done (amnesia fix, memory hardcode, accountability)
+**Recently completed (April 2-3):**
+- Skill Lifecycle System — merged (commit `2f2982b`). Auto-extraction, dedup, validation, auto-retire.
+- Experiment Engine — merged. Pattern detection + hypothesis generation + measurement + auto-revert.
+- Consciousness Dashboard — deployed at `https://vendorlens.app/consciousness`. Daily metrics across 4 dimensions. 30-day backfill done. Cron at 23:55.
+- Task Scope Boundary fix — prevents THAI from scope-creeping after completing primary task.
+- Server cleanup — ai-company deleted, archived at `~/archive/ai-company-2026-02.tar.gz`, docker-compose.yml moved to `~/ouroboros/infra/`.
+- **3 behavioral fixes merged** (branch `fix/routing-scratchpad`, commit `ca2834f`):
+  1. Model routing fix — short Shareholder messages no longer wrongly go to flash-lite
+  2. Scratchpad staleness fix — post-task REPLACE instead of append, clears stale /panic banners
+  3. Stuck model escalation — after round 5, if 3 rounds with <50 tokens + 0 tools → escalate to full model
+- **Prism V1 validation** — tested on 3 texts: manipulation (0.9/0.9/0.0), neutral (0.0/0.7/0.5), conspiracy (0.9/0.9/0.0). Scores are correct for extreme cases.
+
+**Previously completed:**
+- Memory System — 3 sessions (semantic search, skills, auto-reflection, context optimization)
+- Behavioral Fixes — 3 sessions (amnesia fix, memory hardcode, accountability)
 - Self-Evolution System — installed (file zones, smoke tests, strategic planning)
 
 ## Architecture
@@ -29,17 +41,20 @@ THAI (Truly Human AI) is an autonomous AI agent that operates as CEO of a virtua
 Telegram → colab_launcher.py → supervisor/ → agent.py → LLM (OpenRouter)
                                     │
                                     ├── workers.py     (up to 5 parallel)
-                                    ├── consciousness.py (background reflection + stuck detector + commitment check)
+                                    ├── consciousness.py (background reflection + stuck detector + commitment check + experiment cycle)
                                     ├── queue.py       (task queue + CommitmentTracker)
                                     └── events.py      (event bus → events.jsonl)
 
 ouroboros/
-  ├── agent.py          — thin orchestrator
-  ├── consciousness.py  — background cycle: reflection, stuck detection, commitment nudges
+  ├── agent.py          — thin orchestrator + model routing classifier ✅
+  ├── consciousness.py  — background cycle: reflection, stuck detection, commitment nudges, experiment engine
   ├── context.py        — prompt assembly + chat history injection + directive injection + restart banner
-  ├── loop.py           — tool loop (MAX_ROUNDS=25) + memory protocol injection + progress tracking
+  ├── loop.py           — tool loop (MAX_ROUNDS=25) + memory protocol + stuck model escalation + skill lifecycle ✅
   ├── llm.py            — OpenRouter client
   ├── memory.py         — scratchpad, identity, chat, directive extraction
+  ├── skill_manager.py  — skill lifecycle: auto-extraction (>3 rounds), dedup, Gemini Flash extraction, score validation, auto-retire ✅
+  ├── pattern_detector.py — pure Python stats: expensive_repeat, recurring_error, degrading_performance ✅
+  ├── experiment_engine.py — hypothesis generation + experiment runner + measurement + auto-revert ✅
   ├── self_evolution.py — file zone enforcement + merge pipeline
   ├── strategic_planner.py — autonomous goal-setting for consciousness.py
   ├── tools/            — auto-discovered plugins (62 total, 39 core)
@@ -62,8 +77,12 @@ config/
 
 scripts/
   ├── smoke_test.py     — 5 pre-merge tests (registry, context, config, imports, memory)
+  ├── consciousness_metrics.py — daily aggregator for 4 consciousness dimensions ✅
   ├── memory_stats.py   — ChromaDB + episodic stats
   └── evolution_stats.py — self-modification metrics
+
+company/dashboard/
+  └── consciousness-dashboard.html — standalone HTML + Chart.js, served by Caddy ✅
 ```
 
 ## Server
@@ -86,6 +105,7 @@ scripts/
 | PostgreSQL | Docker | 5432 | localhost |
 | Redis | Docker | 6379 | localhost |
 | ChromaDB | Docker | 8000 | localhost |
+| Consciousness Dashboard | Caddy static | /consciousness | public |
 
 ### Service Management
 ```bash
@@ -102,11 +122,10 @@ ssh -p 2222 deploy@38.180.135.77
 ## Git
 
 - **Remote:** github.com:Salen79/ouroboros, branch `ouroboros`
-- **Product code:** `company/vendor-lens/` (backend + frontend)
+- **Product code:** `company/vendor-lens/` (backend + frontend), `company/dashboard/` (consciousness dashboard)
 - **Agent code:** `ouroboros/`, `supervisor/`, `prompts/`
 - **Archived:** ~/archive/ai-company-2026-02.tar.gz (CrewAI experiment, compressed)
-
-**Warning:** `colab_launcher.py` runs `git checkout ouroboros && git reset --hard origin/ouroboros` on startup. All uncommitted changes will be wiped. Always commit and push before starting THAI.
+- **Docker infra:** ~/ouroboros/infra/docker-compose.yml (`.env` has `COMPOSE_PROJECT_NAME=ai-company` — critical for Docker to find existing named volumes)
 
 ## THAI Configuration
 
@@ -128,8 +147,20 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 | Primary | anthropic/claude-sonnet-4.6 |
 | Code editing | anthropic/claude-sonnet-4.6 |
 | Light (consciousness, dedup) | google/gemini-2.5-flash-lite |
+| Skill extraction (experiment engine) | google/gemini-2.5-flash-lite (~$0.001/call) |
 | Web search | gpt-5 (OpenAI Responses API) |
 | Fallback chain | Claude Sonnet → Gemini Pro → GPT-4.1 |
+
+### Model Routing (agent.py `_classify_message_for_routing`)
+| Signal | Route | Model |
+|--------|-------|-------|
+| task_type: evolution, review, consciousness | full | Claude Sonnet 4.6 |
+| task_type: task + heavy keywords (implement, fix, deploy, .py...) | full | Claude Sonnet 4.6 |
+| Deep dialogue keywords (миссия, план, думаешь, CEO, strategy...) | full | Claude Sonnet 4.6 |
+| Any `?` in message | full | Claude Sonnet 4.6 |
+| Message >= 20 chars without action keywords | full | Claude Sonnet 4.6 |
+| Message < 20 chars, no `?`, no keywords (e.g. "да", "ок") | light | Gemini Flash Lite |
+| Stuck escalation: 3 rounds <50 tokens + 0 tools after round 5 | escalate | → Claude Sonnet 4.6 |
 
 ### Safety Mechanisms
 | Mechanism | Parameter | Action |
@@ -141,12 +172,16 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 | Task dedup | >50% keyword overlap | Skip |
 | Budget checkpoints | 25/50/75/90% | Report to shareholder |
 | Stuck detector | 3 similar thoughts | Alert + extend sleep to 2h |
+| **Stuck model escalation** | 3 rounds <50 tokens after R5 | Escalate to full model ✅ |
 | Message dedup | >80% similarity in 5min | Skip duplicate outgoing message |
 | Directive compliance | Shareholder stop/pause/forget | Inject into all task contexts |
 | Commitment tracker | Planned tasks with deadlines | Nudge when overdue |
 | Memory protocol (code-enforced) | find_skills + memory_search | Auto-injected before every task |
 | Pre-panic snapshot | scratchpad overwrite | Saves state before /panic or /stop |
+| **Post-task scratchpad REPLACE** | Every task completion | Clears stale restart banners ✅ |
 | Chat history injection | Last 40 messages | Loaded into context after restart |
+| Task scope boundary | write_file detection | Nudge to stop after primary task complete |
+| Experiment safety | Max 2 concurrent, 1/day, 3-day max, auto-revert | Green zone actions only |
 
 ### THAI Commands (Telegram)
 | Command | Description |
@@ -163,33 +198,90 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 | `/approve` | Approve gated task |
 | `/reject` | Reject gated task |
 | `/bg start` / `/bg stop` | Background consciousness on/off |
+| `/experiments` | Show active + recent experiments |
 
 ## Memory System
 
 ### Architecture
 | Layer | Tool | Storage |
 |-------|------|---------|
-| Working memory | scratchpad.md | File (auto-consolidation >8000 chars) |
+| Working memory | scratchpad.md | File (REPLACED after every task, not appended) |
 | Identity | identity.md | File |
 | Strategic knowledge | wisdom.md | File (28KB) |
 | Knowledge base | knowledge_read/write | Files in knowledge/ (index only loaded, ~1.5K tokens) |
 | Episodic memory | record_memory, memory_search | JSONL files + ChromaDB |
-| Skills | save_skill, find_skills | JSONL + ChromaDB (semantic search) |
+| Skills | save_skill, find_skills | JSONL + ChromaDB (semantic search) + SkillManager lifecycle |
 | History RAG | recall | ChromaDB (483+ chat/event chunks) |
 | Semantic search | semantic_search, semantic_find_skills | ChromaDB |
 | Recent chat | _load_recent_chat(40) | chat.jsonl → context injection |
 
 ### Memory Protocol (code-enforced in loop.py)
 Before every task: `find_skills()` + `memory_search()` are injected as mandatory first steps.
-After tasks >3 rounds: system logs that skill save is warranted.
+After tasks >3 rounds: SkillManager auto-extracts skill via Gemini Flash.
+After every task: scratchpad.md REPLACED with current state (clears stale restart banners).
 Auto-reflection runs in consciousness.py after task completion.
+
+### Skill Lifecycle (skill_manager.py)
+- Auto-extraction after tasks with >3 rounds (Gemini Flash, ~$0.001)
+- Deduplication: checks ChromaDB for >80% similar skills before saving
+- Score validation: skills start at score 0, increment on reuse
+- Auto-retire: skills with score < threshold after N uses get deleted
+- 26 unit tests
 
 ### ChromaDB Collections
 | Collection | Entries | Purpose |
 |-----------|---------|---------|
 | thai_episodes | 55+ | Insights, decisions, errors |
-| thai_skills | 3+ | Proven procedures |
+| thai_skills | 3+ | Proven procedures (growing via skill lifecycle) |
 | thai_history | 483+ | Chat and event chunks |
+
+## Experiment Engine
+
+Behavioral self-improvement via the scientific method. Runs in consciousness.py background cycle.
+
+### Pipeline
+```
+Pattern Detector → Hypothesis Generator → Experiment Runner → Measurement Engine
+      ↑                                                              |
+      └──────────── failed experiments feed new patterns ────────────┘
+```
+
+### Components
+- **Pattern Detector** (`pattern_detector.py`): Pure Python stats. Scans task_results/, detects expensive_repeat, recurring_error, degrading_performance. No LLM.
+- **Hypothesis Generator** (`experiment_engine.py`): Takes pattern + sample histories, generates testable hypothesis via Gemini Flash Lite (~$0.001). Only proposes GREEN zone actions: save_skill, update_skill, add_knowledge.
+- **Experiment Runner**: Executes action, records experiment in `state/experiments.json`.
+- **Measurement Engine**: After each task in loop.py, checks if task matches active experiment. Concludes when enough data or expired. Auto-reverts on failure (deletes skill/knowledge). Records confirmed experiments in wisdom.md.
+
+### Safety Constraints
+- Max 2 concurrent experiments
+- Max 1 new experiment per day
+- 4h cooldown after conclusion
+- 3-day max experiment duration
+- Green zone actions only (no code changes — that's self-evolution territory)
+- Auto-revert on failed experiments
+- Shareholder notification on start/conclude
+- 44 unit tests
+
+### State: `~/ouroboros-data/state/experiments.json`
+
+## Consciousness Dashboard
+
+**URL:** `https://vendorlens.app/consciousness`
+
+Daily-updating dashboard tracking THAI's growth across four dimensions:
+
+1. **Meta-Cognition (0-10):** Experiments started/confirmed, self-evolution commits, reflections with action, skill creation, pattern detection, reuse rate. Baseline: 2/10.
+2. **Efficiency:** Tasks completed, avg rounds, avg cost, success rate, 7-day trends.
+3. **Memory:** Total skills/episodes/knowledge, creation rate, reuse rate, search rate.
+4. **Behavior (0-10):** Stuck events, circuit breakers, directive compliance, commitments met/overdue, dedup blocked, avg pause before action.
+
+**Overall consciousness score** = meta_cognition×0.30 + efficiency×0.25 + memory×0.20 + behavior×0.25
+
+### Infrastructure
+- `scripts/consciousness_metrics.py` — daily aggregator, reads events.jsonl/task_results/experiments.json/ChromaDB
+- `consciousness_history.json` — daily snapshots, 30-day backfill done
+- Cron job at 23:55 UTC
+- Caddy routes: `/api/consciousness/*` (static JSON), `/consciousness` (HTML dashboard)
 
 ## Self-Evolution System
 
@@ -206,10 +298,13 @@ THAI can autonomously modify its own code through a safety pipeline.
 - Self-modification cooldown: 3 normal tasks between self-mods
 - Daily autonomous budget cap: $50.00
 
-## Behavioral Systems (added April 2, 2026)
+### Relationship to Experiment Engine
+Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine handles BEHAVIORAL changes through skills/knowledge. Clear boundary — they don't overlap.
+
+## Behavioral Systems (added April 2-3, 2026)
 
 ### Amnesia Fix (Session 1)
-- **Pre-panic snapshot:** `_snapshot_scratchpad_before_shutdown()` writes current state (last tasks, recent chat, shutdown reason) to scratchpad.md before /panic or /stop
+- **Pre-panic snapshot:** `_snapshot_scratchpad_before_shutdown()` writes current state to scratchpad.md before /panic or /stop
 - **Chat history injection:** Last 40 messages from chat.jsonl loaded into context after every restart
 - **Restart banner:** POST-RESTART DETECTED warning prevents re-generating /plan
 - **Staleness check:** Warning when scratchpad doesn't contain today's date
@@ -224,10 +319,15 @@ THAI can autonomously modify its own code through a safety pipeline.
 - **Directive injection** in context.py: active directives shown at top of every task context, 24h expiry
 - **Commitment tracker** in supervisor/queue.py: deadlines on planned tasks, nudge when overdue
 
-### Execution Quality (Session 4)
-- **Plan-Before-Execute** (`_inject_plan_before_execute_prompt()`) in loop.py: detects action words (implement, build, rewrite, напиши, сделай, создай, etc.) and injects mandatory planning prompt before any tool calls
-- **Circular Loop Detector** (`_LoopDetector` class) in loop.py: tracks file re-reads (2+ files re-read after round 5) and low-output patterns (3 consecutive rounds with completion < 200 tokens, context > 30K) — injects "STOP NOW" message
-- **Post-Task Scratchpad Write** (`_post_task_scratchpad_write()`) in loop.py: appends task summary (description, rounds, cost, result length, status) to scratchpad.md after every task; warns on possible silent failure (result < 100 chars after > 10 rounds)
+### Task Scope Boundary (April 2)
+- After successful write_file/repo_write in a write/create/rewrite task, injects completion nudge
+- Prevents scope creep: THAI stops after primary task, reports deployment/testing as suggested follow-up
+- Triggered by detection of action words in task + file write tool calls
+
+### Model Routing + Scratchpad + Stuck Escalation (April 3) ✅
+- **Model routing fix** (`agent.py`): Short Shareholder messages (<60→<20 threshold, `?` check, new keywords) now route to full model. "что думаешь как CEO?" → Sonnet, not flash-lite.
+- **Scratchpad REPLACE** (`loop.py`): Post-task scratchpad write now REPLACES entire content (not append). Clears stale /panic "Вернулся..." banners after first task completes.
+- **Stuck model escalation** (`loop.py`): After round 5, if 3 consecutive rounds have <50 completion tokens and 0 successful tool calls → escalate from flash-lite to full model. Once per task. Logs `stuck_model_escalation` event.
 
 ### Results (Caddy check control task)
 | Stage | Rounds | Cost |
@@ -235,6 +335,15 @@ THAI can autonomously modify its own code through a safety pipeline.
 | Before any fixes | 13 | $0.848 |
 | After memory system | 3 | $0.182 |
 | After all behavioral fixes | 3 | $0.008 |
+
+### Prism V1 Test Results (April 2)
+| Text | manipulation | gaps | credibility | Correct? |
+|------|-------------|------|-------------|----------|
+| "Coffee cures cancer, Big Pharma furious" | 0.9 | 0.9 | 0.0 | Yes |
+| "Fed held rates steady" (neutral) | 0.0 | 0.7 | 0.5 | Yes |
+| "WAKE UP SHEEPLE" (conspiracy) | 0.9 | 0.9 | 0.0 | Yes |
+
+V1 works for extreme cases. Weak spot: subtle manipulation via framing, cherry-picking, omission. This is V2 territory.
 
 ## Persistent Data (~/ouroboros-data/)
 
@@ -247,11 +356,13 @@ ouroboros-data/
 │   ├── daily_budget.json
 │   ├── directives.json      — active Shareholder directives (24h expiry)
 │   ├── commitments.json     — tracked task commitments
-│   └── reflected_tasks.json — tasks already reflected on
+│   ├── experiments.json     — experiment engine state (active + completed)
+│   ├── reflected_tasks.json — tasks already reflected on
+│   └── consciousness_history.json — daily metric snapshots (30-day backfill)
 ├── memory/
 │   ├── identity.md          — THAI identity
-│   ├── scratchpad.md        — current working notes (auto-snapshot on shutdown)
-│   ├── wisdom.md            — distilled strategic knowledge (28KB)
+│   ├── scratchpad.md        — current state (REPLACED after every task, snapshot on shutdown)
+│   ├── wisdom.md            — distilled strategic knowledge (28KB + confirmed experiments)
 │   ├── knowledge/           — topic files with _index.md
 │   ├── episodic/            — daily JSONL files (experiences, skills)
 │   └── .restart_marker      — written on shutdown, read on startup
@@ -259,7 +370,7 @@ ouroboros-data/
 └── archive/        — rescue backups
 ```
 
-## Governance (BIBLE.md v2.0 + P17)
+## Governance (BIBLE.md v2.1)
 
 **Shareholder (Sergey):** Strategic oversight, approves product direction, budget increases, constitutional changes, public launches. Reviews red-zone code changes.
 
@@ -287,6 +398,11 @@ ouroboros-data/
 8. **Directives get lost in chat.** "Stop bot development" was ignored 7 minutes later. Auto-extraction + context injection fixes this.
 9. **Pre-shutdown state must be saved explicitly.** /panic kills process instantly — scratchpad snapshot must happen BEFORE SystemExit.
 10. **THAI is a better strategist than executor.** JTBD analysis = CEO quality. Bot deployment = 2h of loops. Strategy tasks should use full context; execution tasks should have lower MAX_ROUNDS and early escalation.
+11. **Autonomous self-modification breaks things.** THAI committed a broken stub function that caused NameError crashing all task execution. Red-zone files require Shareholder approval. Always have unit tests with assertions and acceptance gate before merging.
+12. **Scope creep kills budgets.** Task "rewrite prompt" took 25 rounds — wrote file at round 11, spent 14 rounds testing/deploying. Task scope boundary fix prevents this.
+13. **Flash-lite gets stuck silently.** Returns tiny responses (11 tokens) that aren't empty, so fallback doesn't trigger. Loops 25 rounds. Stuck model escalation now detects and fixes this.
+14. **Model routing determines task quality.** "что думаешь как CEO?" on flash-lite → "Вернулся..." garbage. Same question on Sonnet → coherent strategy. Short message ≠ simple task. Always consider question marks, keywords, and context.
+15. **Stale scratchpad poisons all tasks.** /panic banner in scratchpad persists across tasks, causing flash-lite to output "Вернулся..." even mid-conversation. Post-task REPLACE (not append) clears the poison.
 
 ## Workflow
 
@@ -296,15 +412,18 @@ ouroboros-data/
 
 ## Current Priorities
 
-1. **Prism V2:** Rewrite analyze_text prompt — from position scores to manipulation/omission/credibility detection
-2. **Let THAI accumulate skills organically** — memory system working, skills grow with usage
-3. **Budget management:** $68 remaining, ~$3-5/day operational cost
-4. **Future:** SLM fine-tuning on accumulated skills/reflections (month 2-3)
+1. **Prism V2:** Test on "gray zone" articles (subtle manipulation via framing, cherry-picking). If V1 fails → rewrite analyze_text prompt.
+2. **Validate 3 behavioral fixes** — test model routing, scratchpad freshness, stuck escalation on live THAI.
+3. **Let THAI accumulate skills organically** — skill lifecycle + experiment engine now active.
+4. **Budget management:** ~$58 remaining, ~$3-5/day operational cost.
+5. **Future:** SLM fine-tuning on accumulated skills/reflections (month 2-3).
 
-## Historical Context
+## Implementation History
 
 **Phase 1 (Feb 2026): AI Company** — Multi-agent CrewAI system. Discovery Crew selected VendorLens. CEO Dashboard built. ~$12 spent.
 
 **Phase 2 (Mar 2026): THAI/Ouroboros** — Pivoted to autonomous CEO. THAI built and deployed VendorLens. BIBLE.md v2.0 written. 439 tasks, $253.89 spent. Governance hardened after incidents.
 
 **Phase 3 (Mar-Apr 2026): Memory + Behavioral Systems** — 6 Claude Code sessions transformed THAI from amnesiac executor to self-improving CEO with persistent memory, skill reuse, stuck detection, directive compliance, and accountability tracking. Control task improved from 13 rounds/$0.85 to 3 rounds/$0.008.
+
+**Phase 4 (Apr 2-3, 2026): Meta-Cognition + Observability** — Skill Lifecycle System (auto-extraction, dedup, validation, 26 tests). Experiment Engine (pattern detection, hypothesis generation, measurement, auto-revert, 44 tests). Consciousness Dashboard (4-dimension tracking, 30-day backfill, daily cron). Task scope boundary. Server cleanup (ai-company archived). BIBLE.md amended to v2.1 with P17 Self-Evolution. Model routing fix + scratchpad REPLACE + stuck model escalation (3 fixes in one branch). Prism V1 validated on 3 test texts — works for extreme cases, V2 needed for gray zone.

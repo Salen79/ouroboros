@@ -38,6 +38,7 @@ class ConsciousnessMetrics:
         eff = self._compute_efficiency(date, events, tasks)
         mem = self._compute_memory(date, events, tasks, episodes)
         beh = self._compute_behavior(date, events)
+        ic = self._compute_inner_critic(date, events)
 
         # Efficiency score 0-10
         eff_score = self._efficiency_score(eff)
@@ -61,6 +62,7 @@ class ConsciousnessMetrics:
             "efficiency": eff,
             "memory": mem,
             "behavior": beh,
+            "inner_critic": ic,
             "summary": {
                 "overall_consciousness_score": overall,
                 "efficiency_score": round(eff_score, 1),
@@ -408,6 +410,51 @@ class ConsciousnessMetrics:
             "message_dedup_blocked": dedup_blocked,
             "proactive_skipped": proactive_skipped,
             "avg_pause_before_action_sec": avg_pause,
+        }
+
+    # ── Inner Critic ─────────────────────────────────────────────────
+
+    def _compute_inner_critic(self, date, events):
+        """Inner critic metrics: checkpoint quality and course corrections."""
+        checkpoints = [e for e in events if e.get("type") == "inner_critic_checkpoint"]
+        skipped = [e for e in events if e.get("type") == "inner_critic_skipped"]
+        skills_saved = [e for e in events if e.get("type") == "inner_critic_skill_saved"]
+        summaries = [e for e in events if e.get("type") == "inner_critic_summary"]
+
+        checkpoints_today = len(checkpoints)
+        off_track_alerts = sum(1 for c in checkpoints if not c.get("on_track", True))
+
+        # Course corrections: off-track alerts where the task still succeeded
+        # (indicated by a summary with any_off_track=True existing for same task)
+        corrected_tasks = set()
+        for s in summaries:
+            if s.get("any_off_track"):
+                corrected_tasks.add(s.get("task_id", ""))
+        course_corrections = len(corrected_tasks)
+
+        correction_success_rate = round(
+            course_corrections / max(1, off_track_alerts), 2
+        ) if off_track_alerts else 0.0
+
+        total_critic_cost = round(
+            sum(c.get("cost", 0) for c in checkpoints), 4
+        )
+
+        patterns_matched = list({
+            c.get("pattern_match", "")
+            for c in checkpoints
+            if c.get("pattern_match")
+        })
+
+        return {
+            "checkpoints_today": checkpoints_today,
+            "off_track_alerts": off_track_alerts,
+            "course_corrections": course_corrections,
+            "correction_success_rate": correction_success_rate,
+            "total_critic_cost": total_critic_cost,
+            "patterns_matched": patterns_matched,
+            "skills_created_from_corrections": len(skills_saved),
+            "skipped_high_confidence": len(skipped),
         }
 
     # ── Summary helpers ─────────────────────────────────────────────

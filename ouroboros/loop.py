@@ -1059,6 +1059,19 @@ def run_llm_loop(
     # Stuck model escalation: track per-round stats
     _rounds_history: List[Dict[str, Any]] = []
     _stuck_escalated = False  # only escalate once per task
+    # Inner Critic: mid-task quality checkpoint (advisory only)
+    _inner_critic = None
+    _response_lengths: List[int] = []  # per-round completion token counts for critic
+    try:
+        from ouroboros.inner_critic import InnerCritic
+        _wisdom_path = (drive_root or pathlib.Path("/home/deploy/ouroboros-data")) / "memory" / "wisdom.md"
+        _inner_critic = InnerCritic(
+            llm_client=llm,
+            wisdom_path=_wisdom_path,
+            max_rounds=MAX_ROUNDS,
+        )
+    except Exception:
+        log.debug("Inner critic init failed (non-fatal)", exc_info=True)
     try:
         while True:
             round_idx += 1
@@ -1247,6 +1260,56 @@ def run_llm_loop(
                             "from_model": _old_model, "to_model": active_model,
                         })
 
+            # Track per-round response lengths for inner critic
+            _response_lengths.append(_this_round_completion)
+
+            # --- Inner Critic checkpoint (advisory, non-fatal) ---
+            if _inner_critic and _inner_critic.should_run(round_idx, float(accumulated_usage.get("cost", 0))):
+                try:
+                    _critic_ctx = _build_critic_context(
+                        original_task=_task_text_for_log,
+                        task_type=task_type,
+                        current_round=round_idx,
+                        max_rounds=MAX_ROUNDS,
+                        total_cost_so_far=float(accumulated_usage.get("cost", 0)),
+                        tool_call_history=llm_trace.get("tool_calls", []),
+                        response_lengths=_response_lengths[-3:],
+                    )
+                    _critic_result = _inner_critic.evaluate(_critic_ctx)
+                    if _critic_result:
+                        _critic_feedback, _critic_usage = _critic_result
+                        # Inject as system message in conversation
+                        messages.append({"role": "system", "content": _critic_feedback})
+                        # Track critic LLM cost in accumulated usage
+                        add_usage(accumulated_usage, _critic_usage)
+                        # Emit event
+                        _last_cp = _inner_critic.checkpoints_done[-1]
+                        append_jsonl(drive_logs / "events.jsonl", {
+                            "ts": utc_now_iso(),
+                            "type": "inner_critic_checkpoint",
+                            "task_id": task_id,
+                            "round": round_idx,
+                            "on_track": _last_cp.on_track,
+                            "confidence": _last_cp.confidence,
+                            "main_concern": _last_cp.main_concern,
+                            "pattern_match": _last_cp.pattern_match,
+                            "suggestion": _last_cp.suggestion,
+                            "cost": _last_cp.cost,
+                        })
+                        log.info("Inner critic checkpoint at round %d: on_track=%s concern=%s",
+                                 round_idx, _last_cp.on_track, _last_cp.main_concern[:60])
+                    elif _inner_critic._skip_remaining:
+                        # Log skip event
+                        append_jsonl(drive_logs / "events.jsonl", {
+                            "ts": utc_now_iso(),
+                            "type": "inner_critic_skipped",
+                            "task_id": task_id,
+                            "reason": "high_confidence_on_track",
+                            "first_checkpoint_confidence": _inner_critic.checkpoints_done[0].confidence if _inner_critic.checkpoints_done else 0,
+                        })
+                except Exception:
+                    log.debug("Inner critic checkpoint failed (non-fatal)", exc_info=True)
+
             # --- Budget guard ---
             # LLM decides when to stop (Bible P0, P3). We only enforce hard budget limit.
             budget_result = _check_budget_limits(
@@ -1387,6 +1450,55 @@ def run_llm_loop(
             except Exception:
                 log.debug("Experiment tracking failed (non-fatal)", exc_info=True)
 
+            # Inner Critic: feedback → skill pipeline (closed learning loop)
+            try:
+                if (
+                    _inner_critic
+                    and _inner_critic.get_summary()["any_off_track"]
+                    and not _hit_max_rounds  # task succeeded
+                    and '_sm' in dir()
+                ):
+                    for _cp in _inner_critic.checkpoints_done:
+                        if not _cp.on_track and _cp.suggestion:
+                            _skill_content = (
+                                f"TASK TYPE: {task_type}\n"
+                                f"PATTERN: {_cp.pattern_match or _cp.main_concern}\n"
+                                f"CORRECTION: {_cp.suggestion}\n"
+                                f"OUTCOME: Task succeeded after course correction at round {_cp.round}\n"
+                            )
+                            _correction_skill = _sm.process_completed_task({
+                                "task": f"critic-correction-{task_type}: {_cp.suggestion[:80]}",
+                                "result": _skill_content,
+                                "rounds": round_idx,
+                                "success": True,
+                                "task_type": task_type,
+                                "tool_calls": [],
+                                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            })
+                            if _correction_skill:
+                                log.info("Inner critic: saved correction skill %s", _correction_skill)
+                                append_jsonl(drive_logs / "events.jsonl", {
+                                    "ts": utc_now_iso(),
+                                    "type": "inner_critic_skill_saved",
+                                    "task_id": task_id,
+                                    "skill": _correction_skill,
+                                    "pattern": _cp.pattern_match or _cp.main_concern,
+                                })
+            except Exception:
+                log.debug("Inner critic skill pipeline failed (non-fatal)", exc_info=True)
+
+            # Inner Critic: include summary in task result logging
+            if _inner_critic and _inner_critic.checkpoints_done:
+                try:
+                    append_jsonl(drive_logs / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "inner_critic_summary",
+                        "task_id": task_id,
+                        **_inner_critic.get_summary(),
+                    })
+                except Exception:
+                    log.debug("Inner critic summary logging failed (non-fatal)", exc_info=True)
+
         # Cleanup thread-sticky executor for stateful tools
         if stateful_executor:
             try:
@@ -1400,6 +1512,67 @@ def run_llm_loop(
                 cleanup_task_mailbox(drive_root, task_id)
             except Exception:
                 log.debug("Failed to cleanup task mailbox", exc_info=True)
+
+
+def _build_critic_context(
+    original_task: str,
+    task_type: str,
+    current_round: int,
+    max_rounds: int,
+    total_cost_so_far: float,
+    tool_call_history: list,
+    response_lengths: list,
+) -> dict:
+    """Build context dict for inner critic evaluation."""
+    from collections import Counter
+
+    # Summarize tool calls (don't send full payloads)
+    summarized_tools = []
+    for tc in tool_call_history:
+        summarized_tools.append({
+            "round": tc.get("round", 0),
+            "tool": tc.get("tool", "unknown"),
+            "success": tc.get("success", False),
+            "summary": str(tc.get("result_summary", ""))[:100],
+        })
+
+    # Detect repeated tool calls
+    tool_signatures = [
+        f"{tc.get('tool', '')}:{tc.get('args_hash', '')}"
+        for tc in tool_call_history
+    ]
+    repeated = [
+        {"tool": sig.split(":")[0], "count": count, "pattern": sig}
+        for sig, count in Counter(tool_signatures).items()
+        if count >= 3
+    ]
+
+    # Collect files written and read from tool call args
+    _write_tools = {"drive_write", "repo_write_commit", "create_file", "write_file", "repo_write"}
+    _read_tools = {"drive_read", "repo_read", "read_file", "cat"}
+    files_written = list({
+        tc.get("args", {}).get("path", "") or tc.get("args", {}).get("file_path", "")
+        for tc in tool_call_history
+        if tc.get("tool") in _write_tools and tc.get("success")
+    })
+    files_read = list({
+        tc.get("args", {}).get("path", "") or tc.get("args", {}).get("file_path", "")
+        for tc in tool_call_history
+        if tc.get("tool") in _read_tools and tc.get("success")
+    })
+
+    return {
+        "original_task": original_task,
+        "task_type": task_type,
+        "current_round": current_round,
+        "max_rounds": max_rounds,
+        "total_cost_so_far": total_cost_so_far,
+        "tool_calls": summarized_tools,
+        "files_written": [f for f in files_written if f],
+        "files_read": [f for f in files_read if f],
+        "last_3_responses_lengths": response_lengths,
+        "repeated_tool_calls": repeated,
+    }
 
 
 def _emit_llm_usage_event(

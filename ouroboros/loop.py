@@ -1070,8 +1070,9 @@ def run_llm_loop(
             wisdom_path=_wisdom_path,
             max_rounds=MAX_ROUNDS,
         )
+        log.info("Inner critic initialized: checkpoints at rounds %s", _inner_critic.checkpoint_rounds)
     except Exception:
-        log.debug("Inner critic init failed (non-fatal)", exc_info=True)
+        log.warning("Inner critic init failed (non-fatal)", exc_info=True)
     try:
         while True:
             round_idx += 1
@@ -1308,7 +1309,7 @@ def run_llm_loop(
                             "first_checkpoint_confidence": _inner_critic.checkpoints_done[0].confidence if _inner_critic.checkpoints_done else 0,
                         })
                 except Exception:
-                    log.debug("Inner critic checkpoint failed (non-fatal)", exc_info=True)
+                    log.warning("Inner critic checkpoint failed at round %d (non-fatal)", round_idx, exc_info=True)
 
             # --- Budget guard ---
             # LLM decides when to stop (Bible P0, P3). We only enforce hard budget limit.
@@ -1523,24 +1524,31 @@ def _build_critic_context(
     tool_call_history: list,
     response_lengths: list,
 ) -> dict:
-    """Build context dict for inner critic evaluation."""
-    from collections import Counter
+    """Build context dict for inner critic evaluation.
 
-    # Summarize tool calls (don't send full payloads)
+    NOTE: tool_call_history comes from llm_trace["tool_calls"] with keys:
+        tool, args (dict), result (str), is_error (bool)
+    We map these to the critic_context spec format.
+    """
+    from collections import Counter
+    from hashlib import md5
+
+    # Summarize tool calls — map llm_trace keys to critic spec keys
     summarized_tools = []
-    for tc in tool_call_history:
+    for idx, tc in enumerate(tool_call_history):
         summarized_tools.append({
-            "round": tc.get("round", 0),
+            "round": idx + 1,  # approximate: 1-indexed position in call history
             "tool": tc.get("tool", "unknown"),
-            "success": tc.get("success", False),
-            "summary": str(tc.get("result_summary", ""))[:100],
+            "success": not tc.get("is_error", True),  # invert is_error → success
+            "summary": str(tc.get("result", ""))[:100],  # trace uses "result", not "result_summary"
         })
 
-    # Detect repeated tool calls
-    tool_signatures = [
-        f"{tc.get('tool', '')}:{tc.get('args_hash', '')}"
-        for tc in tool_call_history
-    ]
+    # Detect repeated tool calls — hash args for dedup signature
+    tool_signatures = []
+    for tc in tool_call_history:
+        args_str = json.dumps(tc.get("args", {}), sort_keys=True, default=str)
+        args_hash = md5(args_str.encode()).hexdigest()[:8]
+        tool_signatures.append(f"{tc.get('tool', '')}:{args_hash}")
     repeated = [
         {"tool": sig.split(":")[0], "count": count, "pattern": sig}
         for sig, count in Counter(tool_signatures).items()
@@ -1553,12 +1561,12 @@ def _build_critic_context(
     files_written = list({
         tc.get("args", {}).get("path", "") or tc.get("args", {}).get("file_path", "")
         for tc in tool_call_history
-        if tc.get("tool") in _write_tools and tc.get("success")
+        if tc.get("tool") in _write_tools and not tc.get("is_error", True)
     })
     files_read = list({
         tc.get("args", {}).get("path", "") or tc.get("args", {}).get("file_path", "")
         for tc in tool_call_history
-        if tc.get("tool") in _read_tools and tc.get("success")
+        if tc.get("tool") in _read_tools and not tc.get("is_error", True)
     })
 
     return {

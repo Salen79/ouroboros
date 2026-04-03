@@ -429,5 +429,111 @@ class TestGetSummary:
         assert summary["total_cost"] == pytest.approx(0.035)
 
 
+# ── Loop integration: critic fires at round 10 with production trace format ──
+
+class TestLoopIntegration:
+    """Simulate the exact production flow: llm_trace format → _build_critic_context → evaluate."""
+
+    def test_critic_fires_at_round_10_with_production_trace(self):
+        """End-to-end: InnerCritic fires at round 10 using real llm_trace format."""
+        from ouroboros.loop import _build_critic_context
+
+        llm_mock = _make_llm_mock(_off_track_response(), cost=0.015)
+        critic = _make_critic(llm_mock=llm_mock, max_rounds=25)
+
+        # Simulate 10 rounds of production llm_trace tool_calls
+        production_trace_calls = [
+            {"tool": "find_skills", "args": {"query": "prism"}, "result": "Found 2 skills", "is_error": False},
+            {"tool": "memory_search", "args": {"query": "prism"}, "result": "3 memories", "is_error": False},
+            {"tool": "shell_exec", "args": {"cmd": "systemctl status prism"}, "result": "active", "is_error": False},
+            {"tool": "drive_read", "args": {"path": "prompts/analyze.md"}, "result": "content...", "is_error": False},
+            {"tool": "drive_write", "args": {"path": "prompts/analyze.md"}, "result": "Written", "is_error": False},
+            {"tool": "shell_exec", "args": {"cmd": "systemctl restart prism"}, "result": "ok", "is_error": False},
+            {"tool": "shell_exec", "args": {"cmd": "curl localhost:8001"}, "result": "ok", "is_error": False},
+            {"tool": "shell_exec", "args": {"cmd": "curl localhost:8001"}, "result": "timeout", "is_error": True},
+            {"tool": "shell_exec", "args": {"cmd": "curl localhost:8001"}, "result": "timeout", "is_error": True},
+            {"tool": "shell_exec", "args": {"cmd": "journalctl -u prism"}, "result": "logs...", "is_error": False},
+        ]
+
+        # Step 1: Verify should_run at round 10
+        assert critic.should_run(10, 0.5) is True
+
+        # Step 2: Build context using production trace format
+        ctx = _build_critic_context(
+            original_task="Rewrite the analyze_text prompt",
+            task_type="write",
+            current_round=10,
+            max_rounds=25,
+            total_cost_so_far=0.5,
+            tool_call_history=production_trace_calls,
+            response_lengths=[200, 150, 80],
+        )
+
+        # Step 3: Verify context was built correctly from production trace
+        assert ctx["current_round"] == 10
+        assert ctx["max_rounds"] == 25
+        assert len(ctx["tool_calls"]) == 10
+        # Verify is_error → success mapping works
+        assert ctx["tool_calls"][0]["success"] is True  # find_skills, is_error=False → success=True
+        assert ctx["tool_calls"][7]["success"] is False  # curl timeout, is_error=True → success=False
+        # Verify files detected correctly from args
+        assert "prompts/analyze.md" in ctx["files_written"]
+        assert "prompts/analyze.md" in ctx["files_read"]
+        # Verify repeated calls detected (curl localhost:8001 x3)
+        assert any(r["tool"] == "shell_exec" and r["count"] >= 3 for r in ctx["repeated_tool_calls"])
+
+        # Step 4: Evaluate fires and returns feedback
+        result = critic.evaluate(ctx)
+        assert result is not None, "Critic must fire at round 10 — returned None instead"
+        feedback, usage = result
+        assert "INNER CRITIC" in feedback
+        assert "round 10/25" in feedback
+        assert usage["cost"] == 0.015
+
+        # Step 5: Verify checkpoint was recorded
+        assert len(critic.checkpoints_done) == 1
+        assert critic.checkpoints_done[0].round == 10
+        assert critic.checkpoints_done[0].on_track is False
+
+    def test_critic_does_not_fire_before_round_10(self):
+        """Verify no checkpoint at rounds 1-9."""
+        critic = _make_critic(max_rounds=25)
+        for r in range(1, 10):
+            assert critic.should_run(r, 0.5) is False, f"should_run({r}) must be False"
+
+    def test_critic_fires_at_both_checkpoints_when_off_track(self):
+        """Both checkpoints fire when first is off-track (confidence < 0.9)."""
+        llm_mock = _make_llm_mock(_off_track_response(), cost=0.02)
+        critic = _make_critic(llm_mock=llm_mock, max_rounds=25)
+
+        # Checkpoint 1 at round 10
+        ctx1 = _make_context(current_round=10)
+        result1 = critic.evaluate(ctx1)
+        assert result1 is not None
+
+        # Should still run at round 18 (off-track doesn't skip)
+        assert critic.should_run(18, 0.5) is True
+
+        ctx2 = _make_context(current_round=18)
+        result2 = critic.evaluate(ctx2)
+        assert result2 is not None
+        assert len(critic.checkpoints_done) == 2
+
+    def test_full_25_round_simulation(self):
+        """Simulate all 25 rounds — verify exactly 2 checkpoints fire."""
+        llm_mock = _make_llm_mock(_off_track_response(), cost=0.01)
+        critic = _make_critic(llm_mock=llm_mock, max_rounds=25)
+
+        checkpoints_fired = []
+        for round_idx in range(1, 26):
+            if critic.should_run(round_idx, 0.5):
+                ctx = _make_context(current_round=round_idx)
+                result = critic.evaluate(ctx)
+                if result is not None:
+                    checkpoints_fired.append(round_idx)
+
+        assert checkpoints_fired == [10, 18], f"Expected checkpoints at [10, 18], got {checkpoints_fired}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

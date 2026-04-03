@@ -94,6 +94,8 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
         # Russian — strategic/philosophical
         "стратегия", "философия", "этика", "мораль",
         "акционер", "shareholder",
+        # Russian — deep dialogue (CEO-style questions)
+        "план", "думаешь", "предлагаешь", "анализ",
         # English — identity & consciousness
         "mission", "consciousness", "self-awareness", "identity",
         "values", "principles", "constitution", "manifesto",
@@ -103,14 +105,16 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
         # English — strategic/philosophical
         "strategy", "philosophy", "ethics", "moral",
         "p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7",
+        # English — deep dialogue
+        "CEO", "review", "plan", "think", "opinion",
     ]
 
     if any(kw in text_lower for kw in deep_dialogue_keywords):
         return "full"
 
     # Short messages that are clearly conversational acknowledgements
-    if len(message_text) < 60:
-        # Unless they have action keywords even when short
+    # Only route "light" if very short (<20 chars), no question mark, no action keywords
+    if len(message_text) < 20 and "?" not in message_text:
         action_keywords = [
             "создай", "сделай", "напиши", "исправь", "задеплой", "запусти",
             "create", "make", "write", "fix", "deploy", "run", "build", "implement",
@@ -125,9 +129,11 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
         "создай", "сделай", "напиши", "исправь", "задеплой", "запусти", "реализуй",
         "добавь", "удали", "измени", "настрой", "установи", "проверь код",
         "архитектур", "рефактор", "оптимизир",
+        "протестируй", "тестируй",
         # English
         "create", "implement", "write", "fix", "deploy", "run", "build",
         "refactor", "optimize", "configure", "install", "test",
+        "analyze", "curl",
         "```", "http://", "https://", ".py", ".js", ".yaml", ".json",
     ]
 

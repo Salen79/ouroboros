@@ -805,12 +805,20 @@ def _post_task_scratchpad_write(
     accumulated_usage: Dict[str, Any],
     final_text: str,
     hit_max_rounds: bool,
+    prev_task_id: str = "",
+    prev_task_summary: str = "",
 ) -> None:
-    """Append task summary to scratchpad.md after every task completion.
+    """REPLACE entire scratchpad with current state after every task completion.
 
     Code-enforced post-task logging (lesson #5).
-    Logs: task description, rounds, cost, result length, status.
-    Warns on possible silent failures (short result + many rounds).
+    Replaces (not appends) to prevent stale shutdown banners from persisting
+    after /panic restart — the first post-task write clears the old snapshot.
+
+    Format:
+        ## Current state ({date})
+        Last task: {task_id} — {rounds}R, ${cost} — {summary[:100]}
+        Previous: {prev_task_id} — {summary[:60]}
+        Active directives: {from directives.json if any}
     """
     if drive_root is None:
         return
@@ -822,34 +830,51 @@ def _post_task_scratchpad_write(
     cost = accumulated_usage.get("cost", 0)
     result_len = len(final_text) if final_text else 0
     status = "MAX_ROUNDS" if hit_max_rounds else "completed"
-    task_short = (task_text or "unknown")[:120].replace("\n", " ")
+    task_short = (task_text or "unknown")[:100].replace("\n", " ")
+    summary = (final_text or "")[:100].replace("\n", " ")
 
     ts = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
+    date_str = time.strftime("%Y-%m-%d", time.gmtime())
 
-    entry = (
-        f"\n### Task Log [{ts}]\n"
-        f"- **Task:** {task_short}\n"
-        f"- **Rounds:** {round_idx} | **Cost:** ${cost:.3f} | "
-        f"**Result:** {result_len} chars | **Status:** {status}\n"
-    )
+    # Load active directives if available
+    directives_text = "none"
+    try:
+        directives_path = drive_root / "state" / "directives.json"
+        if directives_path.exists():
+            directives_data = json.loads(directives_path.read_text(encoding="utf-8"))
+            active = [d.get("text", "") for d in directives_data
+                      if isinstance(d, dict) and d.get("text")]
+            if active:
+                directives_text = "; ".join(active[:5])
+    except Exception:
+        pass
 
-    # Warn on possible silent failure
+    # Build previous task line
+    prev_line = ""
+    if prev_task_id or prev_task_summary:
+        prev_short = (prev_task_summary or "unknown")[:60].replace("\n", " ")
+        prev_line = f"Previous: {prev_task_id} — {prev_short}\n"
+
+    # Build warning line for possible silent failures
+    warning_line = ""
     if result_len < 100 and round_idx > 10:
-        entry += (
-            f"- ⚠️ **WARNING: possible silent failure** — "
+        warning_line = (
+            f"⚠️ WARNING: possible silent failure — "
             f"result < 100 chars after {round_idx} rounds\n"
         )
 
+    new_content = (
+        f"## Current state ({date_str})\n"
+        f"Last task: {task_short} — {round_idx}R, ${cost:.3f} — {status}\n"
+        f"Result: {summary}\n"
+        f"{prev_line}"
+        f"Active directives: {directives_text}\n"
+        f"{warning_line}"
+    )
+
     try:
-        existing = ""
-        if scratchpad_path.exists():
-            existing = scratchpad_path.read_text(encoding="utf-8")
-        # Append to end
-        scratchpad_path.write_text(
-            existing.rstrip() + "\n" + entry,
-            encoding="utf-8",
-        )
-        log.info("Post-task scratchpad write: %s, %d rounds, $%.3f, %d chars, %s",
+        scratchpad_path.write_text(new_content, encoding="utf-8")
+        log.info("Post-task scratchpad REPLACE: %s, %d rounds, $%.3f, %d chars, %s",
                  task_short[:50], round_idx, cost, result_len, status)
     except Exception as e:
         log.warning("Failed to write post-task scratchpad: %s", e)
@@ -1031,6 +1056,9 @@ def run_llm_loop(
             break
     round_idx = 0
     _hit_max_rounds = False  # Fix 3: track if we hit MAX_ROUNDS
+    # Stuck model escalation: track per-round stats
+    _rounds_history: List[Dict[str, Any]] = []
+    _stuck_escalated = False  # only escalate once per task
     try:
         while True:
             round_idx += 1
@@ -1186,6 +1214,39 @@ def run_llm_loop(
                 emit_progress(f"🔄 Loop detected at round {round_idx} — forcing completion")
                 log.warning("Loop detected at round %d for task %s", round_idx, task_id)
 
+            # Stuck model escalation: track round stats and check for stalled model
+            _round_completion_tokens = int(accumulated_usage.get("completion_tokens", 0))
+            # Count completion tokens for THIS round (delta from previous)
+            _prev_total_completion = sum(r.get("completion_tokens", 0) for r in _rounds_history)
+            _this_round_completion = max(0, _round_completion_tokens - _prev_total_completion)
+            # Count successful (non-error) tool calls this round using error_count and tool_calls count
+            _successful_tool_calls = max(0, len(tool_calls) - error_count)
+            _rounds_history.append({
+                "completion_tokens": _this_round_completion,
+                "successful_tool_calls": _successful_tool_calls,
+            })
+
+            if round_idx >= 5 and not _stuck_escalated:
+                _recent = _rounds_history[-3:]
+                if (len(_recent) >= 3
+                    and all(r["completion_tokens"] < 50 for r in _recent)
+                    and all(r["successful_tool_calls"] == 0 for r in _recent)):
+                    # Escalate to full model if currently on a light model
+                    if active_model != llm.default_model():
+                        _old_model = active_model
+                        active_model = llm.default_model()
+                        _stuck_escalated = True
+                        log.warning("Stuck detection: escalating %s → %s at round %d for task %s",
+                                    _old_model, active_model, round_idx, task_id)
+                        messages.append({"role": "system", "content":
+                            "You were stuck on a light model. Now upgraded. Focus on the task, not on recovery."})
+                        emit_progress(f"⚡ Stuck detection: escalating to {active_model}")
+                        append_jsonl(drive_logs / "events.jsonl", {
+                            "ts": utc_now_iso(), "type": "stuck_model_escalation",
+                            "task_id": task_id, "round": round_idx,
+                            "from_model": _old_model, "to_model": active_model,
+                        })
+
             # --- Budget guard ---
             # LLM decides when to stop (Bible P0, P3). We only enforce hard budget limit.
             budget_result = _check_budget_limits(
@@ -1219,6 +1280,25 @@ def run_llm_loop(
                     if _m.get("role") == "assistant":
                         _final_text = str(_m.get("content", ""))[:500]
                         break
+
+                # Read previous task info from last task_results file for "Previous:" line
+                _prev_task_id = ""
+                _prev_task_summary = ""
+                try:
+                    _results_dir = (drive_root or pathlib.Path("/home/deploy/ouroboros-data")) / "task_results"
+                    if _results_dir.exists():
+                        _result_files = sorted(_results_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+                        # Skip current task's result file (may not exist yet), get the previous one
+                        for _rf in _result_files[:5]:
+                            if task_id and task_id in _rf.name:
+                                continue
+                            _prev_data = json.loads(_rf.read_text(encoding="utf-8"))
+                            _prev_task_id = str(_prev_data.get("task_id", ""))[:20]
+                            _prev_task_summary = str(_prev_data.get("result", ""))[:60]
+                            break
+                except Exception:
+                    pass
+
                 _post_task_scratchpad_write(
                     drive_root=drive_root,
                     task_text=_task_text_for_log,
@@ -1226,6 +1306,8 @@ def run_llm_loop(
                     accumulated_usage=accumulated_usage,
                     final_text=_final_text,
                     hit_max_rounds=_hit_max_rounds,
+                    prev_task_id=_prev_task_id,
+                    prev_task_summary=_prev_task_summary,
                 )
             except Exception:
                 log.debug("Failed post-task scratchpad write", exc_info=True)

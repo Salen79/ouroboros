@@ -836,7 +836,15 @@ while True:
             log.debug("Directive extraction failed: %s", _de)
 
         # Natural language stop detection — handled at supervisor level, not sent to LLM
-        if _STOP_PATTERNS.search(_text_lower) and not _text_lower.startswith("/"):
+        # Only trigger if the message is SHORT (≤8 words) OR starts with a stop word.
+        # Long messages with tasks should NEVER trigger stop even if they contain stop words.
+        _word_count = len(_text_lower.split())
+        _starts_with_stop = bool(re.match(
+            r'^(?:останови|останов|стоп|stop|остановись|остановите|halt)\b',
+            _text_lower, re.IGNORECASE
+        ))
+        _is_short_stop = _word_count <= 8 and _STOP_PATTERNS.search(_text_lower)
+        if (_starts_with_stop or _is_short_stop) and not _text_lower.startswith("/"):
             _snapshot_scratchpad_before_shutdown("natural_stop")
             _stop_msg = stop_all_tasks()
             send_with_budget(chat_id, f"⏹️ {_stop_msg}")

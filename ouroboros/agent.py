@@ -77,6 +77,11 @@ def _classify_message_for_routing(message_text: str, task_type: str) -> str:
             return "full"
         if any(kw in text_lower for kw in light_keywords):
             return "light"
+        # Deep dialogue check — strategic questions need full model
+        deep_kw = ["план", "думаешь", "предлагаешь", "анализ", "ceo", "стратегия",
+                   "миссия", "сознание", "review", "plan", "think", "opinion", "strategy"]
+        if any(kw in text_lower for kw in deep_kw) or "?" in message_text:
+            return "full"
         if len(message_text) < 60:
             return "light"
         return "full"

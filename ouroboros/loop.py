@@ -655,6 +655,17 @@ def _inject_memory_lookup_prompt(
         "If nothing found → proceed normally, but SAVE results after:\n"
         "   → save_skill() if task took >3 rounds (reusable procedure)\n"
         "   → record_memory(type='error_pattern') if task failed\n"
+        "\n"
+        "CRITICAL EXECUTION RULE — file editing tasks:\n"
+        "If the task specifies a file path (e.g. '/opt/prism/backend/...' or 'classifier.py'):\n"
+        "  → DO NOT run find, ls, or search commands first.\n"
+        "  → Round 1: read ONLY the relevant section of the specified file.\n"
+        "  → Round 2: make the edit (claude_code_edit or run_shell with sed).\n"
+        "  → Round 3: restart service if needed.\n"
+        "  → Round 4+: test.\n"
+        "  → NEVER exceed 5 rounds before first write action.\n"
+        "  → DO NOT web_search, DO NOT read unrelated files.\n"
+        "  → DO NOT expand scope beyond what was asked.\n"
     )
     messages.append({"role": "system", "content": instruction})
 

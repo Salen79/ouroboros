@@ -836,15 +836,23 @@ while True:
             log.debug("Directive extraction failed: %s", _de)
 
         # Natural language stop detection — handled at supervisor level, not sent to LLM
-        # Only trigger if the message is SHORT (≤8 words) OR starts with a stop word.
-        # Long messages with tasks should NEVER trigger stop even if they contain stop words.
+        # Rules:
+        # 1. Message is ONLY a stop word (≤3 words, no extra context) → STOP
+        # 2. Message is a /panic command → STOP (handled above)
+        # 3. "Останови X" with a specific object (≥4 words OR has noun after stop word) → NOT a stop, pass to LLM
+        # Examples that STOP:   "стоп", "останови", "stop all", "остановись"
+        # Examples that PASS:   "останови работы по призму", "останови это и сделай X"
         _word_count = len(_text_lower.split())
-        _starts_with_stop = bool(re.match(
-            r'^(?:останови|останов|стоп|stop|остановись|остановите|halt)\b',
-            _text_lower, re.IGNORECASE
+        _words = _text_lower.split()
+
+        # Check if the ENTIRE message is essentially just a stop command (≤3 words, pure stop intent)
+        _is_pure_stop_command = bool(re.match(
+            r'^(?:останови|останов|стоп|stop(?:\s+all)?|остановись|остановите|halt)[\s,!.]*$',
+            _text_lower.strip(), re.IGNORECASE
         ))
-        _is_short_stop = _word_count <= 8 and _STOP_PATTERNS.search(_text_lower)
-        if (_starts_with_stop or _is_short_stop) and not _text_lower.startswith("/"):
+        # Short message (≤3 words) that is just stop + maybe one word like "всё", "все", "all"
+        _is_short_stop = _word_count <= 3 and _STOP_PATTERNS.search(_text_lower)
+        if (_is_pure_stop_command or _is_short_stop) and not _text_lower.startswith("/"):
             _snapshot_scratchpad_before_shutdown("natural_stop")
             _stop_msg = stop_all_tasks()
             send_with_budget(chat_id, f"⏹️ {_stop_msg}")

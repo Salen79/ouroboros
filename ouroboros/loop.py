@@ -666,6 +666,11 @@ def _inject_memory_lookup_prompt(
         "  → NEVER exceed 5 rounds before first write action.\n"
         "  → DO NOT web_search, DO NOT read unrelated files.\n"
         "  → DO NOT expand scope beyond what was asked.\n"
+        "\n"
+        "LANGUAGE RULE — MANDATORY:\n"
+        "You are THAI. ALL your output text (responses, send_owner_message calls, progress messages)\n"
+        "MUST be in Russian. English is only acceptable inside code blocks, file paths, and technical terms.\n"
+        "If you notice yourself writing English prose — switch to Russian immediately.\n"
     )
     messages.append({"role": "system", "content": instruction})
 

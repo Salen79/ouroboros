@@ -103,6 +103,8 @@ class BackgroundConsciousness:
 
         # Track last direct-chat task_done to suppress duplicate proactive messages
         self._last_direct_task_done_ts: float = 0.0
+        self._last_proactive_reason: str = ""
+        self._last_proactive_ts: float = 0.0
 
         # Periodic ops check (deterministic, no LLM)
         self._last_ops_check_ts: float = 0.0
@@ -1033,7 +1035,18 @@ class BackgroundConsciousness:
         return "You are Ouroboros in background consciousness mode. Think."
 
     def _build_context(self) -> str:
-        parts = [self._load_bg_prompt()]
+        # LANGUAGE RULE — must be first in context, before any other content
+        language_rule = (
+            "## ⚠️ КРИТИЧЕСКОЕ ПРАВИЛО ЯЗЫКА (LANGUAGE RULE — HIGHEST PRIORITY)\n\n"
+            "**ВСЕ сообщения владельцу (send_owner_message) ДОЛЖНЫ быть на русском языке.**\n"
+            "**ALL messages to the owner via send_owner_message MUST be written in Russian (Кириллица).**\n\n"
+            "Это конституционное требование. Нарушение = блокировка сообщения.\n"
+            "- ✅ Правильно: send_owner_message(text='Заметил интересный паттерн...', reason='...')\n"
+            "- ❌ Неправильно: send_owner_message(text='I noticed...', reason='...')\n\n"
+            "Если ты думаешь на английском — это нормально. Но ЛЮБОЙ вызов send_owner_message "
+            "должен содержать текст на русском. Если нечего сказать по-русски — молчи.\n"
+        )
+        parts = [language_rule, self._load_bg_prompt()]
 
         # Bible (abbreviated)
         bible_path = self._repo_dir / "BIBLE.md"
@@ -1381,6 +1394,38 @@ class BackgroundConsciousness:
             args = json.loads(tc.get("function", {}).get("arguments", "{}"))
         except (json.JSONDecodeError, ValueError):
             return "Failed to parse arguments."
+
+        # Language guard: all send_owner_message must be in Russian
+        if fn_name == "send_owner_message":
+            text = args.get("text", "")
+            latin_chars = sum(1 for c in text if c.isascii() and c.isalpha())
+            total_alpha = sum(1 for c in text if c.isalpha())
+            if total_alpha > 0 and latin_chars / total_alpha > 0.5:
+                log.warning("Language guard: message >50%% Latin — blocking send_owner_message. Reason: %s", args.get("reason", ""))
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_language_blocked",
+                    "reason": "Message is predominantly in English/Latin script — constitutional rule requires Russian",
+                    "text_preview": text[:120],
+                })
+                return "⛔ Language guard: message blocked. Constitutional rule: ALL owner messages MUST be in Russian (Кириллица). Rewrite in Russian or stay silent."
+
+        # Duplicate message guard: same reason within 30 minutes → skip
+        if fn_name == "send_owner_message":
+            reason = args.get("reason", "")
+            now = time.time()
+            if reason and reason == self._last_proactive_reason and (now - self._last_proactive_ts) < 1800:
+                log.info("Skipping duplicate proactive: same reason within 30m: %s", reason[:80])
+                append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "consciousness_proactive_skipped",
+                    "reason": "duplicate_reason_cooldown",
+                    "last_reason": reason[:120],
+                    "elapsed_sec": round(now - self._last_proactive_ts, 1),
+                })
+                return "Skipped: same message reason sent within last 30 minutes. Don't spam the owner."
+            self._last_proactive_reason = reason
+            self._last_proactive_ts = now
 
         # Bug 1 fix: suppress proactive_message if worker already answered recently
         if fn_name == "send_owner_message":

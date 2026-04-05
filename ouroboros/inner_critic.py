@@ -84,7 +84,7 @@ class InnerCritic:
         llm_client,
         wisdom_path: Path,
         episodic_search_fn: Optional[Callable] = None,
-        max_rounds: int = 25,
+        max_rounds: int = 12,
     ):
         self.llm = llm_client
         self.wisdom_path = wisdom_path

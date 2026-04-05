@@ -505,7 +505,7 @@ def _check_budget_limits(
     if round_idx > 3 and task_cost > 0.0:
         cost_per_round = task_cost / round_idx
         if cost_per_round > 0.05 and round_idx % 5 == 0:
-            messages.append({"role": "system", "content": f"[COST ALERT] Avg ${cost_per_round:.3f}/round. At this rate task will cost ${cost_per_round * int(os.environ.get('OUROBOROS_MAX_ROUNDS', '25')):.2f} total. If doing browser automation against external services (Gmail, GitHub signup, etc.) — STOP NOW. These require CAPTCHA/phone verification and cannot be automated. Report to user directly."})
+            messages.append({"role": "system", "content": f"[COST ALERT] Avg ${cost_per_round:.3f}/round. At this rate task will cost ${cost_per_round * int(os.environ.get('OUROBOROS_MAX_ROUNDS', '12')):.2f} total. If doing browser automation against external services (Gmail, GitHub signup, etc.) — STOP NOW. These require CAPTCHA/phone verification and cannot be automated. Report to user directly."})
 
     return None
 
@@ -1047,11 +1047,11 @@ def run_llm_loop(
     stateful_executor = _StatefulToolExecutor()
     # Dedup set for per-task owner messages from Drive mailbox
     _owner_msg_seen: set = set()
-    MAX_ROUNDS = 25
+    MAX_ROUNDS = 12
     try:
-        MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "25")))
+        MAX_ROUNDS = max(1, int(os.environ.get("OUROBOROS_MAX_ROUNDS", "12")))
     except Exception:
-        log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 25")
+        log.warning("Invalid OUROBOROS_MAX_ROUNDS, defaulting to 12")
     # Inject mandatory progress tracking instruction at task start
     _inject_progress_tracking_prompt(messages)
     # Inject memory protocol instruction (find_skills + recall before, save_skill after)
@@ -1086,9 +1086,12 @@ def run_llm_loop(
             wisdom_path=_wisdom_path,
             max_rounds=MAX_ROUNDS,
         )
-        log.info("Inner critic initialized: checkpoints at rounds %s", _inner_critic.checkpoint_rounds)
+        log.warning("Inner critic initialized: checkpoints at rounds %s (MAX_ROUNDS=%d)",
+                    _inner_critic.checkpoint_rounds, MAX_ROUNDS)
     except Exception:
         log.warning("Inner critic init failed (non-fatal)", exc_info=True)
+    if _inner_critic is None:
+        log.warning("Inner critic is None — checkpoints will be skipped for this task")
     try:
         while True:
             round_idx += 1
@@ -1280,6 +1283,36 @@ def run_llm_loop(
             # Track per-round response lengths for inner critic
             _response_lengths.append(_this_round_completion)
 
+            # --- Action-first enforcement ---
+            # Nudge agent if it's only planning/reading without taking action
+            if round_idx >= 3 and task_type in ("task",):
+                _ACTION_TOOLS = frozenset({
+                    "run_shell", "shell_exec", "repo_write", "write_file", "create_file",
+                    "claude_code_edit", "save_skill", "knowledge_write", "repo_write_commit",
+                })
+                _action_calls = [
+                    tc for tc in llm_trace.get("tool_calls", [])
+                    if tc.get("tool") in _ACTION_TOOLS
+                ]
+                if not _action_calls:
+                    if round_idx == 3:
+                        _action_nudge = (
+                            "\n\u26a0\ufe0f ACTION CHECK: You have completed 3 rounds without any concrete action "
+                            "(no file writes, no shell commands, no skill saves). "
+                            "If the task requires action \u2014 do it now, don't plan more. "
+                            "If the task is analysis/reflection only \u2014 complete and report results.\n"
+                        )
+                        messages.append({"role": "system", "content": _action_nudge})
+                        log.warning("Action-first nudge at round %d: 0 action tools used", round_idx)
+                    elif round_idx == 6:
+                        _hard_nudge = (
+                            "\n\U0001f6d1 NO ACTIONS IN 6 ROUNDS. You are planning without executing. "
+                            "Either perform a concrete action RIGHT NOW or complete the task with what you have. "
+                            "Do NOT write another plan.\n"
+                        )
+                        messages.append({"role": "system", "content": _hard_nudge})
+                        log.warning("Hard action nudge at round 6: still 0 action tools used")
+
             # --- Inner Critic checkpoint (advisory, non-fatal) ---
             if _inner_critic and _inner_critic.should_run(round_idx, float(accumulated_usage.get("cost", 0))):
                 try:
@@ -1313,8 +1346,8 @@ def run_llm_loop(
                             "suggestion": _last_cp.suggestion,
                             "cost": _last_cp.cost,
                         })
-                        log.info("Inner critic checkpoint at round %d: on_track=%s concern=%s",
-                                 round_idx, _last_cp.on_track, _last_cp.main_concern[:60])
+                        log.warning("Inner critic checkpoint at round %d: on_track=%s concern=%s",
+                                    round_idx, _last_cp.on_track, _last_cp.main_concern[:60])
                     elif _inner_critic._skip_remaining:
                         # Log skip event
                         append_jsonl(drive_logs / "events.jsonl", {

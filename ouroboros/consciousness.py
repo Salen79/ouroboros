@@ -201,6 +201,15 @@ class BackgroundConsciousness:
             # Periodic ops check (deterministic, no LLM)
             self._maybe_ops_check()
 
+            # Overnight mode: 19:00-07:00 UTC — only ops_check, skip strategic/proactive
+            from datetime import datetime, timezone
+            _now_utc = datetime.now(timezone.utc)
+            _is_overnight = _now_utc.hour >= 19 or _now_utc.hour < 7
+            if _is_overnight:
+                log.debug("Consciousness: overnight mode (hour=%d UTC) — skipping think cycle", _now_utc.hour)
+                self._next_wakeup_sec = 600  # Check again in 10 min
+                continue
+
             # Strategic planning when queue is empty
             self._maybe_strategic_plan()
 
@@ -1242,8 +1251,6 @@ class BackgroundConsciousness:
         # Read-only tools for awareness
         "web_search", "repo_read", "repo_list", "drive_read", "drive_list",
         "chat_history",
-        # GitHub Issues
-        "list_github_issues", "get_github_issue",
         # Semantic memory (read-only)
         "semantic_search", "recall",
     })
@@ -1494,6 +1501,41 @@ class BackgroundConsciousness:
                     "tool": fn_name,
                 })
                 return f"Skipped: owner is actively chatting (wrote within {self._ACTIVE_DIALOGUE_MINUTES}m). Not interrupting."
+
+        # Task dedup: don't schedule tasks similar to recently completed ones (4h window)
+        if fn_name == "schedule_task":
+            try:
+                task_desc = (args.get("task") or args.get("description") or args.get("text") or "").lower().strip()
+                if task_desc:
+                    results_dir = self._drive_root / "task_results"
+                    if results_dir.exists():
+                        _dedup_cutoff = time.time() - 4 * 3600  # 4 hours
+                        for rf in sorted(results_dir.iterdir(), reverse=True):
+                            if not rf.name.endswith(".json"):
+                                continue
+                            try:
+                                rd = json.loads(rf.read_text(encoding="utf-8"))
+                                ts_str = rd.get("ts", "")
+                                if ts_str:
+                                    from datetime import datetime as _dt
+                                    _task_ts = _dt.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
+                                    if _task_ts < _dedup_cutoff:
+                                        break  # Older than 4h, stop checking
+                                prev_desc = (rd.get("task_text") or rd.get("task") or "").lower().strip()
+                                if prev_desc and task_desc and len(task_desc) > 10:
+                                    # Simple keyword overlap check
+                                    words_new = set(task_desc.split())
+                                    words_old = set(prev_desc.split())
+                                    if words_old and words_new:
+                                        overlap = len(words_new & words_old) / max(len(words_new), 1)
+                                        if overlap > 0.5:
+                                            log.warning("Task dedup: skipping '%s' — similar to recent '%s' (overlap=%.0f%%)",
+                                                        task_desc[:60], prev_desc[:60], overlap * 100)
+                                            return f"Skipped: similar task recently completed ('{prev_desc[:60]}')"
+                            except Exception:
+                                continue
+            except Exception:
+                log.debug("Task dedup check failed (non-fatal)", exc_info=True)
 
         # Set chat_id context for send_owner_message
         chat_id = self._owner_chat_id_fn()

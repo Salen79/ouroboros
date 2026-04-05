@@ -150,12 +150,30 @@ class InnerCritic:
                 reasoning_effort="low",
             )
 
-            response_text = (msg.get("content") or "").strip()
+            # Extract text from response — handle multiple possible formats
+            response_text = ""
+            if isinstance(msg, dict):
+                response_text = (msg.get("content") or msg.get("text") or "")
+                # Some models return content as list of dicts [{type: "text", text: "..."}]
+                if isinstance(response_text, list):
+                    response_text = " ".join(
+                        part.get("text", "") for part in response_text
+                        if isinstance(part, dict)
+                    )
+            elif isinstance(msg, str):
+                response_text = msg
+            response_text = response_text.strip()
+
             checkpoint_cost = float(usage.get("cost") or 0)
 
             # Hard cap: abort if checkpoint cost exceeds $0.03
             if checkpoint_cost > 0.03:
                 log.warning("Inner critic checkpoint cost $%.4f exceeds $0.03 cap", checkpoint_cost)
+
+            if not response_text:
+                log.warning("Inner critic got empty response from LLM (msg keys: %s)",
+                            list(msg.keys()) if isinstance(msg, dict) else type(msg).__name__)
+                return None
 
             # Parse response
             result = self._parse_response(response_text)
@@ -285,12 +303,19 @@ class InnerCritic:
         """Parse JSON response from critic LLM call."""
         try:
             text = response.strip()
-            # Strip markdown code fences if present
+            # Strip markdown code fences if present (```json ... ```)
             if text.startswith("```"):
                 text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             if text.endswith("```"):
                 text = text[:-3]
             text = text.strip()
+
+            # Try to extract JSON object if surrounded by non-JSON text
+            if not text.startswith("{"):
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    text = text[start:end + 1]
 
             result = json.loads(text)
 
@@ -302,7 +327,8 @@ class InnerCritic:
 
             return result
         except (json.JSONDecodeError, ValueError) as e:
-            log.warning("Failed to parse critic response: %s", e)
+            log.warning("Failed to parse critic response: %s | raw (first 200 chars): %s",
+                        e, repr(response[:200]))
             return None
 
     def _format_feedback(self, cp: CriticCheckpoint, current_round: int, max_rounds: int) -> str:

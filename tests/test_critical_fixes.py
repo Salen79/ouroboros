@@ -136,6 +136,82 @@ class TestInnerCriticCheckpoints:
             assert len(critic.checkpoints_done) == 1
             assert not critic.checkpoints_done[0].on_track
 
+    def test_evaluate_handles_empty_content(self):
+        """If LLM returns content=None, evaluate returns None gracefully."""
+        llm = MagicMock()
+        llm.chat.return_value = (
+            {"content": None},  # empty content
+            {"cost": 0.01, "prompt_tokens": 100, "completion_tokens": 0},
+        )
+
+        with tempfile.TemporaryDirectory() as td:
+            critic = InnerCritic(llm, Path(td) / "wisdom.md", max_rounds=12)
+            context = {
+                "original_task": "test", "task_type": "test",
+                "current_round": 4, "max_rounds": 12,
+                "total_cost_so_far": 0.1, "tool_calls": [],
+                "files_written": [], "files_read": [],
+                "last_3_responses_lengths": [], "repeated_tool_calls": [],
+            }
+            result = critic.evaluate(context)
+            assert result is None
+
+    def test_evaluate_handles_json_in_markdown(self):
+        """If LLM wraps JSON in markdown fences, parse still works."""
+        response_json = {
+            "on_track": True, "confidence": 0.9,
+            "progress_assessment": "Good progress",
+            "main_concern": "none",
+            "suggestion": "continue",
+            "should_change_approach": False,
+            "approach_alternative": None,
+        }
+        llm = MagicMock()
+        llm.chat.return_value = (
+            {"content": "```json\n" + json.dumps(response_json) + "\n```"},
+            {"cost": 0.01, "prompt_tokens": 100, "completion_tokens": 50},
+        )
+
+        with tempfile.TemporaryDirectory() as td:
+            critic = InnerCritic(llm, Path(td) / "wisdom.md", max_rounds=12)
+            context = {
+                "original_task": "test", "task_type": "test",
+                "current_round": 4, "max_rounds": 12,
+                "total_cost_so_far": 0.1, "tool_calls": [],
+                "files_written": [], "files_read": [],
+                "last_3_responses_lengths": [], "repeated_tool_calls": [],
+            }
+            result = critic.evaluate(context)
+            assert result is not None
+            feedback, usage = result
+            assert "INNER CRITIC" in feedback
+
+    def test_evaluate_handles_json_with_preamble(self):
+        """If LLM adds text before/after JSON, parse still works."""
+        response_json = {
+            "on_track": True, "confidence": 0.85,
+            "progress_assessment": "Making progress",
+            "main_concern": "none",
+            "suggestion": "continue",
+        }
+        llm = MagicMock()
+        llm.chat.return_value = (
+            {"content": "Here is my assessment:\n" + json.dumps(response_json) + "\nDone."},
+            {"cost": 0.01, "prompt_tokens": 100, "completion_tokens": 50},
+        )
+
+        with tempfile.TemporaryDirectory() as td:
+            critic = InnerCritic(llm, Path(td) / "wisdom.md", max_rounds=12)
+            context = {
+                "original_task": "test", "task_type": "test",
+                "current_round": 4, "max_rounds": 12,
+                "total_cost_so_far": 0.1, "tool_calls": [],
+                "files_written": [], "files_read": [],
+                "last_3_responses_lengths": [], "repeated_tool_calls": [],
+            }
+            result = critic.evaluate(context)
+            assert result is not None
+
     def test_evaluate_handles_llm_failure(self):
         """If LLM call fails, return None — don't crash."""
         llm = MagicMock()

@@ -72,6 +72,35 @@ def _read_episodic_entries(days: int = 30) -> List[Dict[str, Any]]:
     return entries
 
 
+def _increment_skill_usage(title: str) -> None:
+    """Increment usage_count for a skill entry in its JSONL file."""
+    ep_dir = _episodic_dir()
+    if not ep_dir.exists():
+        return
+    for f in sorted(ep_dir.glob("*.jsonl"), reverse=True):
+        lines = f.read_text(encoding="utf-8").splitlines()
+        changed = False
+        new_lines = []
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped:
+                new_lines.append(line)
+                continue
+            try:
+                entry = json.loads(line_stripped)
+                if entry.get("title", "") == title and entry.get("type") == "skill":
+                    entry["usage_count"] = int(entry.get("usage_count", 0)) + 1
+                    new_lines.append(json.dumps(entry, ensure_ascii=False))
+                    changed = True
+                else:
+                    new_lines.append(line)
+            except json.JSONDecodeError:
+                new_lines.append(line)
+        if changed:
+            f.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+            return  # Found and updated, stop searching
+
+
 def _score_entry(entry: Dict[str, Any], query_terms: List[str]) -> int:
     """Score an entry based on keyword matches."""
     score = 0
@@ -105,10 +134,11 @@ def _format_entry(entry: Dict[str, Any]) -> str:
     tags = entry.get("tags", [])
     importance = entry.get("importance", 1)
     stars = "★" * importance
+    usage_count = entry.get("usage_count", 0)
 
     tag_str = " ".join(f"#{t}" for t in tags) if tags else ""
     lines = [
-        f"[{ts}] {entry_type.upper()} {stars} — {title}",
+        f"[{ts}] {entry_type.upper()} {stars} [used:{usage_count}x] — {title}",
         content,
     ]
     if tag_str:
@@ -183,6 +213,7 @@ def _tool_record_memory(
         "content": content.strip(),
         "tags": tags,
         "importance": importance,
+        "usage_count": kwargs.get("usage_count", 0),
     }
 
     # Write to today's episodic file
@@ -326,6 +357,10 @@ def _tool_find_skills(ctx: ToolContext, query: str, limit: int = 3, **kwargs) ->
             lines.append(f"--- {i}. (relevance: {score}) ---")
         lines.append(_format_entry(entry))
         lines.append("")
+
+    # Increment usage_count for returned skills
+    for entry, _ in top:
+        _increment_skill_usage(entry.get("title", ""))
 
     return "\n".join(lines)
 

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAI Process Graph — April 4-5, 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #c9d1d9; overflow: hidden; }
+#header { padding: 12px 20px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; z-index: 10; position: relative; }
+#header h1 { font-size: 16px; font-weight: 600; }
+#header .stats { font-size: 12px; color: #8b949e; display: flex; gap: 20px; }
+#header .stats span { color: #58a6ff; }
+#controls { padding: 8px 20px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; gap: 12px; align-items: center; font-size: 12px; z-index: 10; position: relative; }
+#controls label { color: #8b949e; }
+#controls select, #controls input { background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.legend { display: flex; gap: 16px; margin-left: auto; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+#graph { width: 100vw; height: calc(100vh - 80px); }
+#tooltip { position: absolute; background: #1c2128; border: 1px solid #30363d; border-radius: 8px; padding: 12px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 400px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+#tooltip .title { font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+#tooltip .detail { color: #8b949e; line-height: 1.5; }
+#tooltip .cost { color: #f0883e; font-weight: 600; }
+#tooltip .time { color: #58a6ff; }
+.node { cursor: pointer; }
+.node:hover circle { stroke-width: 3px; stroke: #fff; }
+.link { fill: none; stroke-opacity: 0.3; }
+.time-label { fill: #484f58; font-size: 10px; font-family: monospace; }
+.day-separator { stroke: #30363d; stroke-dasharray: 4,4; }
+.day-label { fill: #8b949e; font-size: 14px; font-weight: 600; }
+.cluster-bg { fill-opacity: 0.04; stroke-opacity: 0.15; rx: 8; }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>THAI Process Graph — April 4-5, 2026</h1>
+  <div class="stats">
+    Budget: <span>$7.77 remaining</span> / $400 |
+    Tasks: <span>22</span> |
+    Spent: <span>$14.16</span> |
+    Waste: <span style="color:#f85149">$9.26 (65%)</span>
+  </div>
+</div>
+<div id="controls">
+  <label>Day:</label>
+  <select id="dayFilter">
+    <option value="all">Both Days</option>
+    <option value="2026-04-04">April 4</option>
+    <option value="2026-04-05">April 5</option>
+  </select>
+  <label>Type:</label>
+  <select id="typeFilter">
+    <option value="all">All Events</option>
+    <option value="task_complete">Tasks</option>
+    <option value="shareholder">Shareholder</option>
+    <option value="consciousness">Consciousness</option>
+    <option value="max_rounds">MAX_ROUNDS</option>
+    <option value="plan_no_action">Plans (no action)</option>
+  </select>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Success</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div> Failed/MAX_ROUNDS</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> Scope Creep/Drift</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#484f58"></div> Consciousness Idle</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Shareholder</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#bc8cff"></div> System</div>
+  </div>
+</div>
+<div id="graph"></div>
+<div id="tooltip"></div>
+
+<script>
+const rawData = {
+  "2026-04-04": [
+    {id:"e1",time:"00:02",type:"shareholder",event:"Sergey: 'Почему опять на английском?'",cost:0,task_id:null},
+    {id:"e2",time:"00:03",type:"task_complete",event:"Worker language drift diagnosis",cost:0.39,rounds:2,task_id:"1624f21e"},
+    {id:"e3",time:"07:14",type:"shareholder",event:"Sergey: 'Сделай рефлексию'",cost:0,task_id:null},
+    {id:"e4",time:"07:14",type:"task_complete",event:"Reflection (wrong time period)",cost:0.013,rounds:2,task_id:"74e9abdd"},
+    {id:"e5",time:"07:21",type:"shareholder",event:"Sergey: corrects time period",cost:0,task_id:null},
+    {id:"e6",time:"07:24",type:"task_complete",event:"Time clarification",cost:0.19,rounds:1,task_id:"54b495bc"},
+    {id:"e7",time:"07:26",type:"shareholder",event:"Sergey: 'со вчера 12:00 до сейчас'",cost:0,task_id:null},
+    {id:"e8",time:"07:28",type:"task_complete",event:"Full reflection: 41 tasks, $62.8 spent",cost:0.82,rounds:6,task_id:"463073ca"},
+    {id:"e9",time:"07:36",type:"shareholder",event:"Sergey: 'Отличная рефлексия - делай'",cost:0,task_id:null},
+    {id:"e10",time:"07:37",type:"scope_creep",event:"Drifted to English template design",cost:0.03,rounds:9,task_id:"2ca6e7cf"},
+    {id:"e11",time:"07:38",type:"shareholder",event:"Sergey: 'Останови Prism, анализ дрифта'",cost:0,task_id:null},
+    {id:"e12",time:"07:38",type:"restart",event:"System stop + restart",cost:0,task_id:null},
+    {id:"e13",time:"07:42",type:"task_complete",event:"Stop-word algorithm fix (committed)",cost:1.09,rounds:9,task_id:"92da03a5"},
+    {id:"e14",time:"08:17",type:"task_complete",event:"Deep-reflection skill updated",cost:0.41,rounds:3,task_id:"1f5756c9"},
+    {id:"e15",time:"08:27",type:"language_violation",event:"Consciousness sends English msg about Prism",cost:0,task_id:null},
+    {id:"e16",time:"10:17",type:"shareholder",event:"Sergey: 'Решай проблему самостоятельно'",cost:0,task_id:null},
+    {id:"e17",time:"10:21",type:"max_rounds",event:"Task hit MAX_ROUNDS (25) — $3.15 wasted",cost:3.15,rounds:25,task_id:"1941f884"},
+    {id:"e18",time:"10:47",type:"redundant",event:"deep-reflection skill scheduled (2nd, redundant)",cost:0.27,rounds:2,task_id:"f4bbd990"},
+    {id:"e19",time:"11:19",type:"language_violation",event:"Worker sends English msg about Prism articles",cost:0,task_id:null},
+    {id:"e20",time:"11:20",type:"shareholder",event:"Sergey: 'Почему воркер опять?'",cost:0,task_id:null},
+    {id:"e21",time:"11:21",type:"task_complete",event:"3-layer diagnosis of worker messaging",cost:0.62,rounds:5,task_id:"960d65cd"},
+    {id:"e22",time:"11:22",type:"shareholder",event:"Sergey: 'Действуй прямо сейчас'",cost:0,task_id:null},
+    {id:"e23",time:"11:22",type:"plan_no_action",event:"6-step plan written, nothing executed",cost:0.001,rounds:1,task_id:"60860a94"},
+    {id:"e24",time:"14:32",type:"shareholder",event:"Sergey: 'Какие результаты?'",cost:0,task_id:null},
+    {id:"e25",time:"14:35",type:"task_complete",event:"Honest admission: plan was not executed",cost:0.62,rounds:4,task_id:"cfccce1b"},
+    {id:"e26",time:"14:39",type:"shareholder",event:"Sergey: 'Поступай как CEO'",cost:0,task_id:null},
+    {id:"e27",time:"14:42",type:"max_rounds",event:"Consciousness investigation (26r, scope creep)",cost:2.59,rounds:26,task_id:"84c777eb"},
+    {id:"e28",time:"15:11",type:"redundant",event:"Cherry-picking: already done yesterday",cost:0.41,rounds:4,task_id:"1be0fb28"},
+    {id:"e29",time:"15:13",type:"redundant",event:"deep-reflection skill (4th time, redundant)",cost:0.26,rounds:2,task_id:"c3b1bae2"},
+    {id:"e30",time:"16:21",type:"language_violation",event:"Consciousness acknowledges English violation",cost:0,task_id:null},
+    {id:"e31",time:"17:28",type:"shareholder",event:"Sergey: 'Хватит рассуждать, делай'",cost:0,task_id:null},
+    {id:"e32",time:"17:29",type:"plan_no_action",event:"Post-restart: another plan, no execution",cost:0.006,rounds:2,task_id:"d1cb7865"},
+    {id:"e33",time:"17:59",type:"redundant",event:"deep-reflection skill (5th time, redundant)",cost:0.40,rounds:2,task_id:"f67dea44"},
+    {id:"e34",time:"18:24",type:"task_complete",event:"Consciousness investigation started",cost:0,rounds:0,task_id:null},
+    {id:"e35",time:"18:28",type:"max_rounds",event:"Code changes ready (26 rounds)",cost:2.53,rounds:26,task_id:"ba272209"},
+    {id:"e36",time:"18:32",type:"task_complete",event:"P21 language fix: 3 files, 1 commit",cost:1.13,rounds:12,task_id:"1f9a4182"},
+    {id:"e37",time:"18:33",type:"blocker",event:"Prism V2 blocked: no web search",cost:0,task_id:null},
+    {id:"e38",time:"19:34",type:"redundant",event:"Same blocker message repeated",cost:0,task_id:null},
+    {id:"c1",time:"09:00",type:"consciousness",event:"Consciousness idle cycle (typical)",cost:0.002,task_id:null},
+    {id:"c2",time:"12:00",type:"consciousness",event:"Consciousness: searching for Directive 4",cost:0.002,task_id:null},
+    {id:"c3",time:"15:00",type:"consciousness",event:"Strategic plan #30 generated",cost:0.002,task_id:null},
+    {id:"c4",time:"20:00",type:"consciousness",event:"Overnight: idle loop (3600s interval)",cost:0.001,task_id:null},
+    {id:"c5",time:"23:00",type:"consciousness",event:"Overnight: idle loop continues",cost:0.001,task_id:null}
+  ],
+  "2026-04-05": [
+    {id:"f1",time:"01:07",type:"consciousness",event:"Consciousness searches chat for Prism V2",cost:0.002,task_id:null},
+    {id:"f2",time:"04:07",type:"proactive_message",event:"THAI messages Sergey: Prism V2 blocked",cost:0.003,task_id:null},
+    {id:"f3",time:"05:08",type:"language_violation",event:"Apology for English in previous message",cost:0.002,task_id:null},
+    {id:"f4",time:"06:47",type:"shareholder",event:"Sergey: 'Сделай рефлексию за вчера'",cost:0,task_id:null},
+    {id:"f5",time:"06:48",type:"task_complete",event:"Reflection for April 4 (1 round, $0.008)",cost:0.008,rounds:1,task_id:"5d99a49a"},
+    {id:"f6",time:"07:18",type:"system",event:"Chat backup: 605 lines, 728KB",cost:0,task_id:null},
+    {id:"f7",time:"07:49",type:"proactive_message",event:"THAI: run_code unavailable since March 6",cost:0.003,task_id:null},
+    {id:"f8",time:"08:49",type:"consciousness",event:"Last consciousness cycle before halt",cost:0.002,task_id:null},
+    {id:"f9",time:"09:01",type:"shutdown",event:"Sergey: /panic — system halted",cost:0,task_id:null}
+  ]
+};
+
+const colorMap = {
+  task_complete: "#3fb950",
+  shareholder: "#58a6ff",
+  max_rounds: "#f85149",
+  scope_creep: "#d29922",
+  plan_no_action: "#d29922",
+  redundant: "#d29922",
+  language_violation: "#f85149",
+  consciousness: "#484f58",
+  restart: "#bc8cff",
+  system: "#bc8cff",
+  blocker: "#f85149",
+  proactive_message: "#484f58",
+  shutdown: "#f85149"
+};
+
+const typeLabels = {
+  task_complete: "Task Complete",
+  shareholder: "Shareholder",
+  max_rounds: "MAX_ROUNDS Hit",
+  scope_creep: "Scope Creep",
+  plan_no_action: "Plan (no action)",
+  redundant: "Redundant Work",
+  language_violation: "Language Violation",
+  consciousness: "Consciousness",
+  restart: "System Restart",
+  system: "System",
+  blocker: "Blocker",
+  proactive_message: "Proactive Message",
+  shutdown: "Shutdown"
+};
+
+function parseTime(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function formatCost(c) { return c > 0 ? "$" + c.toFixed(3) : "—"; }
+
+const tooltip = d3.select("#tooltip");
+const width = window.innerWidth;
+const height = window.innerHeight - 80;
+const margin = { top: 50, right: 40, bottom: 40, left: 70 };
+
+const svg = d3.select("#graph")
+  .append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
+const g = svg.append("g");
+
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 5])
+  .on("zoom", (e) => g.attr("transform", e.transform));
+
+svg.call(zoom);
+
+function getTrack(type) {
+  const tracks = {
+    shareholder: 0,
+    task_complete: 1,
+    max_rounds: 1,
+    scope_creep: 1,
+    plan_no_action: 1,
+    redundant: 2,
+    language_violation: 2,
+    blocker: 2,
+    consciousness: 3,
+    proactive_message: 3,
+    restart: 4,
+    system: 4,
+    shutdown: 4
+  };
+  return tracks[type] ?? 2;
+}
+
+const trackLabels = ["Shareholder", "Tasks", "Issues", "Consciousness", "System"];
+
+function render(dayFilter, typeFilter) {
+  g.selectAll("*").remove();
+
+  let allNodes = [];
+  const days = dayFilter === "all" ? ["2026-04-04", "2026-04-05"] : [dayFilter];
+
+  days.forEach((day, di) => {
+    rawData[day].forEach(n => {
+      if (typeFilter !== "all" && n.type !== typeFilter) return;
+      allNodes.push({ ...n, day, dayIndex: di });
+    });
+  });
+
+  if (allNodes.length === 0) return;
+
+  const graphW = width - margin.left - margin.right;
+  const graphH = height - margin.top - margin.bottom;
+  const dayWidth = days.length > 1 ? graphW / 2 : graphW;
+
+  // Time scale (0-1440 minutes)
+  const xScale = d3.scaleLinear().domain([0, 1440]).range([0, dayWidth - 20]);
+  const yScale = d3.scaleLinear().domain([0, 4]).range([margin.top, graphH - 20]);
+
+  // Day separators and labels
+  days.forEach((day, di) => {
+    const xOff = di * dayWidth + margin.left;
+
+    g.append("text")
+      .attr("class", "day-label")
+      .attr("x", xOff + dayWidth / 2)
+      .attr("y", 25)
+      .attr("text-anchor", "middle")
+      .text(day === "2026-04-04" ? "April 4, 2026" : "April 5, 2026");
+
+    // Time axis
+    for (let h = 0; h <= 24; h += 3) {
+      const x = xOff + xScale(h * 60);
+      g.append("line")
+        .attr("x1", x).attr("y1", margin.top - 10)
+        .attr("x2", x).attr("y2", graphH)
+        .attr("stroke", "#21262d").attr("stroke-width", 0.5);
+      g.append("text")
+        .attr("class", "time-label")
+        .attr("x", x).attr("y", margin.top - 15)
+        .attr("text-anchor", "middle")
+        .text(`${String(h).padStart(2, "0")}:00`);
+    }
+
+    if (di > 0) {
+      g.append("line")
+        .attr("class", "day-separator")
+        .attr("x1", xOff - 5).attr("y1", 10)
+        .attr("x2", xOff - 5).attr("y2", graphH + 10);
+    }
+  });
+
+  // Track labels
+  trackLabels.forEach((label, i) => {
+    g.append("text")
+      .attr("x", 8)
+      .attr("y", yScale(i) + 4)
+      .attr("fill", "#484f58")
+      .attr("font-size", 10)
+      .text(label);
+  });
+
+  // Links between consecutive events
+  const sorted = [...allNodes].sort((a, b) => {
+    if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+    return parseTime(a.time) - parseTime(b.time);
+  });
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const x1 = prev.dayIndex * dayWidth + margin.left + xScale(parseTime(prev.time));
+    const y1 = yScale(getTrack(prev.type));
+    const x2 = curr.dayIndex * dayWidth + margin.left + xScale(parseTime(curr.time));
+    const y2 = yScale(getTrack(curr.type));
+
+    g.append("line")
+      .attr("class", "link")
+      .attr("x1", x1).attr("y1", y1)
+      .attr("x2", x2).attr("y2", y2)
+      .attr("stroke", "#30363d")
+      .attr("stroke-width", 1);
+  }
+
+  // Nodes
+  const nodes = g.selectAll(".node")
+    .data(sorted)
+    .enter()
+    .append("g")
+    .attr("class", "node")
+    .attr("transform", d => {
+      const x = d.dayIndex * dayWidth + margin.left + xScale(parseTime(d.time));
+      const y = yScale(getTrack(d.type));
+      return `translate(${x},${y})`;
+    });
+
+  nodes.append("circle")
+    .attr("r", d => Math.max(5, Math.min(22, (d.cost || 0.01) * 12 + 4)))
+    .attr("fill", d => colorMap[d.type] || "#484f58")
+    .attr("fill-opacity", 0.8)
+    .attr("stroke", d => colorMap[d.type] || "#484f58")
+    .attr("stroke-width", 1.5);
+
+  // Cost labels on expensive nodes
+  nodes.filter(d => d.cost >= 0.5)
+    .append("text")
+    .attr("dy", -14)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#f0883e")
+    .attr("font-size", 9)
+    .attr("font-weight", 600)
+    .text(d => "$" + d.cost.toFixed(2));
+
+  // Hover
+  nodes.on("mouseover", function(event, d) {
+    const [mx, my] = d3.pointer(event, document.body);
+    tooltip.style("opacity", 1)
+      .style("left", (mx + 15) + "px")
+      .style("top", (my - 10) + "px")
+      .html(`
+        <div class="title">${d.event}</div>
+        <div class="detail">
+          <span class="time">${d.day} ${d.time} UTC</span><br>
+          Type: ${typeLabels[d.type] || d.type}<br>
+          Cost: <span class="cost">${formatCost(d.cost)}</span>
+          ${d.rounds ? "<br>Rounds: " + d.rounds : ""}
+          ${d.task_id ? "<br>Task: " + d.task_id : ""}
+        </div>
+      `);
+  })
+  .on("mousemove", function(event) {
+    const [mx, my] = d3.pointer(event, document.body);
+    tooltip.style("left", (mx + 15) + "px").style("top", (my - 10) + "px");
+  })
+  .on("mouseout", () => tooltip.style("opacity", 0));
+
+  // Initial zoom to fit
+  const bounds = g.node().getBBox();
+  const fullW = bounds.width + 40;
+  const fullH = bounds.height + 40;
+  const scale = Math.min(width / fullW, height / fullH, 1.2);
+  const tx = (width - fullW * scale) / 2 - bounds.x * scale + 20;
+  const ty = (height - fullH * scale) / 2 - bounds.y * scale + 20;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+// Controls
+d3.select("#dayFilter").on("change", function() {
+  render(this.value, d3.select("#typeFilter").property("value"));
+});
+d3.select("#typeFilter").on("change", function() {
+  render(d3.select("#dayFilter").property("value"), this.value);
+});
+
+render("all", "all");
+
+window.addEventListener("resize", () => {
+  svg.attr("width", window.innerWidth).attr("height", window.innerHeight - 80);
+  render(
+    d3.select("#dayFilter").property("value"),
+    d3.select("#typeFilter").property("value")
+  );
+});
+</script>
+</body>
+</html>

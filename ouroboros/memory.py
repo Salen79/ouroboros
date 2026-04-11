@@ -76,51 +76,82 @@ class Memory:
     # --- Chat history ---
 
     def chat_history(self, count: int = 100, offset: int = 0, search: str = "") -> str:
-        """Read from logs/chat.jsonl. count messages, offset from end, filter by search."""
+        """Read from logs/chat.jsonl and logs/events.jsonl. count messages, offset from end, filter by search."""
         chat_path = self.logs_path("chat.jsonl")
-        if not chat_path.exists():
-            return "(chat history is empty)"
+        events_path = self.logs_path("events.jsonl")
+        
+        message_entries = []
+        if chat_path.exists():
+            try:
+                raw_lines = chat_path.read_text(encoding="utf-8").strip().split("\n")
+                for line in raw_lines:
+                    line = line.strip()
+                    if not line: continue
+                    try:
+                        entry = json.loads(line)
+                        entry["source"] = "chat" # Mark source
+                        message_entries.append(entry)
+                    except Exception:
+                        log.debug(f"Failed to parse JSON line in chat_history: {line[:100]}")
+            except Exception as e:
+                log.warning(f"Failed to read chat.jsonl: {e}")
 
-        try:
-            raw_lines = chat_path.read_text(encoding="utf-8").strip().split("\n")
-            entries = []
-            for line in raw_lines:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entries.append(json.loads(line))
-                except Exception:
-                    log.debug(f"Failed to parse JSON line in chat_history: {line[:100]}")
-                    continue
+        event_entries = []
+        if events_path.exists():
+            try:
+                raw_lines = events_path.read_text(encoding="utf-8").strip().split("\n")
+                for line in raw_lines:
+                    line = line.strip()
+                    if not line: continue
+                    try:
+                        entry = json.loads(line)
+                        entry["source"] = "event" # Mark source
+                        event_entries.append(entry)
+                    except Exception:
+                        log.debug(f"Failed to parse JSON line in events.jsonl: {line[:100]}")
+            except Exception as e:
+                log.warning(f"Failed to read events.jsonl: {e}")
+        
+        # Combine and sort by timestamp
+        all_entries = message_entries + event_entries
+        all_entries.sort(key=lambda x: x.get("ts", "")) # Sort by timestamp
 
-            if search:
-                search_lower = search.lower()
-                entries = [e for e in entries if search_lower in str(e.get("text", "")).lower()]
+        if search:
+            search_lower = search.lower()
+            all_entries = [e for e in all_entries if search_lower in str(e).lower()]
 
-            if offset > 0:
-                entries = entries[:-offset] if offset < len(entries) else []
+        if offset > 0:
+            all_entries = all_entries[:-offset] if offset < len(all_entries) else []
 
-            entries = entries[-count:] if count < len(entries) else entries
+        all_entries = all_entries[-count:] if count < len(all_entries) else all_entries
 
-            if not entries:
-                return "(no messages matching query)"
+        if not all_entries:
+            return "(no messages or events matching query)"
 
-            lines = []
-            for e in entries:
+        lines = []
+        for e in all_entries:
+            source = e.get("source")
+            ts_full = e.get("ts", "")
+            ts_hhmm = ts_full[11:16] if ts_full and len(ts_full) >= 16 else ""
+
+            if source == "chat":
                 dir_raw = str(e.get("direction", "")).lower()
                 direction = "→" if dir_raw in ("out", "outgoing") else "←"
-                ts = str(e.get("ts", ""))[:16]
                 raw_text = str(e.get("text", ""))
                 if dir_raw in ("out", "outgoing"):
                     text = short(raw_text, 800)
                 else:
                     text = raw_text  # never truncate creator's messages
-                lines.append(f"{direction} [{ts}] {text}")
+                lines.append(f"{direction} [{ts_hhmm}] {text}")
+            elif source == "event":
+                evt_type = e.get("type", "?")
+                event_text = short(str(e.get("text", e.get("error", ""))), 700) # Show text or error
+                lines.append(f"⚙️ [{ts_hhmm}] {evt_type}: {event_text}")
+            else: # Fallback for unknown sources
+                lines.append(f"❓ [{ts_hhmm}] {short(str(e), 700)}")
 
-            return f"Showing {len(entries)} messages:\n\n" + "\n".join(lines)
-        except Exception as e:
-            return f"(error reading history: {e})"
+        return f"Showing {len(lines)} recent messages/events:\n\n" + "\n".join(lines)
+
 
     # --- JSONL tail reading ---
 
@@ -154,18 +185,28 @@ class Memory:
             return ""
         lines = []
         for e in entries[-100:]:
-            dir_raw = str(e.get("direction", "")).lower()
-            direction = "→" if dir_raw in ("out", "outgoing") else "←"
-            ts_full = e.get("ts", "")
-            ts_hhmm = ts_full[11:16] if len(ts_full) >= 16 else ""
-            # Creator messages: no truncation (most valuable context)
-            # Outgoing messages: truncate to 800 chars
-            raw_text = str(e.get("text", ""))
-            if dir_raw in ("out", "outgoing"):
-                text = short(raw_text, 800)
+            if e.get("source") == "chat":
+                dir_raw = str(e.get("direction", "")).lower()
+                direction = "→" if dir_raw in ("out", "outgoing") else "←"
+                ts_full = e.get("ts", "")
+                ts_hhmm = ts_full[11:16] if ts_full and len(ts_full) >= 16 else ""
+
+                raw_text = str(e.get("text", ""))
+                if dir_raw in ("out", "outgoing"):
+                    text = short(raw_text, 800)
+                else:
+                    text = raw_text  # never truncate creator's messages
+                lines.append(f"{direction} {ts_hhmm} {text}")
+            elif e.get("source") == "event":
+                ts_full = e.get("ts", "")
+                ts_hhmm = ts_full[11:16] if ts_full and len(ts_full) >= 16 else ""
+                evt_type = e.get("type", "?")
+                event_text = short(str(e.get("text", e.get("error", ""))), 700)
+                lines.append(f"⚙️ {ts_hhmm} {evt_type}: {event_text}")
             else:
-                text = raw_text  # never truncate creator's messages
-            lines.append(f"{direction} {ts_hhmm} {text}")
+                 ts_full = e.get("ts", "")
+                 ts_hhmm = ts_full[11:16] if ts_full and len(ts_full) >= 16 else ""
+                 lines.append(f"❓ {ts_hhmm}: {short(str(e), 700)}")
         return "\n".join(lines)
 
     def summarize_progress(self, entries: List[Dict[str, Any]], limit: int = 15) -> str:
@@ -175,7 +216,7 @@ class Memory:
         lines = []
         for e in entries[-limit:]:
             ts_full = e.get("ts", "")
-            ts_hhmm = ts_full[11:16] if len(ts_full) >= 16 else ""
+            ts_hhmm = ts_full[11:16] if ts_full and len(ts_full) >= 16 else ""
             text = short(str(e.get("text", "")), 300)
             lines.append(f"⚙️ {ts_hhmm} {text}")
         return "\n".join(lines)

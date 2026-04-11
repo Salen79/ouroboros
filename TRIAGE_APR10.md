@@ -18,35 +18,55 @@ standard circuit breaker termination, not LLM failures.
 **Fix:** Relabeled as `circuit_breaker_empty` in loop.py (1 line).
 Event type now correctly distinguishes circuit breaker from real empty responses.
 
-## P3: overplanning — partial fix only
+## P3: overplanning — resolved via kill switch
 
 ### Implemented (this branch)
-- D: budget guard at 95% (`STRATEGIC_PLAN_BUDGET_THRESHOLD = 0.95`) —
-  safety valve, valid regardless of dispatcher state.
-  Logs `strategic_plan_blocked_budget` event with spent/threshold values.
+- **Kill switch:** `STRATEGIC_PLANNER_ENABLED` env var, default `"false"`.
+  Planner disabled until context issues resolved. Logs `strategic_planner_disabled`.
+- **D: budget guard** at 95% (`STRATEGIC_PLAN_BUDGET_THRESHOLD = 0.95`) —
+  safety valve for when planner is re-enabled. Logs `strategic_plan_blocked_budget`.
 
-### Frozen in fix/post-apr10-triage (NOT merged)
-- B: plan-commitment tracker (in-memory, checks task_received for >50% keyword match)
-- C: daily plan cap via `OUROBOROS_MAX_PLANS_PER_DAY` env (default 4)
+### Abandoned (fix/post-apr10-triage branch)
+- B: plan-commitment tracker — would block ALL plans permanently because
+  dispatcher never delivers planned tasks (see P4).
+- C: daily plan cap — redundant while kill switch is active.
 
-### Why frozen
-Side discovery during P3 implementation: `planned_task` events from
-consciousness.py are NOT handled by supervisor/events.py dispatcher —
-they fall into `unknown_worker_event`. Non-gated tasks from strategic
-plans never reach the queue. This means:
-- The "31% plan→execution conversion" was actually gated approval rate
-- The 51% duplicate rate is a symptom: planner has no execution feedback
-- B (plan-commitment tracker) would block ALL plans permanently after
-  the first one, because no plan tasks ever complete
+Branch `fix/post-apr10-triage` can be deleted after this merge.
 
-B and C are valid fixes IF the dispatcher bug is fixed first. Until then,
-merging them would mask the real problem and freeze the strategic planner.
+## P4: dispatcher does not handle `planned_task` — closed, no fix
 
-### Next: fix/dispatcher-planned-task
-See P4 below.
+**Diagnosed.** `planned_task` and `proactive_message` event types were never
+added to `supervisor/events.py` EVENT_HANDLERS (git history confirms: never
+existed, original oversight in commit `1c11209`).
 
-## P4: dispatcher does not handle `planned_task` (NEW)
+**Impact (Apr 6-10):**
+- 112 `planned_task` events dropped (all fell to `unknown_worker_event`)
+- 141 `proactive_message` events dropped (133 gate notifications, 8 plan summaries)
+- Shareholder never saw gate approval requests → could not `/approve`
 
-Status: discovered during P3, not yet diagnosed.
-Branch: fix/dispatcher-planned-task (to be created after P3 merge).
-Approach: diagnostic-first, same protocol as P1-P3.
+**Decision: no dispatcher fix.** Diagnosis of the 112 planned tasks revealed
+the strategic planner generates hallucinated tasks:
+- 6/15 sampled tasks reference archived "AI Company" / CrewAI multi-agent system
+- 7/15 are thematic duplicates ("await Prism V2 input" × 7 variations)
+- 0/15 would have been genuinely useful
+- Estimated waste if dispatcher worked: ~$112 on garbage tasks
+
+Fixing the dispatcher would only deliver hallucinated tasks to the queue.
+The real fix is planner context (P5), not delivery infrastructure.
+
+## P5: Strategic planner context outdated (NEW — out of scope)
+
+The strategic planner (`ouroboros/strategic_planner.py`) generates plans
+based on stale context that includes references to:
+- "AI Company" multi-agent architecture (archived Feb 2026)
+- CrewAI crew structure (replaced by Ouroboros)
+- "Agent performance metrics" for non-existent agents
+
+**Before re-enabling** (`STRATEGIC_PLANNER_ENABLED=true`):
+1. Audit planner's context assembly — what does it read?
+2. Strip references to archived systems
+3. Add current product state (Prism V2 status, VendorLens paused)
+4. Test with 5 plan generations, verify 0 hallucinated tasks
+5. Only then: enable planner + add `planned_task` handler to dispatcher
+
+Scheduled separately from this triage.

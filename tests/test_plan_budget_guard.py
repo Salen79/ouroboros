@@ -30,7 +30,7 @@ def _make_consciousness(tmpdir: Path, env_overrides: dict = None):
     repo_dir = tmpdir / "repo"
     repo_dir.mkdir(exist_ok=True)
 
-    env = {"TOTAL_BUDGET": "500", **(env_overrides or {})}
+    env = {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true", **(env_overrides or {})}
 
     with patch.dict(os.environ, env), \
          patch("ouroboros.consciousness.LLMClient"), \
@@ -97,7 +97,7 @@ class TestBudgetGuard:
         _write_state(drive_root, 476.0)
 
         c._last_plan_ts = 0
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "500"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 c._maybe_strategic_plan()
@@ -113,7 +113,7 @@ class TestBudgetGuard:
         c._last_plan_ts = 0
         fake_plan = FakePlan([FakeTask("Test task")])
 
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "500"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 with patch("ouroboros.strategic_planner.StrategicPlanner") as mock_sp:
@@ -130,7 +130,7 @@ class TestBudgetGuard:
         _write_state(drive_root, 475.0)
 
         c._last_plan_ts = 0
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "500"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 c._maybe_strategic_plan()
@@ -144,7 +144,7 @@ class TestBudgetGuard:
         _write_state(drive_root, 490.0)
 
         c._last_plan_ts = 0
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "500"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 c._maybe_strategic_plan()
@@ -162,7 +162,7 @@ class TestBudgetGuard:
         c._last_plan_ts = 0
         fake_plan = FakePlan([FakeTask("Test")])
 
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "500"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 with patch("ouroboros.strategic_planner.StrategicPlanner") as mock_sp:
@@ -180,7 +180,7 @@ class TestBudgetGuard:
         c._last_plan_ts = 0
         fake_plan = FakePlan([FakeTask("Test")])
 
-        with patch.dict(os.environ, {"TOTAL_BUDGET": "0"}):
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "0", "STRATEGIC_PLANNER_ENABLED": "true"}):
             with patch("supervisor.workers.RUNNING", []), \
                  patch("supervisor.workers.PENDING", []):
                 with patch("ouroboros.strategic_planner.StrategicPlanner") as mock_sp:
@@ -189,3 +189,54 @@ class TestBudgetGuard:
                     c._maybe_strategic_plan()
 
         assert _plan_was_generated(drive_root)
+
+
+# ── Kill switch tests ─────────────────────────────────────────────────
+
+class TestKillSwitch:
+    def test_disabled_by_default(self, tmp_path):
+        """When STRATEGIC_PLANNER_ENABLED is unset, planner should not run."""
+        c, drive_root = _make_consciousness(tmp_path)
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("STRATEGIC_PLANNER_ENABLED", None)
+            c._maybe_strategic_plan()
+
+        assert not _plan_was_generated(drive_root)
+        events = _read_events(drive_root)
+        disabled = [e for e in events if e.get("type") == "strategic_planner_disabled"]
+        assert len(disabled) == 1
+        assert disabled[0]["reason"] == "env_guard"
+
+    def test_explicitly_false(self, tmp_path):
+        """When STRATEGIC_PLANNER_ENABLED=false, planner should not run."""
+        c, drive_root = _make_consciousness(tmp_path)
+
+        with patch.dict(os.environ, {"STRATEGIC_PLANNER_ENABLED": "false"}):
+            c._maybe_strategic_plan()
+
+        assert not _plan_was_generated(drive_root)
+        events = _read_events(drive_root)
+        disabled = [e for e in events if e.get("type") == "strategic_planner_disabled"]
+        assert len(disabled) == 1
+
+    def test_enabled_when_true(self, tmp_path):
+        """When STRATEGIC_PLANNER_ENABLED=true, planner should proceed."""
+        c, drive_root = _make_consciousness(tmp_path)
+        _write_state(drive_root, 100.0)
+
+        c._last_plan_ts = 0
+        fake_plan = FakePlan([FakeTask("Test")])
+
+        with patch.dict(os.environ, {"TOTAL_BUDGET": "500", "STRATEGIC_PLANNER_ENABLED": "true"}):
+            with patch("supervisor.workers.RUNNING", []), \
+                 patch("supervisor.workers.PENDING", []):
+                with patch("ouroboros.strategic_planner.StrategicPlanner") as mock_sp:
+                    mock_sp.return_value.generate_plan.return_value = fake_plan
+                    mock_sp.return_value.format_telegram_summary.return_value = "p"
+                    c._maybe_strategic_plan()
+
+        assert _plan_was_generated(drive_root)
+        events = _read_events(drive_root)
+        disabled = [e for e in events if e.get("type") == "strategic_planner_disabled"]
+        assert len(disabled) == 0

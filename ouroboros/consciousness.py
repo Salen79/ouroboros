@@ -324,6 +324,15 @@ class BackgroundConsciousness:
 
     def _maybe_strategic_plan(self) -> None:
         """Run strategic planner when task queue is empty. No LLM budget — planner handles that."""
+        # Kill switch: planner disabled by default until context issues resolved (P5)
+        if os.environ.get("STRATEGIC_PLANNER_ENABLED", "false").lower() != "true":
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "strategic_planner_disabled",
+                "reason": "env_guard",
+            })
+            return
+
         now = time.time()
         if now - self._last_plan_ts < self._plan_interval_sec:
             return

@@ -67,6 +67,13 @@ based on stale context that includes references to:
 2. Strip references to archived systems
 3. Add current product state (Prism V2 status, VendorLens paused)
 4. Test with 5 plan generations, verify 0 hallucinated tasks
-5. Only then: enable planner + add `planned_task` handler to dispatcher
+5. Only then: enable planner. Observe 1-2 weeks of plan quality with
+   `planned_task` events still going to unknown_worker_event (planner
+   visible in logs but not executing). Add dispatcher handler ONLY if
+   plans prove consistently useful — see P4 for rationale.
 
 Scheduled separately from this triage.
+
+Re-enabling path likely involves Memory SLM brief integration to provide
+planner with current operational context (the same compact brief used by
+loop.py since Memory SLM Phase 1).

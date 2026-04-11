@@ -1728,7 +1728,7 @@ def _call_llm_with_retry(
 
                 # Log raw empty response for debugging
                 append_jsonl(drive_logs / "events.jsonl", {
-                    "ts": utc_now_iso(), "type": "llm_empty_response",
+                    "ts": utc_now_iso(), "type": "circuit_breaker_empty" if round_idx > int(os.environ.get("OUROBOROS_MAX_ROUNDS", "12")) else "llm_empty_response",
                     "task_id": task_id,
                     "round": round_idx, "attempt": attempt + 1,
                     "model": model,

@@ -36,6 +36,10 @@ from ouroboros.llm import LLMClient, DEFAULT_LIGHT_MODEL
 
 log = logging.getLogger(__name__)
 
+# P17: stop strategic planning at 95% budget to preserve remaining funds for
+# shareholder-directed tasks. The last 5% is reserved for manual work.
+STRATEGIC_PLAN_BUDGET_THRESHOLD = 0.95
+
 
 class StuckDetector:
     """Detect when consciousness keeps producing the same thought."""
@@ -320,9 +324,38 @@ class BackgroundConsciousness:
 
     def _maybe_strategic_plan(self) -> None:
         """Run strategic planner when task queue is empty. No LLM budget — planner handles that."""
+        # Kill switch: planner disabled by default until context issues resolved (P5)
+        if os.environ.get("STRATEGIC_PLANNER_ENABLED", "false").lower() != "true":
+            append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "strategic_planner_disabled",
+                "reason": "env_guard",
+            })
+            return
+
         now = time.time()
         if now - self._last_plan_ts < self._plan_interval_sec:
             return
+
+        # D: Budget guard — no planning when >=95% of budget consumed
+        try:
+            _state_path = self._drive_root / "state" / "state.json"
+            if _state_path.exists():
+                _spent = float(json.loads(read_text(_state_path)).get("spent_usd", 0))
+                _total = float(os.environ.get("TOTAL_BUDGET", "0"))
+                _threshold = _total * STRATEGIC_PLAN_BUDGET_THRESHOLD
+                if _total > 0 and _spent >= _threshold:
+                    log.info("Consciousness: skipping plan — budget %.0f%% consumed ($%.2f/$%.2f)",
+                             (_spent / _total) * 100, _spent, _total)
+                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
+                        "ts": utc_now_iso(),
+                        "type": "strategic_plan_blocked_budget",
+                        "spent": round(_spent, 2),
+                        "threshold": round(_threshold, 2),
+                    })
+                    return
+        except Exception:
+            pass  # non-fatal — proceed with planning if budget check fails
 
         # Only plan when queue is empty and no tasks running
         try:

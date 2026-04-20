@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 log = logging.getLogger(__name__)
 
 from ouroboros.utils import (
-    utc_now_iso, read_text, append_jsonl,
+    utc_now_iso, read_text, write_text, append_jsonl,
     safe_relpath, truncate_for_log,
     get_git_info, sanitize_task_for_event,
 )
@@ -406,6 +406,67 @@ class OuroborosAgent:
         except Exception as e:
             return {"status": "error", "error": str(e)}, 0
 
+    # R1: Placeholder content written when a memory-core file is missing or empty.
+    # Kept intentionally minimal — real content is expected to land via first
+    # update_identity / post-task scratchpad REPLACE. Does NOT overwrite an
+    # existing non-empty file.
+    _IDENTITY_PLACEHOLDER = (
+        "# Identity\n\n"
+        "Identity not yet initialised — inherit from BIBLE.md "
+        "until first update_identity call.\n"
+    )
+    _SCRATCHPAD_PLACEHOLDER = (
+        "# Scratchpad\n\n"
+        "Scratchpad not yet initialised — first task will replace this placeholder.\n"
+    )
+
+    def _ensure_memory_core(self, git_sha: str) -> Tuple[dict, int]:
+        """R1: guarantee identity.md and scratchpad.md exist and are non-empty.
+
+        Restores minimal placeholder if file is missing or zero bytes. Emits a
+        separate ``startup_memory_restore`` event listing the restored files
+        only when at least one was actually restored. Never overwrites an
+        existing non-empty file.
+
+        Returns a payload ``({"identity_md_ok": bool, "scratchpad_md_ok": bool,
+        "restored": [...]}, 0)`` — issues_count is always 0 because we auto-fix.
+        """
+        memory_dir = self.env.drive_path("memory")
+        targets = [
+            ("identity.md", memory_dir / "identity.md", self._IDENTITY_PLACEHOLDER),
+            ("scratchpad.md", memory_dir / "scratchpad.md", self._SCRATCHPAD_PLACEHOLDER),
+        ]
+        restored: List[str] = []
+        status = {}
+        for name, path, placeholder in targets:
+            try:
+                present = path.exists() and path.stat().st_size > 0
+            except Exception:
+                present = False
+            if not present:
+                try:
+                    write_text(path, placeholder)
+                    restored.append(name)
+                except Exception as e:
+                    log.warning("Failed to restore %s: %s", name, e, exc_info=True)
+                    status[f"{name.replace('.md','')}_md_ok"] = False
+                    continue
+            status[f"{name.replace('.md','')}_md_ok"] = True
+        status["restored"] = restored
+
+        if restored:
+            try:
+                append_jsonl(self.env.drive_path("logs") / "events.jsonl", {
+                    "ts": utc_now_iso(),
+                    "type": "startup_memory_restore",
+                    "restored": restored,
+                    "git_sha": git_sha,
+                })
+            except Exception:
+                log.warning("Failed to log startup_memory_restore event", exc_info=True)
+
+        return status, 0
+
     def _verify_system_state(self, git_sha: str) -> None:
         """Bible Principle 1: verify system state on every startup.
 
@@ -413,6 +474,7 @@ class OuroborosAgent:
         - Uncommitted changes (auto-rescue commit & push)
         - VERSION file sync with git tags
         - Budget remaining (warning thresholds)
+        - Memory core files present (identity.md, scratchpad.md) — R1
         """
         checks = {}
         issues = 0
@@ -428,6 +490,10 @@ class OuroborosAgent:
 
         # 3. Budget check
         checks["budget"], issue_count = self._check_budget()
+        issues += issue_count
+
+        # 4. Memory core (R1): identity.md + scratchpad.md must exist non-empty
+        checks["memory_core"], issue_count = self._ensure_memory_core(git_sha)
         issues += issue_count
 
         # Log verification result

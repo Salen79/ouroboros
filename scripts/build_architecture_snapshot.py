@@ -661,355 +661,617 @@ def _associate_nodes_with_zones(nodes: List[Dict], dark_zones: List[Dict]) -> No
 
 
 # ---------------------------------------------------------------------------
-# Phase 1.6 — Ecosystem classification: functional roles, memory lifetime,
-# tool categories, typed edges, layout hints.
+# Phase 1.7 — Functional block classification (organ → block → nodes).
 #
-# These are HAND-CURATED. Semantics like "observes" vs "governs" vs
-# "reads_from" cannot be reliably inferred from imports; the generator only
-# attaches these pre-defined maps to the emitted nodes.
+# Blocks are hand-curated groupings with a Russian label, a guiding
+# question, and either a list of topology-node IDs (nodes-based organs)
+# or tool names / abstract safety items (for TOOLS / SAFETY).
+#
+# Edges are block-level, with only two kinds for display: "control"
+# (invocations, guards, commands) and "data" (reads, writes, observations).
+# The fine-grained 5-kind taxonomy stays in the `subtype` field so Phase
+# 2 can still filter by "governs" vs "reads_from" if needed.
 # ---------------------------------------------------------------------------
 
-# Functional roles within the BRAIN aggregate.
-BRAIN_ROLES = {
-    "reactive":   ["agent", "loop", "context", "memory", "inner_critic", "llm", "owner_inject"],
-    "reflective": ["skill_manager", "experiment_engine", "pattern_detector"],
-    "continuous": ["consciousness", "strategic_planner"],
-    "governance": ["self_evolution", "budget", "state"],
-}
+# --- BRAIN: 5 functional blocks ---
+BRAIN_BLOCKS = [
+    {
+        "id": "brain_perception",
+        "organ": "brain",
+        "label": "Восприятие",
+        "question": "Что пришло? Какого это типа? Что я знаю про это?",
+        "nodes": ["agent", "context", "memory", "owner_inject"],
+    },
+    {
+        "id": "brain_thinking",
+        "organ": "brain",
+        "label": "Мышление",
+        "question": "Раунд за раундом: думаю → действую → наблюдаю",
+        "nodes": ["loop", "llm"],
+    },
+    {
+        "id": "brain_selfcontrol",
+        "organ": "brain",
+        "label": "Самоконтроль",
+        "question": "Правильно ли я делаю? Можно ли мне это делать?",
+        "nodes": ["inner_critic", "self_evolution", "budget"],
+    },
+    {
+        "id": "brain_reflection",
+        "organ": "brain",
+        "label": "Рефлексия",
+        "question": "Что я могу извлечь из того, что было?",
+        "nodes": ["skill_manager", "experiment_engine", "pattern_detector"],
+    },
+    {
+        "id": "brain_continuous",
+        "organ": "brain",
+        "label": "Фоновое сознание",
+        "question": "Что происходит между задачами? К чему я иду?",
+        "nodes": ["consciousness", "strategic_planner"],
+    },
+]
 
-# Functional roles within the INTERFACE aggregate.
-INTERFACE_ROLES = {
-    "inbound":       ["telegram_api", "colab_launcher"],
-    "outbound":      ["telegram"],              # supervisor/telegram.py send path
-    "orchestration": ["queue", "workers", "events", "git_ops"],
-    "process":       ["worker_pool", "consciousness_thread", "fs_data"],
-    "infra":         ["docker_chromadb", "docker_postgres", "docker_redis"],
-    "external":      ["openrouter"],
-}
+# --- INTERFACE: 3 blocks ---
+INTERFACE_BLOCKS = [
+    {
+        "id": "iface_comm",
+        "organ": "interface",
+        "label": "Связь с внешним миром",
+        "question": "Что мне говорят? Что я отвечаю?",
+        "nodes": ["colab_launcher", "telegram"],
+    },
+    {
+        "id": "iface_dispatch",
+        "organ": "interface",
+        "label": "Диспетчеризация",
+        "question": "Кто это сделает? Когда? В какой последовательности?",
+        "nodes": ["queue", "workers", "events", "worker_pool", "consciousness_thread"],
+    },
+    {
+        "id": "iface_infra",
+        "organ": "interface",
+        "label": "Жизнеобеспечение",
+        "question": "Что со мной было? На какой версии я работаю?",
+        "nodes": ["state", "git_ops", "fs_data",
+                  "docker_chromadb", "docker_postgres", "docker_redis"],
+    },
+]
 
-# Memory lifetime bands (Phase 1.6 reorg).
-MEMORY_LIFETIME = {
-    "working": [   # per-task, dropped at task end
-        "mem_scratchpad",
-    ],
-    "short_term": [  # session / day, ages out
-        "log_chat", "log_events", "log_supervisor", "log_tools", "log_progress",
-        "state_directives", "state_budget", "state_queue",
-    ],
-    "long_term": [   # persistent, accumulates
-        "mem_identity", "mem_wisdom", "mem_knowledge", "mem_episodic",
-        "chroma_episodes", "chroma_skills", "chroma_history",
-        "state_main", "state_experiments", "state_commitments",
-        "state_reflected", "state_cooldown", "state_consciousness",
-        "file_task_results",
-    ],
-}
+# --- EXTERNAL (not a functional organ proper — rendered as periphery) ---
+EXTERNAL_NODES = ["telegram_api", "openrouter"]
 
-# Tool categories (Phase 1.6 functional cut for Overview zoom).
-TOOL_CATEGORIES = {
-    "read": [
-        "repo_read", "repo_list", "drive_read", "drive_list", "chat_history",
-        "git_status", "git_diff", "recall", "memory_search", "find_skills",
-        "semantic_search", "semantic_find_skills", "knowledge_read", "knowledge_list",
-        "chromadb_stats", "list_github_issues", "get_github_issue",
-        "read_service_logs", "run_ops_check", "codebase_digest", "codebase_health",
-        "check_evolution_status", "generate_evolution_stats", "web_search",
-        "browse_page", "analyze_screenshot", "vlm_query", "recent_session",
-        "wait_for_task", "get_task_result", "deep_reflection", "multi_model_review",
-        "summarize_dialogue",
-    ],
-    "write": [
-        "drive_write", "update_scratchpad", "update_identity",
-        "record_memory", "save_skill", "knowledge_write", "send_owner_message",
-        "send_photo", "schedule_task", "cancel_task", "create_github_issue",
-        "close_github_issue", "comment_on_issue", "toggle_evolution",
-        "toggle_consciousness", "forward_to_worker", "propose_change",
-        "browser_action", "compact_context", "request_review",
-    ],
-    "execute": [
-        "run_shell", "claude_code_edit", "repo_write_commit", "repo_commit_push",
-        "restart_service", "request_restart", "promote_to_stable", "apply_change",
-    ],
-    "meta": [
-        "list_available_tools", "enable_tools", "switch_model",
-    ],
-}
+# --- MEMORY: 3 lifetime levels, with 4 sub-blocks inside Долговременная ---
+MEMORY_BLOCKS = [
+    {
+        "id": "mem_working",
+        "organ": "memory",
+        "level": "working",
+        "label": "Рабочая",
+        "tagline": "per-task — теряется в конце задачи",
+        "question": "Что происходит прямо сейчас?",
+        "nodes": ["mem_scratchpad"],
+        # Virtual items (no topology node) rendered as text labels
+        "virtual_items": ["messages[]", "owner_mailbox/"],
+    },
+    {
+        "id": "mem_operational",
+        "organ": "memory",
+        "level": "short",
+        "label": "Оперативная",
+        "tagline": "день / сессия — медленно устаревает",
+        "question": "Что было недавно? Что меня попросили 24 часа назад?",
+        "nodes": ["log_chat", "log_events", "log_supervisor", "log_tools",
+                  "log_progress",
+                  "state_directives", "state_budget", "state_queue"],
+    },
+    # Долговременная split into 4 sub-blocks ↓
+    {
+        "id": "mem_identity",
+        "organ": "memory",
+        "level": "long",
+        "sub": "identity",
+        "label": "Идентичность",
+        "question": "Кто я? Что я знаю про себя?",
+        "nodes": ["mem_identity", "mem_wisdom"],
+    },
+    {
+        "id": "mem_knowledge",
+        "organ": "memory",
+        "level": "long",
+        "sub": "knowledge",
+        "label": "Знания",
+        "question": "Что я выучил про предметную область?",
+        "nodes": ["mem_knowledge"],
+    },
+    {
+        "id": "mem_experience",
+        "organ": "memory",
+        "level": "long",
+        "sub": "experience",
+        "label": "Опыт",
+        "question": "Что я пробовал? Что сработало?",
+        "nodes": ["mem_episodic", "chroma_episodes", "chroma_skills", "chroma_history"],
+    },
+    {
+        "id": "mem_service",
+        "organ": "memory",
+        "level": "long",
+        "sub": "service",
+        "label": "Служебная",
+        "question": "В каком я состоянии? Что я пообещал?",
+        "nodes": ["state_main", "state_experiments", "state_commitments",
+                  "state_reflected", "state_cooldown", "state_consciousness"],
+    },
+    {
+        "id": "mem_archive",
+        "organ": "memory",
+        "level": "archive",
+        "label": "Архив задач",
+        "tagline": "append-only — 645+ файлов",
+        "question": "Что я делал раньше и как это прошло?",
+        "nodes": ["file_task_results"],
+    },
+]
 
+# --- TOOLS: 6 functional blocks (Phase 1.7) ---
+TOOLS_BLOCKS = [
+    {
+        "id": "tools_read",
+        "organ": "tools",
+        "label": "Чтение мира",
+        "question": "Что есть?",
+        "tools": [
+            "repo_read", "repo_list", "git_status", "git_diff",
+            "codebase_digest", "codebase_health",
+            "drive_read", "drive_list",
+            "chat_history", "recent_session", "summarize_dialogue",
+            "recall", "memory_search", "semantic_search",
+            "find_skills", "semantic_find_skills",
+            "knowledge_read", "knowledge_list",
+            "web_search", "browse_page", "vlm_query", "analyze_screenshot",
+            "read_service_logs", "run_ops_check", "chromadb_stats",
+            "list_github_issues", "get_github_issue",
+            "wait_for_task", "get_task_result",
+        ],
+    },
+    {
+        "id": "tools_write",
+        "organ": "tools",
+        "label": "Изменение мира",
+        "question": "Что сделать?",
+        "tools": [
+            "drive_write", "repo_write_commit", "repo_commit_push",
+            "propose_change", "apply_change", "claude_code_edit",
+            "update_scratchpad", "update_identity",
+            "record_memory", "save_skill", "knowledge_write",
+            "send_owner_message", "send_photo",
+            "create_github_issue", "close_github_issue", "comment_on_issue",
+        ],
+    },
+    {
+        "id": "tools_selfctl",
+        "organ": "tools",
+        "label": "Управление собой",
+        "question": "Как мне изменить свой режим работы?",
+        "tools": [
+            "schedule_task", "cancel_task", "forward_to_worker",
+            "request_restart", "restart_service", "promote_to_stable",
+            "switch_model", "toggle_consciousness", "toggle_evolution",
+            "compact_context",
+        ],
+    },
+    {
+        "id": "tools_reflection",
+        "organ": "tools",
+        "label": "Саморефлексия",
+        "question": "Как мне оценить своё поведение?",
+        "tools": [
+            "deep_reflection", "multi_model_review", "request_review",
+            "check_evolution_status", "generate_evolution_stats",
+        ],
+    },
+    {
+        "id": "tools_danger",
+        "organ": "tools",
+        "label": "Опасная сила",
+        "question": "Что могу сломать одним вызовом?",
+        "tools": ["run_shell", "browser_action"],
+    },
+    {
+        "id": "tools_meta",
+        "organ": "tools",
+        "label": "Мета",
+        "question": "Какие у меня вообще есть инструменты?",
+        "tools": ["list_available_tools", "enable_tools"],
+    },
+]
 
-# Hand-curated typed edges — see ARCHITECTURE_MAP §1.2 + §2.1 + §2.2.
-# `visibility` says at which zoom states the edge should render.
-#   "l0"       = always visible on the landing composition (organ-level flow)
-#   "detail"   = shown whenever any L1 zoom is active
-#   "l1-brain" = only when zoomed into BRAIN
-#   "l1-iface" = only when zoomed into INTERFACE
-TYPED_EDGES = [
-    # ---- L0: organ-level flows --------------------------------------
-    {"source": "telegram_api", "target": "colab_launcher", "kind": "invokes",
-     "label": "poll_updates", "visibility": "l0"},
-    {"source": "colab_launcher", "target": "telegram_api", "kind": "invokes",
-     "label": "send_messages", "visibility": "l0"},
-    {"source": "colab_launcher", "target": "agent",        "kind": "invokes",
-     "label": "dispatch_task (via queue+workers)", "visibility": "l0"},
-    {"source": "llm", "target": "openrouter",              "kind": "invokes",
-     "label": "HTTP completions", "visibility": "l0"},
-    {"source": "loop", "target": "llm",                    "kind": "invokes",
-     "label": "every round", "visibility": "l0"},
-    {"source": "loop", "target": "registry",               "kind": "invokes",
-     "label": "dispatch tool", "visibility": "l0"},
-    {"source": "loop", "target": "mem_scratchpad",         "kind": "writes_to",
-     "label": "REPLACE post-task", "visibility": "l0"},
-    {"source": "loop", "target": "log_events",             "kind": "writes_to",
-     "label": "llm_round + stuck", "visibility": "l0"},
-    {"source": "context", "target": "mem_identity",        "kind": "reads_from",
-     "label": "identity", "visibility": "l0"},
-    {"source": "context", "target": "log_chat",            "kind": "reads_from",
-     "label": "last 40 msgs", "visibility": "l0"},
-    {"source": "registry", "target": "chroma_episodes",    "kind": "writes_to",
-     "label": "semantic episodes", "visibility": "l0"},
-    {"source": "consciousness", "target": "log_events",    "kind": "observes",
-     "label": "reflection cycle", "visibility": "l0"},
-    {"source": "inner_critic", "target": "loop",           "kind": "governs",
-     "label": "advisory at 40%/75%", "visibility": "l0"},
-    {"source": "self_evolution", "target": "loop",         "kind": "governs",
-     "label": "file zones", "visibility": "l0"},
-    {"source": "budget", "target": "loop",                 "kind": "governs",
-     "label": "cost caps", "visibility": "l0"},
+# --- SAFETY: 5 functional blocks ---
+# Items are abstract safety mechanisms (not topology nodes), each with
+# a RU title and a code reference (file:line or concept).
+SAFETY_BLOCKS = [
+    {
+        "id": "safety_prevent",
+        "organ": "safety",
+        "label": "Предотвращение",
+        "question": "Что агенту запрещено делать?",
+        "items": [
+            {"title": "FILE_ZONES (red / yellow / green)", "ref": "config/FILE_ZONES.yaml"},
+            {"title": "Destructive-keyword guard",          "ref": "supervisor/workers.py:320-351"},
+            {"title": "Consciousness whitelist",            "ref": "ouroboros/consciousness.py:1273-1300"},
+            {"title": "Budget caps (task + daily)",         "ref": "ouroboros/budget.py + loop.py:465"},
+        ],
+    },
+    {
+        "id": "safety_observe",
+        "organ": "safety",
+        "label": "Наблюдение",
+        "question": "Что идёт не так прямо сейчас?",
+        "items": [
+            {"title": "Inner Critic (checkpoints 40% / 75%)", "ref": "ouroboros/inner_critic.py"},
+            {"title": "Stuck Detector (3 similar thoughts)",  "ref": "ouroboros/consciousness.py:44-78"},
+            {"title": "Action-first nudge",                   "ref": "ouroboros/loop.py:1217-1241"},
+            {"title": "Budget drift alert",                   "ref": "context.py:369 (live OR credits)"},
+        ],
+    },
+    {
+        "id": "safety_contain",
+        "organ": "safety",
+        "label": "Сдерживание",
+        "question": "Как остановить до того, как станет хуже?",
+        "items": [
+            {"title": "MAX_ROUNDS = 12",         "ref": "ouroboros/loop.py:1050"},
+            {"title": "Per-task cost cap $3",    "ref": "ouroboros/loop.py:465"},
+            {"title": "Circuit breaker (3×empty)","ref": "ouroboros/loop.py:1034"},
+            {"title": "/panic handler",          "ref": "colab_launcher.py:391-479"},
+        ],
+    },
+    {
+        "id": "safety_recover",
+        "organ": "safety",
+        "label": "Восстановление",
+        "question": "Как вернуться в рабочее состояние?",
+        "items": [
+            {"title": "git reset on startup",         "ref": "supervisor/git_ops.py:208-315"},
+            {"title": "R1 memory restore",            "ref": "ouroboros/agent.py:423-468"},
+            {"title": "Queue snapshot restore",       "ref": "supervisor/queue.py:177-215"},
+            {"title": "Self-mod cooldown (3 tasks)",  "ref": "ouroboros/self_evolution.py:601-660"},
+        ],
+    },
+    # The 5th block is the Dark-Zones taxonomy; items are generated below
+    # from SAFETY_DZ_GROUPS.
+    {
+        "id": "safety_weaknesses",
+        "organ": "safety",
+        "label": "Известные слабости",
+        "question": "Что мы знаем, что плохо, но пока не починили?",
+        "items": [],  # filled programmatically from SAFETY_DZ_GROUPS
+    },
+]
 
-    # ---- BRAIN L1 internals -----------------------------------------
-    {"source": "agent", "target": "loop",                  "kind": "invokes",
-     "label": "run_llm_loop", "visibility": "l1-brain"},
-    {"source": "agent", "target": "context",               "kind": "invokes",
-     "label": "_prepare_task_context", "visibility": "l1-brain"},
-    {"source": "agent", "target": "memory",                "kind": "invokes",
-     "label": "ensure memory core (R1)", "visibility": "l1-brain"},
-    {"source": "loop", "target": "inner_critic",           "kind": "invokes",
-     "label": "checkpoint 40%/75%", "visibility": "l1-brain"},
-    {"source": "loop", "target": "skill_manager",          "kind": "invokes",
-     "label": "post-task extract", "visibility": "l1-brain"},
-    {"source": "loop", "target": "experiment_engine",      "kind": "invokes",
-     "label": "record_task", "visibility": "l1-brain"},
-    {"source": "consciousness", "target": "llm",           "kind": "invokes",
-     "label": "think cycle", "visibility": "l1-brain"},
-    {"source": "consciousness", "target": "strategic_planner", "kind": "invokes",
-     "label": "gated (kill-switch)", "visibility": "l1-brain"},
-    {"source": "consciousness", "target": "experiment_engine", "kind": "invokes",
-     "label": "run_full_cycle", "visibility": "l1-brain"},
-    {"source": "consciousness", "target": "skill_manager", "kind": "invokes",
-     "label": "auto_reflection", "visibility": "l1-brain"},
-    {"source": "consciousness", "target": "pattern_detector", "kind": "invokes",
-     "label": "scan task_results", "visibility": "l1-brain"},
-    {"source": "context", "target": "memory",              "kind": "invokes",
-     "label": "load identity/scratchpad", "visibility": "l1-brain"},
-
-    # ---- INTERFACE L1 internals -------------------------------------
-    {"source": "colab_launcher", "target": "queue",        "kind": "invokes",
-     "label": "enqueue_task", "visibility": "l1-iface"},
-    {"source": "queue", "target": "workers",               "kind": "invokes",
-     "label": "in_q.put", "visibility": "l1-iface"},
-    {"source": "workers", "target": "agent",               "kind": "invokes",
-     "label": "worker_main → handle_task", "visibility": "l1-iface"},
-    {"source": "colab_launcher", "target": "consciousness_thread", "kind": "invokes",
-     "label": "spawn bg thread", "visibility": "l1-iface"},
-    {"source": "colab_launcher", "target": "telegram",     "kind": "invokes",
-     "label": "send_with_budget", "visibility": "l1-iface"},
-    {"source": "git_ops", "target": "colab_launcher",      "kind": "governs",
-     "label": "safe_restart", "visibility": "l1-iface"},
-
-    # ---- Cross-organ detail (visible whenever any zoom is active) ---
-    {"source": "telegram", "target": "log_chat",           "kind": "writes_to",
-     "label": "log_chat()", "visibility": "detail"},
-    {"source": "telegram", "target": "log_supervisor",     "kind": "writes_to",
-     "label": "outbound notes", "visibility": "detail"},
-    {"source": "colab_launcher", "target": "log_supervisor","kind": "writes_to",
-     "label": "launcher_start", "visibility": "detail"},
-    {"source": "queue", "target": "state_queue",           "kind": "writes_to",
-     "label": "persist_queue_snapshot", "visibility": "detail"},
-    {"source": "git_ops", "target": "state_main",          "kind": "writes_to",
-     "label": "current_sha on reset", "visibility": "detail"},
-    {"source": "experiment_engine", "target": "state_experiments", "kind": "writes_to",
-     "label": "_save_json", "visibility": "detail"},
-    {"source": "experiment_engine", "target": "mem_wisdom","kind": "writes_to",
-     "label": "on confirm", "visibility": "detail"},
-    {"source": "skill_manager", "target": "chroma_skills", "kind": "writes_to",
-     "label": "UUID writer", "visibility": "detail"},
-    {"source": "skill_manager", "target": "mem_episodic",  "kind": "writes_to",
-     "label": "via callback", "visibility": "detail"},
-    {"source": "pattern_detector", "target": "file_task_results", "kind": "reads_from",
-     "label": "scan JSONs", "visibility": "detail"},
-    {"source": "consciousness", "target": "chroma_episodes", "kind": "writes_to",
-     "label": "auto_reflection upsert", "visibility": "detail"},
-    {"source": "consciousness", "target": "state_reflected", "kind": "writes_to",
-     "label": "reflection dedup", "visibility": "detail"},
-    {"source": "memory", "target": "state_directives",     "kind": "writes_to",
-     "label": "save_directive", "visibility": "detail"},
-    {"source": "budget", "target": "state_budget",         "kind": "writes_to",
-     "label": "spend()", "visibility": "detail"},
-    {"source": "loop", "target": "file_task_results",      "kind": "writes_to",
-     "label": "per-task JSON", "visibility": "detail"},
-    {"source": "agent", "target": "mem_scratchpad",        "kind": "reads_from",
-     "label": "context load", "visibility": "detail"},
-    {"source": "context", "target": "mem_scratchpad",      "kind": "reads_from",
-     "label": "restart banner check", "visibility": "detail"},
-    {"source": "context", "target": "mem_wisdom",          "kind": "reads_from",
-     "label": "load wisdom", "visibility": "detail"},
-    {"source": "context", "target": "mem_knowledge",       "kind": "reads_from",
-     "label": "knowledge index", "visibility": "detail"},
+# Dark-Zone taxonomy (from Phase 1.5, relabeled to Russian).
+SAFETY_DZ_GROUPS = [
+    ("Наблюдаемость",      ["D1", "D2", "D5", "D15", "D18"]),
+    ("Согласованность",    ["D4", "D19", "D20", "D22", "D23"]),
+    ("Конфигурация",       ["D8", "D11", "D12", "D13"]),
+    ("Атаки",              ["D14", "D16", "D17", "D25"]),
+    ("Артефакты",          ["D3", "D6", "D7", "D10"]),
+    ("Внешнее",            ["D9", "D21", "D24"]),
 ]
 
 
-# Layout — SVG coords for each organ so the frontend is pure render.
+# --- Typed edges (block-level, control/data) ---
+# Only the ~17 most-significant cross-organ flows. Everything else is in
+# drill-down at L1 zoom.
+TYPED_EDGES = [
+    # --- ПАМЯТЬ internal ---
+    {"source": "mem_working", "target": "mem_experience",
+     "kind": "data", "subtype": "writes_to", "visibility": "l0",
+     "label": "следы в episodic/skills после задачи"},
+    {"source": "mem_operational", "target": "mem_experience",
+     "kind": "data", "subtype": "writes_to", "visibility": "l0",
+     "label": "offline indexing chat+events → ChromaDB"},
+    {"source": "mem_experience", "target": "mem_working",
+     "kind": "data", "subtype": "reads_from", "visibility": "l0",
+     "label": "recall / find_skills в новый контекст"},
+
+    # --- ПАМЯТЬ → МОЗГ ---
+    {"source": "mem_identity", "target": "brain_perception",
+     "kind": "data", "subtype": "reads_from", "visibility": "l0",
+     "label": "identity.md в каждый prompt"},
+    {"source": "mem_operational", "target": "brain_perception",
+     "kind": "data", "subtype": "reads_from", "visibility": "l0",
+     "label": "directives 24h в контекст"},
+
+    # --- ИНТЕРФЕЙС ↔ МОЗГ ---
+    {"source": "iface_comm", "target": "brain_perception",
+     "kind": "control", "subtype": "invokes", "visibility": "l0",
+     "label": "входящая задача → handle_task"},
+
+    # --- МОЗГ Мышление ↔ ИНСТРУМЕНТЫ ---
+    {"source": "brain_thinking", "target": "tools_read",
+     "kind": "control", "subtype": "invokes", "visibility": "l0",
+     "label": "tool call (чтение)"},
+    {"source": "brain_thinking", "target": "tools_write",
+     "kind": "control", "subtype": "invokes", "visibility": "l0",
+     "label": "tool call (запись)"},
+    {"source": "brain_thinking", "target": "tools_selfctl",
+     "kind": "control", "subtype": "invokes", "visibility": "l0",
+     "label": "tool call (управление)"},
+    {"source": "brain_thinking", "target": "tools_danger",
+     "kind": "control", "subtype": "invokes", "visibility": "l0",
+     "label": "tool call (опасное)"},
+    {"source": "tools_read", "target": "brain_thinking",
+     "kind": "data", "subtype": "reads_from", "visibility": "l0",
+     "label": "результаты чтения"},
+    {"source": "tools_write", "target": "brain_thinking",
+     "kind": "data", "subtype": "writes_to", "visibility": "l0",
+     "label": "подтверждения изменений"},
+
+    # --- МОЗГ → ПАМЯТЬ ---
+    {"source": "brain_thinking", "target": "mem_working",
+     "kind": "data", "subtype": "writes_to", "visibility": "l0",
+     "label": "scratchpad writes, event emits"},
+    {"source": "brain_reflection", "target": "mem_experience",
+     "kind": "data", "subtype": "writes_to", "visibility": "l0",
+     "label": "skills, episodes"},
+
+    # --- БЕЗОПАСНОСТЬ → МОЗГ Самоконтроль ---
+    {"source": "safety_observe", "target": "brain_selfcontrol",
+     "kind": "control", "subtype": "governs", "visibility": "l0",
+     "label": "inner_critic / stuck / drift"},
+    {"source": "safety_contain", "target": "brain_selfcontrol",
+     "kind": "control", "subtype": "governs", "visibility": "l0",
+     "label": "MAX_ROUNDS / cost cap / circuit breaker"},
+
+    # --- БЕЗОПАСНОСТЬ Восстановление → ИНТЕРФЕЙС Жизнеобеспечение ---
+    {"source": "safety_recover", "target": "iface_infra",
+     "kind": "control", "subtype": "governs", "visibility": "l0",
+     "label": "git reset, queue snapshot restore"},
+]
+
+
+# --- LAYOUT (SVG user-space coordinates) ---
+# The viewBox is expanded to 2000×1780 to host the new SAFETY organ.
 LAYOUT = {
-    "viewbox": {"x": 0, "y": 0, "w": 2000, "h": 1400},
+    "viewbox": {"x": 0, "y": 0, "w": 2000, "h": 1780},
     "organs": {
-        "external": {"x": 0,    "y": 0,    "w": 2000, "h": 160,
-                     "label_x": 1000, "label_y": 28, "label": "EXTERNAL"},
-        "interface": {"x": 0,   "y": 200,  "w": 2000, "h": 220,
-                      "label_x": 1000, "label_y": 226, "label": "INTERFACE"},
-        "brain":     {"x": 460, "y": 460,  "w": 1080, "h": 540,
-                      "label_x": 1000, "label_y": 488, "label": "BRAIN"},
-        "tools":     {"x": 1580,"y": 460,  "w": 380,  "h": 540,
-                      "label_x": 1770, "label_y": 488, "label": "TOOLS"},
-        "memory":    {"x": 40,  "y": 1040, "w": 1920, "h": 340,
-                      "label_x": 1000, "label_y": 1068, "label": "MEMORY"},
+        "external":  {"x": 0,    "y": 20,   "w": 2000, "h": 120,
+                      "label_x": 1000, "label_y": 40, "label": "ВНЕШНЕЕ"},
+        "interface": {"x": 0,    "y": 170,  "w": 2000, "h": 240,
+                      "label_x": 1000, "label_y": 185, "label": "ИНТЕРФЕЙС"},
+        "brain":     {"x": 440,  "y": 440,  "w": 1110, "h": 580,
+                      "label_x": 990, "label_y": 455, "label": "МОЗГ"},
+        "tools":     {"x": 1560, "y": 440,  "w": 410,  "h": 580,
+                      "label_x": 1765, "label_y": 455, "label": "ИНСТРУМЕНТЫ"},
+        "memory":    {"x": 30,   "y": 1050, "w": 1940, "h": 330,
+                      "label_x": 1000, "label_y": 1065, "label": "ПАМЯТЬ"},
+        "safety":    {"x": 30,   "y": 1400, "w": 1940, "h": 360,
+                      "label_x": 1000, "label_y": 1415, "label": "БЕЗОПАСНОСТЬ"},
     },
-    # Explicit node placements — every topology node id gets (cx, cy).
-    # Coordinates are in SVG user-space. Edges auto-route by endpoints.
+    "blocks": {
+        # INTERFACE
+        "iface_comm":     {"x": 40,  "y": 210, "w": 580, "h": 190,
+                           "label_x": 330, "label_y": 227},
+        "iface_dispatch": {"x": 640, "y": 210, "w": 620, "h": 190,
+                           "label_x": 950, "label_y": 227},
+        "iface_infra":    {"x": 1280,"y": 210, "w": 680, "h": 190,
+                           "label_x": 1620,"label_y": 227},
+
+        # BRAIN
+        "brain_perception":  {"x": 460,  "y": 480, "w": 210, "h": 530,
+                              "label_x": 565, "label_y": 497},
+        "brain_thinking":    {"x": 680,  "y": 480, "w": 210, "h": 530,
+                              "label_x": 785, "label_y": 497},
+        "brain_selfcontrol": {"x": 900,  "y": 480, "w": 210, "h": 530,
+                              "label_x": 1005,"label_y": 497},
+        "brain_reflection":  {"x": 1120, "y": 480, "w": 210, "h": 530,
+                              "label_x": 1225,"label_y": 497},
+        "brain_continuous":  {"x": 1340, "y": 480, "w": 210, "h": 530,
+                              "label_x": 1445,"label_y": 497},
+
+        # TOOLS (6 stacked)
+        "tools_read":        {"x": 1580, "y": 480, "w": 380, "h": 80,
+                              "label_x": 1770,"label_y": 495},
+        "tools_write":       {"x": 1580, "y": 570, "w": 380, "h": 80,
+                              "label_x": 1770,"label_y": 585},
+        "tools_selfctl":     {"x": 1580, "y": 660, "w": 380, "h": 80,
+                              "label_x": 1770,"label_y": 675},
+        "tools_reflection":  {"x": 1580, "y": 750, "w": 380, "h": 70,
+                              "label_x": 1770,"label_y": 765},
+        "tools_danger":      {"x": 1580, "y": 830, "w": 380, "h": 60,
+                              "label_x": 1770,"label_y": 845},
+        "tools_meta":        {"x": 1580, "y": 900, "w": 380, "h": 60,
+                              "label_x": 1770,"label_y": 915},
+
+        # MEMORY
+        "mem_working":      {"x": 40,   "y": 1100, "w": 220, "h": 260,
+                             "label_x": 150, "label_y": 1117},
+        "mem_operational":  {"x": 280,  "y": 1100, "w": 500, "h": 260,
+                             "label_x": 530, "label_y": 1117},
+        "mem_identity":     {"x": 810,  "y": 1100, "w": 180, "h": 260,
+                             "label_x": 900, "label_y": 1117},
+        "mem_knowledge":    {"x": 1000, "y": 1100, "w": 170, "h": 260,
+                             "label_x": 1085,"label_y": 1117},
+        "mem_experience":   {"x": 1180, "y": 1100, "w": 310, "h": 260,
+                             "label_x": 1335,"label_y": 1117},
+        "mem_service":      {"x": 1500, "y": 1100, "w": 320, "h": 260,
+                             "label_x": 1660,"label_y": 1117},
+        "mem_archive":      {"x": 1830, "y": 1100, "w": 130, "h": 260,
+                             "label_x": 1895,"label_y": 1117},
+
+        # SAFETY
+        "safety_prevent":    {"x": 40,   "y": 1430, "w": 380, "h": 320,
+                              "label_x": 230, "label_y": 1450},
+        "safety_observe":    {"x": 430,  "y": 1430, "w": 380, "h": 320,
+                              "label_x": 620, "label_y": 1450},
+        "safety_contain":    {"x": 820,  "y": 1430, "w": 380, "h": 320,
+                              "label_x": 1010,"label_y": 1450},
+        "safety_recover":    {"x": 1210, "y": 1430, "w": 380, "h": 320,
+                              "label_x": 1400,"label_y": 1450},
+        "safety_weaknesses": {"x": 1600, "y": 1430, "w": 360, "h": 320,
+                              "label_x": 1780,"label_y": 1450},
+    },
+    # Explicit per-node placements in SVG user-space
     "nodes": {
-        # --- EXTERNAL band ---
-        "telegram_api":          {"cx":  240, "cy":   84, "w": 180, "h": 56},
-        "openrouter":            {"cx": 1760, "cy":   84, "w": 180, "h": 56},
+        # EXTERNAL
+        "telegram_api":          {"cx":  180, "cy":   80, "w": 180, "h": 52},
+        "openrouter":            {"cx": 1820, "cy":   80, "w": 180, "h": 52},
 
-        # --- INTERFACE band ---
-        # inbound (left)
-        "colab_launcher":        {"cx":  260, "cy":  310, "w": 220, "h": 56},
-        # orchestration (center)
-        "queue":                 {"cx":  660, "cy":  280, "w": 150, "h": 46},
-        "workers":               {"cx":  830, "cy":  280, "w": 150, "h": 46},
-        "worker_pool":           {"cx": 1000, "cy":  280, "w": 150, "h": 46},
-        "events":                {"cx":  660, "cy":  355, "w": 150, "h": 46},
-        "git_ops":               {"cx":  830, "cy":  355, "w": 150, "h": 46},
-        "consciousness_thread":  {"cx": 1000, "cy":  355, "w": 170, "h": 46},
-        # outbound (right)
-        "telegram":              {"cx": 1760, "cy":  310, "w": 200, "h": 56},
+        # INTERFACE — Связь
+        "colab_launcher":        {"cx":  180, "cy":  310, "w": 200, "h": 50},
+        "telegram":              {"cx":  460, "cy":  310, "w": 220, "h": 50},
+        # INTERFACE — Диспетчеризация
+        "queue":                 {"cx":  740, "cy":  280, "w": 130, "h": 40},
+        "workers":               {"cx":  900, "cy":  280, "w": 130, "h": 40},
+        "events":                {"cx": 1060, "cy":  280, "w": 130, "h": 40},
+        "worker_pool":           {"cx":  820, "cy":  350, "w": 160, "h": 36},
+        "consciousness_thread":  {"cx": 1060, "cy":  350, "w": 190, "h": 36},
+        # INTERFACE — Жизнеобеспечение
+        "state":                 {"cx": 1370, "cy":  280, "w": 130, "h": 40},
+        "git_ops":                {"cx": 1520, "cy":  280, "w": 130, "h": 40},
+        "fs_data":                {"cx": 1680, "cy":  280, "w": 130, "h": 40},
+        "docker_chromadb":       {"cx": 1370, "cy":  350, "w": 130, "h": 32},
+        "docker_postgres":       {"cx": 1520, "cy":  350, "w": 130, "h": 32},
+        "docker_redis":          {"cx": 1680, "cy":  350, "w": 130, "h": 32},
 
-        # Unused infra (dimmed)
-        "docker_chromadb":       {"cx": 1310, "cy":  310, "w": 150, "h": 42},
-        "docker_postgres":       {"cx": 1310, "cy":  360, "w": 150, "h": 32},
-        "docker_redis":          {"cx": 1470, "cy":  360, "w": 130, "h": 32},
-        "fs_data":               {"cx": 1470, "cy":  310, "w": 130, "h": 42},
+        # BRAIN — Восприятие (col 1)
+        "agent":                 {"cx":  565, "cy":  605, "w": 170, "h": 46},
+        "context":               {"cx":  565, "cy":  665, "w": 170, "h": 46},
+        "memory":                {"cx":  565, "cy":  725, "w": 170, "h": 46},
+        "owner_inject":          {"cx":  565, "cy":  785, "w": 170, "h": 46},
+        # BRAIN — Мышление (col 2)
+        "loop":                  {"cx":  785, "cy":  620, "w": 170, "h": 46},
+        "llm":                   {"cx":  785, "cy":  690, "w": 170, "h": 46},
+        # BRAIN — Самоконтроль (col 3)
+        "inner_critic":          {"cx": 1005, "cy":  605, "w": 170, "h": 46},
+        "self_evolution":        {"cx": 1005, "cy":  665, "w": 170, "h": 46},
+        "budget":                {"cx": 1005, "cy":  725, "w": 170, "h": 46},
+        # BRAIN — Рефлексия (col 4)
+        "skill_manager":         {"cx": 1225, "cy":  605, "w": 170, "h": 46},
+        "experiment_engine":     {"cx": 1225, "cy":  665, "w": 180, "h": 46},
+        "pattern_detector":      {"cx": 1225, "cy":  725, "w": 180, "h": 46},
+        # BRAIN — Фоновое сознание (col 5)
+        "consciousness":         {"cx": 1445, "cy":  620, "w": 170, "h": 46},
+        "strategic_planner":     {"cx": 1445, "cy":  690, "w": 180, "h": 46},
 
-        # --- BRAIN (center) ---
-        # Reactive layer (top)
-        "agent":                 {"cx":  600, "cy":  580, "w": 130, "h": 48},
-        "context":               {"cx":  760, "cy":  580, "w": 130, "h": 48},
-        "memory":                {"cx":  920, "cy":  580, "w": 130, "h": 48},
-        "loop":                  {"cx": 1080, "cy":  580, "w": 130, "h": 48},
-        "llm":                   {"cx": 1240, "cy":  580, "w": 130, "h": 48},
-        "inner_critic":          {"cx": 1400, "cy":  580, "w": 130, "h": 48},
-        # Reflective layer (middle)
-        "skill_manager":         {"cx":  680, "cy":  720, "w": 150, "h": 46},
-        "experiment_engine":     {"cx":  870, "cy":  720, "w": 170, "h": 46},
-        "pattern_detector":      {"cx": 1060, "cy":  720, "w": 170, "h": 46},
-        "owner_inject":          {"cx": 1240, "cy":  720, "w": 150, "h": 46},
-        # Continuous (bottom)
-        "consciousness":         {"cx":  700, "cy":  870, "w": 180, "h": 52},
-        "strategic_planner":     {"cx":  920, "cy":  870, "w": 180, "h": 52},
-        # Governance (right column of BRAIN)
-        "self_evolution":        {"cx": 1160, "cy":  870, "w": 170, "h": 46},
-        "budget":                {"cx": 1330, "cy":  870, "w": 140, "h": 46},
-        "state":                 {"cx": 1460, "cy":  870, "w": 130, "h": 46},
+        # TOOLS registry — kept so edges from/to TOOLS still resolve
+        "registry":              {"cx": 1770, "cy":  980, "w": 300, "h": 30},
 
-        # --- TOOLS (right sidebar) ---
-        "registry":              {"cx": 1770, "cy":  720, "w": 280, "h": 60},
-
-        # --- MEMORY (bottom band, arranged by lifetime) ---
-        # Working (left section)
-        "mem_scratchpad":        {"cx":  180, "cy": 1170, "w": 200, "h": 52},
-        # Short-term (middle)
-        "log_chat":              {"cx":  540, "cy": 1120, "w": 150, "h": 40},
-        "log_events":            {"cx":  700, "cy": 1120, "w": 170, "h": 40},
-        "log_supervisor":        {"cx":  880, "cy": 1120, "w": 180, "h": 40},
-        "log_tools":             {"cx": 1060, "cy": 1120, "w": 150, "h": 40},
-        "log_progress":          {"cx": 1060, "cy": 1170, "w": 150, "h": 40},
-        "state_directives":      {"cx":  540, "cy": 1170, "w": 150, "h": 40},
-        "state_budget":          {"cx":  700, "cy": 1170, "w": 160, "h": 40},
-        "state_queue":           {"cx":  880, "cy": 1170, "w": 170, "h": 40},
-        # Long-term (right section)
-        "mem_identity":          {"cx":  180, "cy": 1230, "w": 190, "h": 40},
-        "mem_wisdom":            {"cx":  180, "cy": 1280, "w": 190, "h": 40},
-        "mem_knowledge":         {"cx":  180, "cy": 1330, "w": 190, "h": 40},
-        "mem_episodic":          {"cx":  380, "cy": 1330, "w": 170, "h": 40},
-        "chroma_episodes":       {"cx": 1260, "cy": 1230, "w": 170, "h": 40},
-        "chroma_skills":         {"cx": 1440, "cy": 1230, "w": 170, "h": 40},
-        "chroma_history":        {"cx": 1620, "cy": 1230, "w": 170, "h": 40},
-        "state_main":            {"cx": 1260, "cy": 1280, "w": 170, "h": 40},
-        "state_experiments":     {"cx": 1440, "cy": 1280, "w": 170, "h": 40},
-        "state_commitments":     {"cx": 1620, "cy": 1280, "w": 170, "h": 40},
-        "state_reflected":       {"cx": 1260, "cy": 1330, "w": 170, "h": 40},
-        "state_consciousness":   {"cx": 1440, "cy": 1330, "w": 170, "h": 40},
-        "state_cooldown":        {"cx": 1620, "cy": 1330, "w": 170, "h": 40},
-        "file_task_results":     {"cx": 1800, "cy": 1280, "w": 150, "h": 40},
+        # MEMORY — Рабочая
+        "mem_scratchpad":        {"cx":  150, "cy": 1175, "w": 180, "h": 40},
+        # MEMORY — Оперативная (2 rows × 4 cols)
+        "log_chat":              {"cx":  345, "cy": 1175, "w": 105, "h": 36},
+        "log_events":            {"cx":  465, "cy": 1175, "w": 105, "h": 36},
+        "log_supervisor":        {"cx":  585, "cy": 1175, "w": 115, "h": 36},
+        "log_tools":             {"cx":  705, "cy": 1175, "w": 105, "h": 36},
+        "log_progress":          {"cx":  345, "cy": 1230, "w": 115, "h": 36},
+        "state_directives":      {"cx":  475, "cy": 1230, "w": 125, "h": 36},
+        "state_budget":          {"cx":  600, "cy": 1230, "w": 115, "h": 36},
+        "state_queue":           {"cx":  715, "cy": 1230, "w": 115, "h": 36},
+        # MEMORY — Идентичность
+        "mem_identity":          {"cx":  900, "cy": 1200, "w": 160, "h": 38},
+        "mem_wisdom":            {"cx":  900, "cy": 1260, "w": 160, "h": 38},
+        # MEMORY — Знания
+        "mem_knowledge":         {"cx": 1085, "cy": 1230, "w": 150, "h": 42},
+        # MEMORY — Опыт (2 rows × 2 cols)
+        "mem_episodic":          {"cx": 1255, "cy": 1200, "w": 140, "h": 36},
+        "chroma_episodes":       {"cx": 1410, "cy": 1200, "w": 150, "h": 36},
+        "chroma_skills":         {"cx": 1255, "cy": 1260, "w": 140, "h": 36},
+        "chroma_history":        {"cx": 1410, "cy": 1260, "w": 150, "h": 36},
+        # MEMORY — Служебная (3 rows × 2 cols)
+        "state_main":            {"cx": 1570, "cy": 1190, "w": 125, "h": 32},
+        "state_experiments":     {"cx": 1700, "cy": 1190, "w": 140, "h": 32},
+        "state_commitments":     {"cx": 1570, "cy": 1230, "w": 140, "h": 32},
+        "state_reflected":       {"cx": 1720, "cy": 1230, "w": 140, "h": 32},
+        "state_cooldown":        {"cx": 1570, "cy": 1270, "w": 130, "h": 32},
+        "state_consciousness":   {"cx": 1720, "cy": 1270, "w": 170, "h": 32},
+        # MEMORY — Архив
+        "file_task_results":     {"cx": 1895, "cy": 1230, "w": 110, "h": 40},
     },
-    # Zoom targets — each L1 zoom state has its own viewBox window.
     "zoom_states": {
-        "l0":          {"x": 0,    "y": 0,    "w": 2000, "h": 1400},
-        "l1-interface":{"x": 100,  "y": 200,  "w": 1800, "h": 320},
-        "l1-brain":    {"x": 460,  "y": 460,  "w": 1080, "h": 540},
-        "l1-tools":    {"x": 1570, "y": 460,  "w": 400,  "h": 540},
-        "l1-memory":   {"x": 40,   "y": 1040, "w": 1920, "h": 340},
+        "l0":           {"x": 0,    "y": 0,    "w": 2000, "h": 1780},
+        "l1-interface": {"x": 20,   "y": 170,  "w": 1960, "h": 260},
+        "l1-brain":     {"x": 430,  "y": 450,  "w": 1130, "h": 590},
+        "l1-tools":     {"x": 1570, "y": 460,  "w": 410,  "h": 560},
+        "l1-memory":    {"x": 20,   "y": 1060, "w": 1960, "h": 330},
+        "l1-safety":    {"x": 20,   "y": 1410, "w": 1960, "h": 360},
     },
-    # Lifetime band backgrounds (MEMORY subzones).
+    # Lifetime band backgrounds inside MEMORY (decorative)
     "memory_bands": {
-        "working":    {"x": 40,   "y": 1090, "w": 340,  "h": 270,
-                        "label": "Working — per task",       "label_x": 210, "label_y": 1108},
-        "short_term": {"x": 400,  "y": 1090, "w": 740,  "h": 120,
-                        "label": "Short-term — session/day", "label_x": 770, "label_y": 1108},
-        "long_term":  {"x": 1160, "y": 1090, "w": 800,  "h": 270,
-                        "label": "Long-term — persistent",   "label_x": 1560, "label_y": 1108},
+        "working":    {"x": 30,   "y": 1095, "w": 230, "h": 270,
+                       "label": "Рабочая",        "label_x": 145, "label_y": 1087},
+        "short_term": {"x": 270,  "y": 1095, "w": 520, "h": 270,
+                       "label": "Оперативная",    "label_x": 525, "label_y": 1087},
+        "long_term":  {"x": 800,  "y": 1095, "w": 1020,"h": 270,
+                       "label": "Долговременная", "label_x": 1315,"label_y": 1087},
+        "archive":    {"x": 1825, "y": 1095, "w": 140, "h": 270,
+                       "label": "Архив",          "label_x": 1895,"label_y": 1087},
     },
 }
 
 
 # ---------------------------------------------------------------------------
-# Hierarchy — 4-level progressive disclosure (L0 aggregate → L1 group →
-# L2 leaf → L3 detail). The leaf IDs reference existing topology node IDs,
-# tool names, or Dark Zone IDs depending on the aggregate.
+# Phase 1.7 annotations + SAFETY DZ taxonomy
 # ---------------------------------------------------------------------------
 
 def _annotate_functional_roles(topology_nodes: List[Dict], tools: List[Dict]) -> None:
-    """Mutate topology_nodes & tools in place, attaching functional_role /
-    memory_lifetime / tools_category fields as appropriate."""
-    brain_role_by_id = {n: r for r, ids in BRAIN_ROLES.items() for n in ids}
-    iface_role_by_id = {n: r for r, ids in INTERFACE_ROLES.items() for n in ids}
-    lifetime_by_id   = {n: r for r, ids in MEMORY_LIFETIME.items() for n in ids}
+    """Attach organ, block_id, and any legacy role fields to each
+    topology_node + tool. Uses the BLOCKS tables as source of truth."""
+    node_block = {}
+    node_organ = {}
+    for b in BRAIN_BLOCKS + INTERFACE_BLOCKS + MEMORY_BLOCKS:
+        for nid in b.get("nodes", []):
+            node_block[nid] = b["id"]
+            node_organ[nid] = b["organ"]
 
     for n in topology_nodes:
         nid = n["id"]
-        if nid in brain_role_by_id:
-            n["functional_role"] = brain_role_by_id[nid]
-            n["organ"] = "brain"
-        elif nid in iface_role_by_id:
-            n["functional_role"] = iface_role_by_id[nid]
-            n["organ"] = "interface" if iface_role_by_id[nid] not in ("external",) else "external"
-        elif nid in lifetime_by_id:
-            n["functional_role"] = lifetime_by_id[nid]
-            n["memory_lifetime"] = lifetime_by_id[nid]
-            n["organ"] = "memory"
-        elif nid == "telegram_api":
-            n["functional_role"] = "external"; n["organ"] = "external"
-        elif nid == "openrouter":
-            n["functional_role"] = "external"; n["organ"] = "external"
+        if nid in node_block:
+            n["organ"] = node_organ[nid]
+            n["block_id"] = node_block[nid]
+        elif nid in EXTERNAL_NODES:
+            n["organ"] = "external"
+            n["block_id"] = "external"
         elif nid == "registry":
-            n["functional_role"] = "registry"; n["organ"] = "tools"
+            n["organ"] = "tools"
+            n["block_id"] = "tools_meta"
         else:
-            # Memory items not yet classified — default long_term
-            n.setdefault("organ", "memory")
-            n.setdefault("functional_role", "long_term")
-            n.setdefault("memory_lifetime", "long_term")
+            # Anything unplaced: default to memory/service so it still
+            # shows up somewhere in the panel view.
+            n["organ"] = "memory"
+            n["block_id"] = "mem_service"
 
-    cat_by_name = {t: c for c, names in TOOL_CATEGORIES.items() for t in names}
+        # Keep a legacy functional_role for Phase 1.6 consumers
+        if nid in {"strategic_planner"}:
+            n["paused"] = True
+
+    tool_block = {}
+    for tb in TOOLS_BLOCKS:
+        for tname in tb["tools"]:
+            tool_block[tname] = tb["id"]
     for t in tools:
-        t["tools_category"] = cat_by_name.get(t["name"], "read")
+        t["block_id"] = tool_block.get(t["name"], "tools_read")
+
+
+def _populate_safety_weaknesses(dark_zones: List[Dict]) -> None:
+    """Fill the 5th SAFETY block with DZ taxonomy items (keyed to DZ IDs)."""
+    weaknesses = next(b for b in SAFETY_BLOCKS if b["id"] == "safety_weaknesses")
+    items = []
+    dz_by_id = {d["id"]: d for d in dark_zones}
+    for (group_label, ids) in SAFETY_DZ_GROUPS:
+        for dz_id in ids:
+            dz = dz_by_id.get(dz_id)
+            if not dz:
+                continue
+            items.append({
+                "title": f"{dz_id} — {dz['title']}",
+                "group": group_label,
+                "dz_id": dz_id,
+                "ref": None,
+            })
+    weaknesses["items"] = items
 
 
 def _build_hierarchy(topology_nodes: List[Dict], tools: List[Dict],
@@ -1376,19 +1638,35 @@ def build_snapshot() -> Dict[str, Any]:
     _associate_tools_with_zones(tools, dark_zones)
     _associate_nodes_with_zones(nodes, dark_zones)
 
-    # Phase 1.6 — functional roles, tool categories, memory lifetime
+    # Phase 1.7 — block-level functional classification
     _annotate_functional_roles(nodes, tools)
+    _populate_safety_weaknesses(dark_zones)
 
-    # Filter typed edges to pairs that exist in current topology
+    # Filter typed edges — Phase 1.7 edges are BLOCK-level so we validate
+    # against the set of known block IDs (plus node IDs for any legacy
+    # edges that still reference specific files).
+    all_block_ids = {b["id"] for b in
+                     (BRAIN_BLOCKS + INTERFACE_BLOCKS + MEMORY_BLOCKS
+                      + TOOLS_BLOCKS + SAFETY_BLOCKS)}
     node_id_set = {n["id"] for n in nodes}
+    valid_endpoints = all_block_ids | node_id_set
     typed_edges = [
         e for e in TYPED_EDGES
-        if e["source"] in node_id_set and e["target"] in node_id_set
+        if e["source"] in valid_endpoints and e["target"] in valid_endpoints
     ]
 
-    # Hierarchy — progressive drill-down structure (Phase 1.5, still used
-    # by the aggregate side panel + SAFETY taxonomy)
+    # Hierarchy — still emitted for the Dark-Zones taxonomy used by the
+    # existing SAFETY view + side panel cross-links.
     hierarchy = _build_hierarchy(nodes, tools, dark_zones)
+
+    # Phase 1.7 block tables for the frontend
+    phase17_blocks = {
+        "interface": INTERFACE_BLOCKS,
+        "brain":     BRAIN_BLOCKS,
+        "tools":     TOOLS_BLOCKS,
+        "memory":    MEMORY_BLOCKS,
+        "safety":    SAFETY_BLOCKS,
+    }
 
     snapshot = {
         "meta": {
@@ -1396,8 +1674,8 @@ def build_snapshot() -> Dict[str, Any]:
             "git": _git_head(),
             "source_map": str(ARCH_MAP.name),
             "repo": str(REPO_ROOT),
-            "schema_version": 1,
-            "phase": 1,
+            "schema_version": 2,
+            "phase": "1.7",
         },
         "summary": {
             "tools_total": len(tools),
@@ -1426,6 +1704,8 @@ def build_snapshot() -> Dict[str, Any]:
         "hierarchy": hierarchy,
         "typed_edges": typed_edges,
         "layout": LAYOUT,
+        "blocks": phase17_blocks,
+        "external_nodes": EXTERNAL_NODES,
     }
     return snapshot
 
@@ -1453,8 +1733,13 @@ def main() -> int:
         h = snap["hierarchy"]
         print(f"  hierarchy: {len(h['aggregates'])} L0 aggregates, "
               f"{sum(len(a['l1']) for a in h['aggregates'])} L1 groups")
-        print(f"  typed_edges: {len(snap['typed_edges'])} (hand-curated)")
-        print(f"  layout: {len(snap['layout']['nodes'])} positioned nodes")
+        print(f"  typed_edges: {len(snap['typed_edges'])} (block-level, hand-curated)")
+        print(f"  layout: {len(snap['layout']['nodes'])} positioned nodes, "
+              f"{len(snap['layout']['blocks'])} blocks")
+        blocks = snap["blocks"]
+        print(f"  blocks: brain={len(blocks['brain'])} interface={len(blocks['interface'])} "
+              f"memory={len(blocks['memory'])} tools={len(blocks['tools'])} "
+              f"safety={len(blocks['safety'])}")
     return 0
 
 

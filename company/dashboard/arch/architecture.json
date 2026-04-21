@@ -1,15 +1,15 @@
 {
   "meta": {
-    "generated_at": "2026-04-21T17:17:22.497957+00:00",
+    "generated_at": "2026-04-21T19:25:58.375800+00:00",
     "git": {
-      "sha": "e2fd3538d9169f73956021a8f48a69f060e438bc",
+      "sha": "23ba51bf4a808d96e78409a9c1979ddb81fac4e1",
       "branch": "feat/architecture-dashboard-phase1",
-      "subject": "feat(phase1.5): redesign Overview as progressive drill-down (4 levels)"
+      "subject": "feat(phase1.6): ecosystem Overview + lifetime-based Memory view"
     },
     "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
     "repo": "/home/deploy/ouroboros",
-    "schema_version": 1,
-    "phase": 1
+    "schema_version": 2,
+    "phase": "1.7"
   },
   "summary": {
     "tools_total": 64,
@@ -50,7 +50,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "apply_change",
@@ -113,7 +113,7 @@
       "is_destructive": true,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "execute"
+      "block_id": "tools_write"
     },
     {
       "name": "browse_page",
@@ -157,7 +157,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "browser_action",
@@ -203,7 +203,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_danger"
     },
     {
       "name": "cancel_task",
@@ -228,7 +228,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "chat_history",
@@ -263,7 +263,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "check_evolution_status",
@@ -282,7 +282,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_reflection"
     },
     {
       "name": "chromadb_stats",
@@ -303,7 +303,7 @@
         "D10",
         "D16"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "claude_code_edit",
@@ -334,7 +334,7 @@
       "dark_zone_ids": [
         "D16"
       ],
-      "tools_category": "execute"
+      "block_id": "tools_write"
     },
     {
       "name": "close_github_issue",
@@ -365,7 +365,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "codebase_digest",
@@ -384,7 +384,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "codebase_health",
@@ -403,7 +403,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "comment_on_issue",
@@ -434,7 +434,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "compact_context",
@@ -459,7 +459,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "create_github_issue",
@@ -495,7 +495,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "deep_reflection",
@@ -519,7 +519,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_reflection"
     },
     {
       "name": "drive_list",
@@ -547,7 +547,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "drive_read",
@@ -572,7 +572,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "drive_write",
@@ -609,7 +609,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "enable_tools",
@@ -635,7 +635,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "meta"
+      "block_id": "tools_meta"
     },
     {
       "name": "find_skills",
@@ -668,7 +668,7 @@
       "dark_zone_ids": [
         "D4"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "forward_to_worker",
@@ -699,7 +699,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "generate_evolution_stats",
@@ -718,7 +718,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_reflection"
     },
     {
       "name": "get_github_issue",
@@ -744,7 +744,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "get_task_result",
@@ -770,7 +770,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "git_diff",
@@ -795,7 +795,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "git_status",
@@ -814,7 +814,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "knowledge_list",
@@ -833,7 +833,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "knowledge_read",
@@ -859,7 +859,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "knowledge_write",
@@ -898,7 +898,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "list_available_tools",
@@ -917,7 +917,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "meta"
+      "block_id": "tools_meta"
     },
     {
       "name": "list_github_issues",
@@ -957,7 +957,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "memory_search",
@@ -995,7 +995,7 @@
       "dark_zone_ids": [
         "D4"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "multi_model_review",
@@ -1034,7 +1034,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_reflection"
     },
     {
       "name": "promote_to_stable",
@@ -1059,7 +1059,7 @@
       "is_destructive": true,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "execute"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "propose_change",
@@ -1098,7 +1098,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "read_service_logs",
@@ -1131,7 +1131,7 @@
       "dark_zone_ids": [
         "D20"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "recall",
@@ -1175,7 +1175,7 @@
         "D10",
         "D16"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "recent_session",
@@ -1202,7 +1202,7 @@
       "dark_zone_ids": [
         "D4"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "record_memory",
@@ -1260,7 +1260,7 @@
       "dark_zone_ids": [
         "D4"
       ],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "repo_commit_push",
@@ -1294,7 +1294,7 @@
       "dark_zone_ids": [
         "D20"
       ],
-      "tools_category": "execute"
+      "block_id": "tools_write"
     },
     {
       "name": "repo_list",
@@ -1322,7 +1322,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "repo_read",
@@ -1347,7 +1347,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "repo_write_commit",
@@ -1380,7 +1380,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "execute"
+      "block_id": "tools_write"
     },
     {
       "name": "request_restart",
@@ -1405,7 +1405,7 @@
       "is_destructive": true,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "execute"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "request_review",
@@ -1431,7 +1431,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_reflection"
     },
     {
       "name": "restart_service",
@@ -1459,7 +1459,7 @@
       "dark_zone_ids": [
         "D20"
       ],
-      "tools_category": "execute"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "run_ops_check",
@@ -1495,7 +1495,7 @@
       "dark_zone_ids": [
         "D20"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "run_shell",
@@ -1530,7 +1530,7 @@
         "D10",
         "D16"
       ],
-      "tools_category": "execute"
+      "block_id": "tools_danger"
     },
     {
       "name": "save_skill",
@@ -1584,7 +1584,7 @@
       "dark_zone_ids": [
         "D4"
       ],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "schedule_task",
@@ -1618,7 +1618,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "semantic_find_skills",
@@ -1652,7 +1652,7 @@
         "D10",
         "D16"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "semantic_search",
@@ -1697,7 +1697,7 @@
         "D10",
         "D16"
       ],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "send_owner_message",
@@ -1727,7 +1727,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "send_photo",
@@ -1757,7 +1757,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "summarize_dialogue",
@@ -1781,7 +1781,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "switch_model",
@@ -1815,7 +1815,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "meta"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "toggle_consciousness",
@@ -1846,7 +1846,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "toggle_evolution",
@@ -1872,7 +1872,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_selfctl"
     },
     {
       "name": "update_identity",
@@ -1898,7 +1898,7 @@
       "is_destructive": true,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "update_scratchpad",
@@ -1924,7 +1924,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "write"
+      "block_id": "tools_write"
     },
     {
       "name": "vlm_query",
@@ -1966,7 +1966,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "wait_for_task",
@@ -1992,7 +1992,7 @@
       "is_destructive": false,
       "is_consciousness": false,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     },
     {
       "name": "web_search",
@@ -2017,7 +2017,7 @@
       "is_destructive": false,
       "is_consciousness": true,
       "dark_zone_ids": [],
-      "tools_category": "read"
+      "block_id": "tools_read"
     }
   ],
   "core_tool_names": [
@@ -2759,8 +2759,8 @@
         "layer": "top",
         "kind": "external",
         "dark_zone_ids": [],
-        "functional_role": "inbound",
-        "organ": "interface"
+        "organ": "external",
+        "block_id": "external"
       },
       {
         "id": "openrouter",
@@ -2768,8 +2768,8 @@
         "layer": "top",
         "kind": "external",
         "dark_zone_ids": [],
-        "functional_role": "external",
-        "organ": "external"
+        "organ": "external",
+        "block_id": "external"
       },
       {
         "id": "colab_launcher",
@@ -2777,8 +2777,8 @@
         "layer": "top",
         "kind": "process",
         "dark_zone_ids": [],
-        "functional_role": "inbound",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_comm"
       },
       {
         "id": "worker_pool",
@@ -2786,8 +2786,8 @@
         "layer": "top",
         "kind": "process",
         "dark_zone_ids": [],
-        "functional_role": "process",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_dispatch"
       },
       {
         "id": "consciousness_thread",
@@ -2795,8 +2795,8 @@
         "layer": "top",
         "kind": "process",
         "dark_zone_ids": [],
-        "functional_role": "process",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_dispatch"
       },
       {
         "id": "docker_chromadb",
@@ -2810,8 +2810,8 @@
           "D5",
           "D6"
         ],
-        "functional_role": "infra",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "docker_postgres",
@@ -2819,8 +2819,8 @@
         "layer": "top",
         "kind": "infra",
         "dark_zone_ids": [],
-        "functional_role": "infra",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "docker_redis",
@@ -2828,8 +2828,8 @@
         "layer": "top",
         "kind": "infra",
         "dark_zone_ids": [],
-        "functional_role": "infra",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "fs_data",
@@ -2837,8 +2837,8 @@
         "layer": "top",
         "kind": "infra",
         "dark_zone_ids": [],
-        "functional_role": "process",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "agent",
@@ -2852,8 +2852,8 @@
           "D15",
           "D7"
         ],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_perception"
       },
       {
         "id": "loop",
@@ -2869,8 +2869,8 @@
           "D24",
           "D5"
         ],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_thinking"
       },
       {
         "id": "context",
@@ -2885,8 +2885,8 @@
           "D23",
           "D3"
         ],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_perception"
       },
       {
         "id": "memory",
@@ -2901,8 +2901,8 @@
           "D16",
           "D4"
         ],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_perception"
       },
       {
         "id": "llm",
@@ -2912,8 +2912,8 @@
         "path": "ouroboros/llm.py",
         "loc": 297,
         "dark_zone_ids": [],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_thinking"
       },
       {
         "id": "consciousness",
@@ -2927,8 +2927,8 @@
           "D25",
           "D8"
         ],
-        "functional_role": "continuous",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_continuous"
       },
       {
         "id": "skill_manager",
@@ -2942,8 +2942,8 @@
           "D4",
           "D5"
         ],
-        "functional_role": "reflective",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_reflection"
       },
       {
         "id": "experiment_engine",
@@ -2955,8 +2955,8 @@
         "dark_zone_ids": [
           "D2"
         ],
-        "functional_role": "reflective",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_reflection"
       },
       {
         "id": "pattern_detector",
@@ -2968,8 +2968,8 @@
         "dark_zone_ids": [
           "D18"
         ],
-        "functional_role": "reflective",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_reflection"
       },
       {
         "id": "strategic_planner",
@@ -2979,8 +2979,9 @@
         "path": "ouroboros/strategic_planner.py",
         "loc": 335,
         "dark_zone_ids": [],
-        "functional_role": "continuous",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_continuous",
+        "paused": true
       },
       {
         "id": "inner_critic",
@@ -2992,8 +2993,8 @@
         "dark_zone_ids": [
           "D24"
         ],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_selfcontrol"
       },
       {
         "id": "self_evolution",
@@ -3003,8 +3004,8 @@
         "path": "ouroboros/self_evolution.py",
         "loc": 659,
         "dark_zone_ids": [],
-        "functional_role": "governance",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_selfcontrol"
       },
       {
         "id": "budget",
@@ -3017,8 +3018,8 @@
           "D21",
           "D9"
         ],
-        "functional_role": "governance",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_selfcontrol"
       },
       {
         "id": "owner_inject",
@@ -3028,8 +3029,8 @@
         "path": "ouroboros/owner_inject.py",
         "loc": 103,
         "dark_zone_ids": [],
-        "functional_role": "reactive",
-        "organ": "brain"
+        "organ": "brain",
+        "block_id": "brain_perception"
       },
       {
         "id": "queue",
@@ -3041,8 +3042,8 @@
         "dark_zone_ids": [
           "D19"
         ],
-        "functional_role": "orchestration",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_dispatch"
       },
       {
         "id": "workers",
@@ -3055,8 +3056,8 @@
           "D17",
           "D6"
         ],
-        "functional_role": "orchestration",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_dispatch"
       },
       {
         "id": "events",
@@ -3066,8 +3067,8 @@
         "path": "supervisor/events.py",
         "loc": 492,
         "dark_zone_ids": [],
-        "functional_role": "orchestration",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_dispatch"
       },
       {
         "id": "telegram",
@@ -3077,8 +3078,8 @@
         "path": "supervisor/telegram.py",
         "loc": 532,
         "dark_zone_ids": [],
-        "functional_role": "outbound",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_comm"
       },
       {
         "id": "state",
@@ -3092,8 +3093,8 @@
           "D21",
           "D22"
         ],
-        "functional_role": "governance",
-        "organ": "brain"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "git_ops",
@@ -3105,8 +3106,8 @@
         "dark_zone_ids": [
           "D20"
         ],
-        "functional_role": "orchestration",
-        "organ": "interface"
+        "organ": "interface",
+        "block_id": "iface_infra"
       },
       {
         "id": "registry",
@@ -3119,8 +3120,8 @@
           "D10",
           "D16"
         ],
-        "functional_role": "registry",
-        "organ": "tools"
+        "organ": "tools",
+        "block_id": "tools_meta"
       },
       {
         "id": "mem_scratchpad",
@@ -3129,9 +3130,8 @@
         "kind": "file_md",
         "description": "Working state, REPLACED per task",
         "dark_zone_ids": [],
-        "functional_role": "working",
-        "memory_lifetime": "working",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_working"
       },
       {
         "id": "mem_identity",
@@ -3143,9 +3143,8 @@
           "D14",
           "D25"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_identity"
       },
       {
         "id": "mem_wisdom",
@@ -3154,9 +3153,8 @@
         "kind": "file_md",
         "description": "Distilled strategy (28KB)",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_identity"
       },
       {
         "id": "mem_knowledge",
@@ -3165,9 +3163,8 @@
         "kind": "file_dir",
         "description": "Topic files + _index.md",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_knowledge"
       },
       {
         "id": "mem_episodic",
@@ -3178,9 +3175,8 @@
         "dark_zone_ids": [
           "D2"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_experience"
       },
       {
         "id": "log_chat",
@@ -3189,9 +3185,8 @@
         "kind": "logfile",
         "description": "Telegram transcript",
         "dark_zone_ids": [],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "log_events",
@@ -3207,9 +3202,8 @@
           "D18",
           "D2"
         ],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "log_supervisor",
@@ -3222,9 +3216,8 @@
           "D17",
           "D6"
         ],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "log_tools",
@@ -3233,9 +3226,8 @@
         "kind": "logfile",
         "description": "tool args + results",
         "dark_zone_ids": [],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "log_progress",
@@ -3244,9 +3236,8 @@
         "kind": "logfile",
         "description": "progress heartbeats",
         "dark_zone_ids": [],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "file_task_results",
@@ -3257,9 +3248,8 @@
         "dark_zone_ids": [
           "D18"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_archive"
       },
       {
         "id": "state_main",
@@ -3272,9 +3262,8 @@
           "D21",
           "D22"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "state_queue",
@@ -3283,9 +3272,8 @@
         "kind": "state_json",
         "description": "PENDING + RUNNING",
         "dark_zone_ids": [],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "state_budget",
@@ -3297,9 +3285,8 @@
           "D21",
           "D9"
         ],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "state_directives",
@@ -3308,9 +3295,8 @@
         "kind": "state_json",
         "description": "stop/pause/forget 24h",
         "dark_zone_ids": [],
-        "functional_role": "short_term",
-        "memory_lifetime": "short_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_operational"
       },
       {
         "id": "state_commitments",
@@ -3321,9 +3307,8 @@
         "dark_zone_ids": [
           "D19"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "state_experiments",
@@ -3334,9 +3319,8 @@
         "dark_zone_ids": [
           "D2"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "state_reflected",
@@ -3345,9 +3329,8 @@
         "kind": "state_json",
         "description": "reflection dedup",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "state_consciousness",
@@ -3356,9 +3339,8 @@
         "kind": "state_json",
         "description": "daily metric snapshots",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "state_cooldown",
@@ -3367,9 +3349,8 @@
         "kind": "state_json",
         "description": "self-mod counter",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_service"
       },
       {
         "id": "chroma_episodes",
@@ -3378,9 +3359,8 @@
         "kind": "chromadb",
         "description": "137 items — insights/errors/decisions",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_experience"
       },
       {
         "id": "chroma_skills",
@@ -3392,9 +3372,8 @@
           "D2",
           "D4"
         ],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_experience"
       },
       {
         "id": "chroma_history",
@@ -3403,9 +3382,8 @@
         "kind": "chromadb",
         "description": "488 items — chat+events chunks",
         "dark_zone_ids": [],
-        "functional_role": "long_term",
-        "memory_lifetime": "long_term",
-        "organ": "memory"
+        "organ": "memory",
+        "block_id": "mem_experience"
       }
     ],
     "edges": [
@@ -4421,368 +4399,140 @@
   },
   "typed_edges": [
     {
-      "source": "telegram_api",
-      "target": "colab_launcher",
-      "kind": "invokes",
-      "label": "poll_updates",
-      "visibility": "l0"
+      "source": "mem_working",
+      "target": "mem_experience",
+      "kind": "data",
+      "subtype": "writes_to",
+      "visibility": "l0",
+      "label": "следы в episodic/skills после задачи"
     },
     {
-      "source": "colab_launcher",
-      "target": "telegram_api",
-      "kind": "invokes",
-      "label": "send_messages",
-      "visibility": "l0"
+      "source": "mem_operational",
+      "target": "mem_experience",
+      "kind": "data",
+      "subtype": "writes_to",
+      "visibility": "l0",
+      "label": "offline indexing chat+events → ChromaDB"
     },
     {
-      "source": "colab_launcher",
-      "target": "agent",
-      "kind": "invokes",
-      "label": "dispatch_task (via queue+workers)",
-      "visibility": "l0"
+      "source": "mem_experience",
+      "target": "mem_working",
+      "kind": "data",
+      "subtype": "reads_from",
+      "visibility": "l0",
+      "label": "recall / find_skills в новый контекст"
     },
     {
-      "source": "llm",
-      "target": "openrouter",
-      "kind": "invokes",
-      "label": "HTTP completions",
-      "visibility": "l0"
+      "source": "mem_identity",
+      "target": "brain_perception",
+      "kind": "data",
+      "subtype": "reads_from",
+      "visibility": "l0",
+      "label": "identity.md в каждый prompt"
     },
     {
-      "source": "loop",
-      "target": "llm",
-      "kind": "invokes",
-      "label": "every round",
-      "visibility": "l0"
+      "source": "mem_operational",
+      "target": "brain_perception",
+      "kind": "data",
+      "subtype": "reads_from",
+      "visibility": "l0",
+      "label": "directives 24h в контекст"
     },
     {
-      "source": "loop",
-      "target": "registry",
-      "kind": "invokes",
-      "label": "dispatch tool",
-      "visibility": "l0"
+      "source": "iface_comm",
+      "target": "brain_perception",
+      "kind": "control",
+      "subtype": "invokes",
+      "visibility": "l0",
+      "label": "входящая задача → handle_task"
     },
     {
-      "source": "loop",
-      "target": "mem_scratchpad",
-      "kind": "writes_to",
-      "label": "REPLACE post-task",
-      "visibility": "l0"
+      "source": "brain_thinking",
+      "target": "tools_read",
+      "kind": "control",
+      "subtype": "invokes",
+      "visibility": "l0",
+      "label": "tool call (чтение)"
     },
     {
-      "source": "loop",
-      "target": "log_events",
-      "kind": "writes_to",
-      "label": "llm_round + stuck",
-      "visibility": "l0"
+      "source": "brain_thinking",
+      "target": "tools_write",
+      "kind": "control",
+      "subtype": "invokes",
+      "visibility": "l0",
+      "label": "tool call (запись)"
     },
     {
-      "source": "context",
-      "target": "mem_identity",
-      "kind": "reads_from",
-      "label": "identity",
-      "visibility": "l0"
+      "source": "brain_thinking",
+      "target": "tools_selfctl",
+      "kind": "control",
+      "subtype": "invokes",
+      "visibility": "l0",
+      "label": "tool call (управление)"
     },
     {
-      "source": "context",
-      "target": "log_chat",
-      "kind": "reads_from",
-      "label": "last 40 msgs",
-      "visibility": "l0"
+      "source": "brain_thinking",
+      "target": "tools_danger",
+      "kind": "control",
+      "subtype": "invokes",
+      "visibility": "l0",
+      "label": "tool call (опасное)"
     },
     {
-      "source": "registry",
-      "target": "chroma_episodes",
-      "kind": "writes_to",
-      "label": "semantic episodes",
-      "visibility": "l0"
+      "source": "tools_read",
+      "target": "brain_thinking",
+      "kind": "data",
+      "subtype": "reads_from",
+      "visibility": "l0",
+      "label": "результаты чтения"
     },
     {
-      "source": "consciousness",
-      "target": "log_events",
-      "kind": "observes",
-      "label": "reflection cycle",
-      "visibility": "l0"
+      "source": "tools_write",
+      "target": "brain_thinking",
+      "kind": "data",
+      "subtype": "writes_to",
+      "visibility": "l0",
+      "label": "подтверждения изменений"
     },
     {
-      "source": "inner_critic",
-      "target": "loop",
-      "kind": "governs",
-      "label": "advisory at 40%/75%",
-      "visibility": "l0"
+      "source": "brain_thinking",
+      "target": "mem_working",
+      "kind": "data",
+      "subtype": "writes_to",
+      "visibility": "l0",
+      "label": "scratchpad writes, event emits"
     },
     {
-      "source": "self_evolution",
-      "target": "loop",
-      "kind": "governs",
-      "label": "file zones",
-      "visibility": "l0"
+      "source": "brain_reflection",
+      "target": "mem_experience",
+      "kind": "data",
+      "subtype": "writes_to",
+      "visibility": "l0",
+      "label": "skills, episodes"
     },
     {
-      "source": "budget",
-      "target": "loop",
-      "kind": "governs",
-      "label": "cost caps",
-      "visibility": "l0"
+      "source": "safety_observe",
+      "target": "brain_selfcontrol",
+      "kind": "control",
+      "subtype": "governs",
+      "visibility": "l0",
+      "label": "inner_critic / stuck / drift"
     },
     {
-      "source": "agent",
-      "target": "loop",
-      "kind": "invokes",
-      "label": "run_llm_loop",
-      "visibility": "l1-brain"
+      "source": "safety_contain",
+      "target": "brain_selfcontrol",
+      "kind": "control",
+      "subtype": "governs",
+      "visibility": "l0",
+      "label": "MAX_ROUNDS / cost cap / circuit breaker"
     },
     {
-      "source": "agent",
-      "target": "context",
-      "kind": "invokes",
-      "label": "_prepare_task_context",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "agent",
-      "target": "memory",
-      "kind": "invokes",
-      "label": "ensure memory core (R1)",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "loop",
-      "target": "inner_critic",
-      "kind": "invokes",
-      "label": "checkpoint 40%/75%",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "loop",
-      "target": "skill_manager",
-      "kind": "invokes",
-      "label": "post-task extract",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "loop",
-      "target": "experiment_engine",
-      "kind": "invokes",
-      "label": "record_task",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "consciousness",
-      "target": "llm",
-      "kind": "invokes",
-      "label": "think cycle",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "consciousness",
-      "target": "strategic_planner",
-      "kind": "invokes",
-      "label": "gated (kill-switch)",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "consciousness",
-      "target": "experiment_engine",
-      "kind": "invokes",
-      "label": "run_full_cycle",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "consciousness",
-      "target": "skill_manager",
-      "kind": "invokes",
-      "label": "auto_reflection",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "consciousness",
-      "target": "pattern_detector",
-      "kind": "invokes",
-      "label": "scan task_results",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "context",
-      "target": "memory",
-      "kind": "invokes",
-      "label": "load identity/scratchpad",
-      "visibility": "l1-brain"
-    },
-    {
-      "source": "colab_launcher",
-      "target": "queue",
-      "kind": "invokes",
-      "label": "enqueue_task",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "queue",
-      "target": "workers",
-      "kind": "invokes",
-      "label": "in_q.put",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "workers",
-      "target": "agent",
-      "kind": "invokes",
-      "label": "worker_main → handle_task",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "colab_launcher",
-      "target": "consciousness_thread",
-      "kind": "invokes",
-      "label": "spawn bg thread",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "colab_launcher",
-      "target": "telegram",
-      "kind": "invokes",
-      "label": "send_with_budget",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "git_ops",
-      "target": "colab_launcher",
-      "kind": "governs",
-      "label": "safe_restart",
-      "visibility": "l1-iface"
-    },
-    {
-      "source": "telegram",
-      "target": "log_chat",
-      "kind": "writes_to",
-      "label": "log_chat()",
-      "visibility": "detail"
-    },
-    {
-      "source": "telegram",
-      "target": "log_supervisor",
-      "kind": "writes_to",
-      "label": "outbound notes",
-      "visibility": "detail"
-    },
-    {
-      "source": "colab_launcher",
-      "target": "log_supervisor",
-      "kind": "writes_to",
-      "label": "launcher_start",
-      "visibility": "detail"
-    },
-    {
-      "source": "queue",
-      "target": "state_queue",
-      "kind": "writes_to",
-      "label": "persist_queue_snapshot",
-      "visibility": "detail"
-    },
-    {
-      "source": "git_ops",
-      "target": "state_main",
-      "kind": "writes_to",
-      "label": "current_sha on reset",
-      "visibility": "detail"
-    },
-    {
-      "source": "experiment_engine",
-      "target": "state_experiments",
-      "kind": "writes_to",
-      "label": "_save_json",
-      "visibility": "detail"
-    },
-    {
-      "source": "experiment_engine",
-      "target": "mem_wisdom",
-      "kind": "writes_to",
-      "label": "on confirm",
-      "visibility": "detail"
-    },
-    {
-      "source": "skill_manager",
-      "target": "chroma_skills",
-      "kind": "writes_to",
-      "label": "UUID writer",
-      "visibility": "detail"
-    },
-    {
-      "source": "skill_manager",
-      "target": "mem_episodic",
-      "kind": "writes_to",
-      "label": "via callback",
-      "visibility": "detail"
-    },
-    {
-      "source": "pattern_detector",
-      "target": "file_task_results",
-      "kind": "reads_from",
-      "label": "scan JSONs",
-      "visibility": "detail"
-    },
-    {
-      "source": "consciousness",
-      "target": "chroma_episodes",
-      "kind": "writes_to",
-      "label": "auto_reflection upsert",
-      "visibility": "detail"
-    },
-    {
-      "source": "consciousness",
-      "target": "state_reflected",
-      "kind": "writes_to",
-      "label": "reflection dedup",
-      "visibility": "detail"
-    },
-    {
-      "source": "memory",
-      "target": "state_directives",
-      "kind": "writes_to",
-      "label": "save_directive",
-      "visibility": "detail"
-    },
-    {
-      "source": "budget",
-      "target": "state_budget",
-      "kind": "writes_to",
-      "label": "spend()",
-      "visibility": "detail"
-    },
-    {
-      "source": "loop",
-      "target": "file_task_results",
-      "kind": "writes_to",
-      "label": "per-task JSON",
-      "visibility": "detail"
-    },
-    {
-      "source": "agent",
-      "target": "mem_scratchpad",
-      "kind": "reads_from",
-      "label": "context load",
-      "visibility": "detail"
-    },
-    {
-      "source": "context",
-      "target": "mem_scratchpad",
-      "kind": "reads_from",
-      "label": "restart banner check",
-      "visibility": "detail"
-    },
-    {
-      "source": "context",
-      "target": "mem_wisdom",
-      "kind": "reads_from",
-      "label": "load wisdom",
-      "visibility": "detail"
-    },
-    {
-      "source": "context",
-      "target": "mem_knowledge",
-      "kind": "reads_from",
-      "label": "knowledge index",
-      "visibility": "detail"
+      "source": "safety_recover",
+      "target": "iface_infra",
+      "kind": "control",
+      "subtype": "governs",
+      "visibility": "l0",
+      "label": "git reset, queue snapshot restore"
     }
   ],
   "layout": {
@@ -4790,372 +4540,591 @@
       "x": 0,
       "y": 0,
       "w": 2000,
-      "h": 1400
+      "h": 1780
     },
     "organs": {
       "external": {
         "x": 0,
-        "y": 0,
+        "y": 20,
         "w": 2000,
-        "h": 160,
+        "h": 120,
         "label_x": 1000,
-        "label_y": 28,
-        "label": "EXTERNAL"
+        "label_y": 40,
+        "label": "ВНЕШНЕЕ"
       },
       "interface": {
         "x": 0,
-        "y": 200,
+        "y": 170,
         "w": 2000,
-        "h": 220,
+        "h": 240,
         "label_x": 1000,
-        "label_y": 226,
-        "label": "INTERFACE"
+        "label_y": 185,
+        "label": "ИНТЕРФЕЙС"
       },
       "brain": {
-        "x": 460,
-        "y": 460,
-        "w": 1080,
-        "h": 540,
-        "label_x": 1000,
-        "label_y": 488,
-        "label": "BRAIN"
+        "x": 440,
+        "y": 440,
+        "w": 1110,
+        "h": 580,
+        "label_x": 990,
+        "label_y": 455,
+        "label": "МОЗГ"
       },
       "tools": {
-        "x": 1580,
-        "y": 460,
-        "w": 380,
-        "h": 540,
-        "label_x": 1770,
-        "label_y": 488,
-        "label": "TOOLS"
+        "x": 1560,
+        "y": 440,
+        "w": 410,
+        "h": 580,
+        "label_x": 1765,
+        "label_y": 455,
+        "label": "ИНСТРУМЕНТЫ"
       },
       "memory": {
-        "x": 40,
-        "y": 1040,
-        "w": 1920,
-        "h": 340,
+        "x": 30,
+        "y": 1050,
+        "w": 1940,
+        "h": 330,
         "label_x": 1000,
-        "label_y": 1068,
-        "label": "MEMORY"
+        "label_y": 1065,
+        "label": "ПАМЯТЬ"
+      },
+      "safety": {
+        "x": 30,
+        "y": 1400,
+        "w": 1940,
+        "h": 360,
+        "label_x": 1000,
+        "label_y": 1415,
+        "label": "БЕЗОПАСНОСТЬ"
+      }
+    },
+    "blocks": {
+      "iface_comm": {
+        "x": 40,
+        "y": 210,
+        "w": 580,
+        "h": 190,
+        "label_x": 330,
+        "label_y": 227
+      },
+      "iface_dispatch": {
+        "x": 640,
+        "y": 210,
+        "w": 620,
+        "h": 190,
+        "label_x": 950,
+        "label_y": 227
+      },
+      "iface_infra": {
+        "x": 1280,
+        "y": 210,
+        "w": 680,
+        "h": 190,
+        "label_x": 1620,
+        "label_y": 227
+      },
+      "brain_perception": {
+        "x": 460,
+        "y": 480,
+        "w": 210,
+        "h": 530,
+        "label_x": 565,
+        "label_y": 497
+      },
+      "brain_thinking": {
+        "x": 680,
+        "y": 480,
+        "w": 210,
+        "h": 530,
+        "label_x": 785,
+        "label_y": 497
+      },
+      "brain_selfcontrol": {
+        "x": 900,
+        "y": 480,
+        "w": 210,
+        "h": 530,
+        "label_x": 1005,
+        "label_y": 497
+      },
+      "brain_reflection": {
+        "x": 1120,
+        "y": 480,
+        "w": 210,
+        "h": 530,
+        "label_x": 1225,
+        "label_y": 497
+      },
+      "brain_continuous": {
+        "x": 1340,
+        "y": 480,
+        "w": 210,
+        "h": 530,
+        "label_x": 1445,
+        "label_y": 497
+      },
+      "tools_read": {
+        "x": 1580,
+        "y": 480,
+        "w": 380,
+        "h": 80,
+        "label_x": 1770,
+        "label_y": 495
+      },
+      "tools_write": {
+        "x": 1580,
+        "y": 570,
+        "w": 380,
+        "h": 80,
+        "label_x": 1770,
+        "label_y": 585
+      },
+      "tools_selfctl": {
+        "x": 1580,
+        "y": 660,
+        "w": 380,
+        "h": 80,
+        "label_x": 1770,
+        "label_y": 675
+      },
+      "tools_reflection": {
+        "x": 1580,
+        "y": 750,
+        "w": 380,
+        "h": 70,
+        "label_x": 1770,
+        "label_y": 765
+      },
+      "tools_danger": {
+        "x": 1580,
+        "y": 830,
+        "w": 380,
+        "h": 60,
+        "label_x": 1770,
+        "label_y": 845
+      },
+      "tools_meta": {
+        "x": 1580,
+        "y": 900,
+        "w": 380,
+        "h": 60,
+        "label_x": 1770,
+        "label_y": 915
+      },
+      "mem_working": {
+        "x": 40,
+        "y": 1100,
+        "w": 220,
+        "h": 260,
+        "label_x": 150,
+        "label_y": 1117
+      },
+      "mem_operational": {
+        "x": 280,
+        "y": 1100,
+        "w": 500,
+        "h": 260,
+        "label_x": 530,
+        "label_y": 1117
+      },
+      "mem_identity": {
+        "x": 810,
+        "y": 1100,
+        "w": 180,
+        "h": 260,
+        "label_x": 900,
+        "label_y": 1117
+      },
+      "mem_knowledge": {
+        "x": 1000,
+        "y": 1100,
+        "w": 170,
+        "h": 260,
+        "label_x": 1085,
+        "label_y": 1117
+      },
+      "mem_experience": {
+        "x": 1180,
+        "y": 1100,
+        "w": 310,
+        "h": 260,
+        "label_x": 1335,
+        "label_y": 1117
+      },
+      "mem_service": {
+        "x": 1500,
+        "y": 1100,
+        "w": 320,
+        "h": 260,
+        "label_x": 1660,
+        "label_y": 1117
+      },
+      "mem_archive": {
+        "x": 1830,
+        "y": 1100,
+        "w": 130,
+        "h": 260,
+        "label_x": 1895,
+        "label_y": 1117
+      },
+      "safety_prevent": {
+        "x": 40,
+        "y": 1430,
+        "w": 380,
+        "h": 320,
+        "label_x": 230,
+        "label_y": 1450
+      },
+      "safety_observe": {
+        "x": 430,
+        "y": 1430,
+        "w": 380,
+        "h": 320,
+        "label_x": 620,
+        "label_y": 1450
+      },
+      "safety_contain": {
+        "x": 820,
+        "y": 1430,
+        "w": 380,
+        "h": 320,
+        "label_x": 1010,
+        "label_y": 1450
+      },
+      "safety_recover": {
+        "x": 1210,
+        "y": 1430,
+        "w": 380,
+        "h": 320,
+        "label_x": 1400,
+        "label_y": 1450
+      },
+      "safety_weaknesses": {
+        "x": 1600,
+        "y": 1430,
+        "w": 360,
+        "h": 320,
+        "label_x": 1780,
+        "label_y": 1450
       }
     },
     "nodes": {
       "telegram_api": {
-        "cx": 240,
-        "cy": 84,
+        "cx": 180,
+        "cy": 80,
         "w": 180,
-        "h": 56
+        "h": 52
       },
       "openrouter": {
-        "cx": 1760,
-        "cy": 84,
+        "cx": 1820,
+        "cy": 80,
         "w": 180,
-        "h": 56
+        "h": 52
       },
       "colab_launcher": {
-        "cx": 260,
-        "cy": 310,
-        "w": 220,
-        "h": 56
-      },
-      "queue": {
-        "cx": 660,
-        "cy": 280,
-        "w": 150,
-        "h": 46
-      },
-      "workers": {
-        "cx": 830,
-        "cy": 280,
-        "w": 150,
-        "h": 46
-      },
-      "worker_pool": {
-        "cx": 1000,
-        "cy": 280,
-        "w": 150,
-        "h": 46
-      },
-      "events": {
-        "cx": 660,
-        "cy": 355,
-        "w": 150,
-        "h": 46
-      },
-      "git_ops": {
-        "cx": 830,
-        "cy": 355,
-        "w": 150,
-        "h": 46
-      },
-      "consciousness_thread": {
-        "cx": 1000,
-        "cy": 355,
-        "w": 170,
-        "h": 46
-      },
-      "telegram": {
-        "cx": 1760,
+        "cx": 180,
         "cy": 310,
         "w": 200,
-        "h": 56
+        "h": 50
+      },
+      "telegram": {
+        "cx": 460,
+        "cy": 310,
+        "w": 220,
+        "h": 50
+      },
+      "queue": {
+        "cx": 740,
+        "cy": 280,
+        "w": 130,
+        "h": 40
+      },
+      "workers": {
+        "cx": 900,
+        "cy": 280,
+        "w": 130,
+        "h": 40
+      },
+      "events": {
+        "cx": 1060,
+        "cy": 280,
+        "w": 130,
+        "h": 40
+      },
+      "worker_pool": {
+        "cx": 820,
+        "cy": 350,
+        "w": 160,
+        "h": 36
+      },
+      "consciousness_thread": {
+        "cx": 1060,
+        "cy": 350,
+        "w": 190,
+        "h": 36
+      },
+      "state": {
+        "cx": 1370,
+        "cy": 280,
+        "w": 130,
+        "h": 40
+      },
+      "git_ops": {
+        "cx": 1520,
+        "cy": 280,
+        "w": 130,
+        "h": 40
+      },
+      "fs_data": {
+        "cx": 1680,
+        "cy": 280,
+        "w": 130,
+        "h": 40
       },
       "docker_chromadb": {
-        "cx": 1310,
-        "cy": 310,
-        "w": 150,
-        "h": 42
+        "cx": 1370,
+        "cy": 350,
+        "w": 130,
+        "h": 32
       },
       "docker_postgres": {
-        "cx": 1310,
-        "cy": 360,
-        "w": 150,
+        "cx": 1520,
+        "cy": 350,
+        "w": 130,
         "h": 32
       },
       "docker_redis": {
-        "cx": 1470,
-        "cy": 360,
+        "cx": 1680,
+        "cy": 350,
         "w": 130,
         "h": 32
       },
-      "fs_data": {
-        "cx": 1470,
-        "cy": 310,
-        "w": 130,
-        "h": 42
-      },
       "agent": {
-        "cx": 600,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "context": {
-        "cx": 760,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "memory": {
-        "cx": 920,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "loop": {
-        "cx": 1080,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "llm": {
-        "cx": 1240,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "inner_critic": {
-        "cx": 1400,
-        "cy": 580,
-        "w": 130,
-        "h": 48
-      },
-      "skill_manager": {
-        "cx": 680,
-        "cy": 720,
-        "w": 150,
-        "h": 46
-      },
-      "experiment_engine": {
-        "cx": 870,
-        "cy": 720,
+        "cx": 565,
+        "cy": 605,
         "w": 170,
         "h": 46
       },
-      "pattern_detector": {
-        "cx": 1060,
-        "cy": 720,
+      "context": {
+        "cx": 565,
+        "cy": 665,
+        "w": 170,
+        "h": 46
+      },
+      "memory": {
+        "cx": 565,
+        "cy": 725,
         "w": 170,
         "h": 46
       },
       "owner_inject": {
-        "cx": 1240,
-        "cy": 720,
-        "w": 150,
+        "cx": 565,
+        "cy": 785,
+        "w": 170,
         "h": 46
       },
-      "consciousness": {
-        "cx": 700,
-        "cy": 870,
-        "w": 180,
-        "h": 52
+      "loop": {
+        "cx": 785,
+        "cy": 620,
+        "w": 170,
+        "h": 46
       },
-      "strategic_planner": {
-        "cx": 920,
-        "cy": 870,
-        "w": 180,
-        "h": 52
+      "llm": {
+        "cx": 785,
+        "cy": 690,
+        "w": 170,
+        "h": 46
+      },
+      "inner_critic": {
+        "cx": 1005,
+        "cy": 605,
+        "w": 170,
+        "h": 46
       },
       "self_evolution": {
-        "cx": 1160,
-        "cy": 870,
+        "cx": 1005,
+        "cy": 665,
         "w": 170,
         "h": 46
       },
       "budget": {
-        "cx": 1330,
-        "cy": 870,
-        "w": 140,
+        "cx": 1005,
+        "cy": 725,
+        "w": 170,
         "h": 46
       },
-      "state": {
-        "cx": 1460,
-        "cy": 870,
-        "w": 130,
+      "skill_manager": {
+        "cx": 1225,
+        "cy": 605,
+        "w": 170,
+        "h": 46
+      },
+      "experiment_engine": {
+        "cx": 1225,
+        "cy": 665,
+        "w": 180,
+        "h": 46
+      },
+      "pattern_detector": {
+        "cx": 1225,
+        "cy": 725,
+        "w": 180,
+        "h": 46
+      },
+      "consciousness": {
+        "cx": 1445,
+        "cy": 620,
+        "w": 170,
+        "h": 46
+      },
+      "strategic_planner": {
+        "cx": 1445,
+        "cy": 690,
+        "w": 180,
         "h": 46
       },
       "registry": {
         "cx": 1770,
-        "cy": 720,
-        "w": 280,
-        "h": 60
+        "cy": 980,
+        "w": 300,
+        "h": 30
       },
       "mem_scratchpad": {
-        "cx": 180,
-        "cy": 1170,
-        "w": 200,
-        "h": 52
-      },
-      "log_chat": {
-        "cx": 540,
-        "cy": 1120,
-        "w": 150,
-        "h": 40
-      },
-      "log_events": {
-        "cx": 700,
-        "cy": 1120,
-        "w": 170,
-        "h": 40
-      },
-      "log_supervisor": {
-        "cx": 880,
-        "cy": 1120,
+        "cx": 150,
+        "cy": 1175,
         "w": 180,
         "h": 40
       },
+      "log_chat": {
+        "cx": 345,
+        "cy": 1175,
+        "w": 105,
+        "h": 36
+      },
+      "log_events": {
+        "cx": 465,
+        "cy": 1175,
+        "w": 105,
+        "h": 36
+      },
+      "log_supervisor": {
+        "cx": 585,
+        "cy": 1175,
+        "w": 115,
+        "h": 36
+      },
       "log_tools": {
-        "cx": 1060,
-        "cy": 1120,
-        "w": 150,
-        "h": 40
+        "cx": 705,
+        "cy": 1175,
+        "w": 105,
+        "h": 36
       },
       "log_progress": {
-        "cx": 1060,
-        "cy": 1170,
-        "w": 150,
-        "h": 40
+        "cx": 345,
+        "cy": 1230,
+        "w": 115,
+        "h": 36
       },
       "state_directives": {
-        "cx": 540,
-        "cy": 1170,
-        "w": 150,
-        "h": 40
+        "cx": 475,
+        "cy": 1230,
+        "w": 125,
+        "h": 36
       },
       "state_budget": {
-        "cx": 700,
-        "cy": 1170,
-        "w": 160,
-        "h": 40
+        "cx": 600,
+        "cy": 1230,
+        "w": 115,
+        "h": 36
       },
       "state_queue": {
-        "cx": 880,
-        "cy": 1170,
-        "w": 170,
-        "h": 40
+        "cx": 715,
+        "cy": 1230,
+        "w": 115,
+        "h": 36
       },
       "mem_identity": {
-        "cx": 180,
-        "cy": 1230,
-        "w": 190,
-        "h": 40
+        "cx": 900,
+        "cy": 1200,
+        "w": 160,
+        "h": 38
       },
       "mem_wisdom": {
-        "cx": 180,
-        "cy": 1280,
-        "w": 190,
-        "h": 40
+        "cx": 900,
+        "cy": 1260,
+        "w": 160,
+        "h": 38
       },
       "mem_knowledge": {
-        "cx": 180,
-        "cy": 1330,
-        "w": 190,
-        "h": 40
+        "cx": 1085,
+        "cy": 1230,
+        "w": 150,
+        "h": 42
       },
       "mem_episodic": {
-        "cx": 380,
-        "cy": 1330,
-        "w": 170,
-        "h": 40
+        "cx": 1255,
+        "cy": 1200,
+        "w": 140,
+        "h": 36
       },
       "chroma_episodes": {
-        "cx": 1260,
-        "cy": 1230,
-        "w": 170,
-        "h": 40
+        "cx": 1410,
+        "cy": 1200,
+        "w": 150,
+        "h": 36
       },
       "chroma_skills": {
-        "cx": 1440,
-        "cy": 1230,
-        "w": 170,
-        "h": 40
+        "cx": 1255,
+        "cy": 1260,
+        "w": 140,
+        "h": 36
       },
       "chroma_history": {
-        "cx": 1620,
-        "cy": 1230,
-        "w": 170,
-        "h": 40
+        "cx": 1410,
+        "cy": 1260,
+        "w": 150,
+        "h": 36
       },
       "state_main": {
-        "cx": 1260,
-        "cy": 1280,
-        "w": 170,
-        "h": 40
+        "cx": 1570,
+        "cy": 1190,
+        "w": 125,
+        "h": 32
       },
       "state_experiments": {
-        "cx": 1440,
-        "cy": 1280,
-        "w": 170,
-        "h": 40
+        "cx": 1700,
+        "cy": 1190,
+        "w": 140,
+        "h": 32
       },
       "state_commitments": {
-        "cx": 1620,
-        "cy": 1280,
-        "w": 170,
-        "h": 40
+        "cx": 1570,
+        "cy": 1230,
+        "w": 140,
+        "h": 32
       },
       "state_reflected": {
-        "cx": 1260,
-        "cy": 1330,
-        "w": 170,
-        "h": 40
-      },
-      "state_consciousness": {
-        "cx": 1440,
-        "cy": 1330,
-        "w": 170,
-        "h": 40
+        "cx": 1720,
+        "cy": 1230,
+        "w": 140,
+        "h": 32
       },
       "state_cooldown": {
-        "cx": 1620,
-        "cy": 1330,
+        "cx": 1570,
+        "cy": 1270,
+        "w": 130,
+        "h": 32
+      },
+      "state_consciousness": {
+        "cx": 1720,
+        "cy": 1270,
         "w": 170,
-        "h": 40
+        "h": 32
       },
       "file_task_results": {
-        "cx": 1800,
-        "cy": 1280,
-        "w": 150,
+        "cx": 1895,
+        "cy": 1230,
+        "w": 110,
         "h": 40
       }
     },
@@ -5164,61 +5133,646 @@
         "x": 0,
         "y": 0,
         "w": 2000,
-        "h": 1400
+        "h": 1780
       },
       "l1-interface": {
-        "x": 100,
-        "y": 200,
-        "w": 1800,
-        "h": 320
+        "x": 20,
+        "y": 170,
+        "w": 1960,
+        "h": 260
       },
       "l1-brain": {
-        "x": 460,
-        "y": 460,
-        "w": 1080,
-        "h": 540
+        "x": 430,
+        "y": 450,
+        "w": 1130,
+        "h": 590
       },
       "l1-tools": {
         "x": 1570,
         "y": 460,
-        "w": 400,
-        "h": 540
+        "w": 410,
+        "h": 560
       },
       "l1-memory": {
-        "x": 40,
-        "y": 1040,
-        "w": 1920,
-        "h": 340
+        "x": 20,
+        "y": 1060,
+        "w": 1960,
+        "h": 330
+      },
+      "l1-safety": {
+        "x": 20,
+        "y": 1410,
+        "w": 1960,
+        "h": 360
       }
     },
     "memory_bands": {
       "working": {
-        "x": 40,
-        "y": 1090,
-        "w": 340,
+        "x": 30,
+        "y": 1095,
+        "w": 230,
         "h": 270,
-        "label": "Working — per task",
-        "label_x": 210,
-        "label_y": 1108
+        "label": "Рабочая",
+        "label_x": 145,
+        "label_y": 1087
       },
       "short_term": {
-        "x": 400,
-        "y": 1090,
-        "w": 740,
-        "h": 120,
-        "label": "Short-term — session/day",
-        "label_x": 770,
-        "label_y": 1108
+        "x": 270,
+        "y": 1095,
+        "w": 520,
+        "h": 270,
+        "label": "Оперативная",
+        "label_x": 525,
+        "label_y": 1087
       },
       "long_term": {
-        "x": 1160,
-        "y": 1090,
-        "w": 800,
+        "x": 800,
+        "y": 1095,
+        "w": 1020,
         "h": 270,
-        "label": "Long-term — persistent",
-        "label_x": 1560,
-        "label_y": 1108
+        "label": "Долговременная",
+        "label_x": 1315,
+        "label_y": 1087
+      },
+      "archive": {
+        "x": 1825,
+        "y": 1095,
+        "w": 140,
+        "h": 270,
+        "label": "Архив",
+        "label_x": 1895,
+        "label_y": 1087
       }
     }
-  }
+  },
+  "blocks": {
+    "interface": [
+      {
+        "id": "iface_comm",
+        "organ": "interface",
+        "label": "Связь с внешним миром",
+        "question": "Что мне говорят? Что я отвечаю?",
+        "nodes": [
+          "colab_launcher",
+          "telegram"
+        ]
+      },
+      {
+        "id": "iface_dispatch",
+        "organ": "interface",
+        "label": "Диспетчеризация",
+        "question": "Кто это сделает? Когда? В какой последовательности?",
+        "nodes": [
+          "queue",
+          "workers",
+          "events",
+          "worker_pool",
+          "consciousness_thread"
+        ]
+      },
+      {
+        "id": "iface_infra",
+        "organ": "interface",
+        "label": "Жизнеобеспечение",
+        "question": "Что со мной было? На какой версии я работаю?",
+        "nodes": [
+          "state",
+          "git_ops",
+          "fs_data",
+          "docker_chromadb",
+          "docker_postgres",
+          "docker_redis"
+        ]
+      }
+    ],
+    "brain": [
+      {
+        "id": "brain_perception",
+        "organ": "brain",
+        "label": "Восприятие",
+        "question": "Что пришло? Какого это типа? Что я знаю про это?",
+        "nodes": [
+          "agent",
+          "context",
+          "memory",
+          "owner_inject"
+        ]
+      },
+      {
+        "id": "brain_thinking",
+        "organ": "brain",
+        "label": "Мышление",
+        "question": "Раунд за раундом: думаю → действую → наблюдаю",
+        "nodes": [
+          "loop",
+          "llm"
+        ]
+      },
+      {
+        "id": "brain_selfcontrol",
+        "organ": "brain",
+        "label": "Самоконтроль",
+        "question": "Правильно ли я делаю? Можно ли мне это делать?",
+        "nodes": [
+          "inner_critic",
+          "self_evolution",
+          "budget"
+        ]
+      },
+      {
+        "id": "brain_reflection",
+        "organ": "brain",
+        "label": "Рефлексия",
+        "question": "Что я могу извлечь из того, что было?",
+        "nodes": [
+          "skill_manager",
+          "experiment_engine",
+          "pattern_detector"
+        ]
+      },
+      {
+        "id": "brain_continuous",
+        "organ": "brain",
+        "label": "Фоновое сознание",
+        "question": "Что происходит между задачами? К чему я иду?",
+        "nodes": [
+          "consciousness",
+          "strategic_planner"
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "id": "tools_read",
+        "organ": "tools",
+        "label": "Чтение мира",
+        "question": "Что есть?",
+        "tools": [
+          "repo_read",
+          "repo_list",
+          "git_status",
+          "git_diff",
+          "codebase_digest",
+          "codebase_health",
+          "drive_read",
+          "drive_list",
+          "chat_history",
+          "recent_session",
+          "summarize_dialogue",
+          "recall",
+          "memory_search",
+          "semantic_search",
+          "find_skills",
+          "semantic_find_skills",
+          "knowledge_read",
+          "knowledge_list",
+          "web_search",
+          "browse_page",
+          "vlm_query",
+          "analyze_screenshot",
+          "read_service_logs",
+          "run_ops_check",
+          "chromadb_stats",
+          "list_github_issues",
+          "get_github_issue",
+          "wait_for_task",
+          "get_task_result"
+        ]
+      },
+      {
+        "id": "tools_write",
+        "organ": "tools",
+        "label": "Изменение мира",
+        "question": "Что сделать?",
+        "tools": [
+          "drive_write",
+          "repo_write_commit",
+          "repo_commit_push",
+          "propose_change",
+          "apply_change",
+          "claude_code_edit",
+          "update_scratchpad",
+          "update_identity",
+          "record_memory",
+          "save_skill",
+          "knowledge_write",
+          "send_owner_message",
+          "send_photo",
+          "create_github_issue",
+          "close_github_issue",
+          "comment_on_issue"
+        ]
+      },
+      {
+        "id": "tools_selfctl",
+        "organ": "tools",
+        "label": "Управление собой",
+        "question": "Как мне изменить свой режим работы?",
+        "tools": [
+          "schedule_task",
+          "cancel_task",
+          "forward_to_worker",
+          "request_restart",
+          "restart_service",
+          "promote_to_stable",
+          "switch_model",
+          "toggle_consciousness",
+          "toggle_evolution",
+          "compact_context"
+        ]
+      },
+      {
+        "id": "tools_reflection",
+        "organ": "tools",
+        "label": "Саморефлексия",
+        "question": "Как мне оценить своё поведение?",
+        "tools": [
+          "deep_reflection",
+          "multi_model_review",
+          "request_review",
+          "check_evolution_status",
+          "generate_evolution_stats"
+        ]
+      },
+      {
+        "id": "tools_danger",
+        "organ": "tools",
+        "label": "Опасная сила",
+        "question": "Что могу сломать одним вызовом?",
+        "tools": [
+          "run_shell",
+          "browser_action"
+        ]
+      },
+      {
+        "id": "tools_meta",
+        "organ": "tools",
+        "label": "Мета",
+        "question": "Какие у меня вообще есть инструменты?",
+        "tools": [
+          "list_available_tools",
+          "enable_tools"
+        ]
+      }
+    ],
+    "memory": [
+      {
+        "id": "mem_working",
+        "organ": "memory",
+        "level": "working",
+        "label": "Рабочая",
+        "tagline": "per-task — теряется в конце задачи",
+        "question": "Что происходит прямо сейчас?",
+        "nodes": [
+          "mem_scratchpad"
+        ],
+        "virtual_items": [
+          "messages[]",
+          "owner_mailbox/"
+        ]
+      },
+      {
+        "id": "mem_operational",
+        "organ": "memory",
+        "level": "short",
+        "label": "Оперативная",
+        "tagline": "день / сессия — медленно устаревает",
+        "question": "Что было недавно? Что меня попросили 24 часа назад?",
+        "nodes": [
+          "log_chat",
+          "log_events",
+          "log_supervisor",
+          "log_tools",
+          "log_progress",
+          "state_directives",
+          "state_budget",
+          "state_queue"
+        ]
+      },
+      {
+        "id": "mem_identity",
+        "organ": "memory",
+        "level": "long",
+        "sub": "identity",
+        "label": "Идентичность",
+        "question": "Кто я? Что я знаю про себя?",
+        "nodes": [
+          "mem_identity",
+          "mem_wisdom"
+        ]
+      },
+      {
+        "id": "mem_knowledge",
+        "organ": "memory",
+        "level": "long",
+        "sub": "knowledge",
+        "label": "Знания",
+        "question": "Что я выучил про предметную область?",
+        "nodes": [
+          "mem_knowledge"
+        ]
+      },
+      {
+        "id": "mem_experience",
+        "organ": "memory",
+        "level": "long",
+        "sub": "experience",
+        "label": "Опыт",
+        "question": "Что я пробовал? Что сработало?",
+        "nodes": [
+          "mem_episodic",
+          "chroma_episodes",
+          "chroma_skills",
+          "chroma_history"
+        ]
+      },
+      {
+        "id": "mem_service",
+        "organ": "memory",
+        "level": "long",
+        "sub": "service",
+        "label": "Служебная",
+        "question": "В каком я состоянии? Что я пообещал?",
+        "nodes": [
+          "state_main",
+          "state_experiments",
+          "state_commitments",
+          "state_reflected",
+          "state_cooldown",
+          "state_consciousness"
+        ]
+      },
+      {
+        "id": "mem_archive",
+        "organ": "memory",
+        "level": "archive",
+        "label": "Архив задач",
+        "tagline": "append-only — 645+ файлов",
+        "question": "Что я делал раньше и как это прошло?",
+        "nodes": [
+          "file_task_results"
+        ]
+      }
+    ],
+    "safety": [
+      {
+        "id": "safety_prevent",
+        "organ": "safety",
+        "label": "Предотвращение",
+        "question": "Что агенту запрещено делать?",
+        "items": [
+          {
+            "title": "FILE_ZONES (red / yellow / green)",
+            "ref": "config/FILE_ZONES.yaml"
+          },
+          {
+            "title": "Destructive-keyword guard",
+            "ref": "supervisor/workers.py:320-351"
+          },
+          {
+            "title": "Consciousness whitelist",
+            "ref": "ouroboros/consciousness.py:1273-1300"
+          },
+          {
+            "title": "Budget caps (task + daily)",
+            "ref": "ouroboros/budget.py + loop.py:465"
+          }
+        ]
+      },
+      {
+        "id": "safety_observe",
+        "organ": "safety",
+        "label": "Наблюдение",
+        "question": "Что идёт не так прямо сейчас?",
+        "items": [
+          {
+            "title": "Inner Critic (checkpoints 40% / 75%)",
+            "ref": "ouroboros/inner_critic.py"
+          },
+          {
+            "title": "Stuck Detector (3 similar thoughts)",
+            "ref": "ouroboros/consciousness.py:44-78"
+          },
+          {
+            "title": "Action-first nudge",
+            "ref": "ouroboros/loop.py:1217-1241"
+          },
+          {
+            "title": "Budget drift alert",
+            "ref": "context.py:369 (live OR credits)"
+          }
+        ]
+      },
+      {
+        "id": "safety_contain",
+        "organ": "safety",
+        "label": "Сдерживание",
+        "question": "Как остановить до того, как станет хуже?",
+        "items": [
+          {
+            "title": "MAX_ROUNDS = 12",
+            "ref": "ouroboros/loop.py:1050"
+          },
+          {
+            "title": "Per-task cost cap $3",
+            "ref": "ouroboros/loop.py:465"
+          },
+          {
+            "title": "Circuit breaker (3×empty)",
+            "ref": "ouroboros/loop.py:1034"
+          },
+          {
+            "title": "/panic handler",
+            "ref": "colab_launcher.py:391-479"
+          }
+        ]
+      },
+      {
+        "id": "safety_recover",
+        "organ": "safety",
+        "label": "Восстановление",
+        "question": "Как вернуться в рабочее состояние?",
+        "items": [
+          {
+            "title": "git reset on startup",
+            "ref": "supervisor/git_ops.py:208-315"
+          },
+          {
+            "title": "R1 memory restore",
+            "ref": "ouroboros/agent.py:423-468"
+          },
+          {
+            "title": "Queue snapshot restore",
+            "ref": "supervisor/queue.py:177-215"
+          },
+          {
+            "title": "Self-mod cooldown (3 tasks)",
+            "ref": "ouroboros/self_evolution.py:601-660"
+          }
+        ]
+      },
+      {
+        "id": "safety_weaknesses",
+        "organ": "safety",
+        "label": "Известные слабости",
+        "question": "Что мы знаем, что плохо, но пока не починили?",
+        "items": [
+          {
+            "title": "D1 — Two parallel event logs, not one",
+            "group": "Наблюдаемость",
+            "dz_id": "D1",
+            "ref": null
+          },
+          {
+            "title": "D2 — SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl",
+            "group": "Наблюдаемость",
+            "dz_id": "D2",
+            "ref": null
+          },
+          {
+            "title": "D5 — No skills written to ChromaDB after 04-07 despite active runtime through 04-12",
+            "group": "Наблюдаемость",
+            "dz_id": "D5",
+            "ref": null
+          },
+          {
+            "title": "D15 — R1 silently auto-restores; no loud telemetry on first use",
+            "group": "Наблюдаемость",
+            "dz_id": "D15",
+            "ref": null
+          },
+          {
+            "title": "D18 — `pattern_detector` scans `task_results/` only — not events.jsonl",
+            "group": "Наблюдаемость",
+            "dz_id": "D18",
+            "ref": null
+          },
+          {
+            "title": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
+            "group": "Согласованность",
+            "dz_id": "D4",
+            "ref": null
+          },
+          {
+            "title": "D19 — CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness",
+            "group": "Согласованность",
+            "dz_id": "D19",
+            "ref": null
+          },
+          {
+            "title": "D20 — `current_sha` in state.json drifts — written only on `git reset`, not on self-commit",
+            "group": "Согласованность",
+            "dz_id": "D20",
+            "ref": null
+          },
+          {
+            "title": "D22 — `_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`",
+            "group": "Согласованность",
+            "dz_id": "D22",
+            "ref": null
+          },
+          {
+            "title": "D23 — Post-restart banner detection is time-based with a 300s window",
+            "group": "Согласованность",
+            "dz_id": "D23",
+            "ref": null
+          },
+          {
+            "title": "D8 — Strategic planner kill switch defaults to OFF and stays OFF",
+            "group": "Конфигурация",
+            "dz_id": "D8",
+            "ref": null
+          },
+          {
+            "title": "D11 — MAX_ROUNDS discrepancy: doc says 25, code default is 12",
+            "group": "Конфигурация",
+            "dz_id": "D11",
+            "ref": null
+          },
+          {
+            "title": "D12 — Per-task cost cap discrepancy: doc says $5, code default is $3",
+            "group": "Конфигурация",
+            "dz_id": "D12",
+            "ref": null
+          },
+          {
+            "title": "D13 — Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap",
+            "group": "Конфигурация",
+            "dz_id": "D13",
+            "ref": null
+          },
+          {
+            "title": "D14 — `identity.md` is read in 5 places, each silently skips if absent",
+            "group": "Атаки",
+            "dz_id": "D14",
+            "ref": null
+          },
+          {
+            "title": "D16 — `run_shell` is the escape-hatch bypass for every other guard",
+            "group": "Атаки",
+            "dz_id": "D16",
+            "ref": null
+          },
+          {
+            "title": "D17 — Worker destructive-keyword guard can refuse tasks before the agent sees them",
+            "group": "Атаки",
+            "dz_id": "D17",
+            "ref": null
+          },
+          {
+            "title": "D25 — Consciousness thread has `update_identity` in its whitelist",
+            "group": "Атаки",
+            "dz_id": "D25",
+            "ref": null
+          },
+          {
+            "title": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
+            "group": "Артефакты",
+            "dz_id": "D3",
+            "ref": null
+          },
+          {
+            "title": "D6 — Auto-resume on every restart is structural, not opt-in",
+            "group": "Артефакты",
+            "dz_id": "D6",
+            "ref": null
+          },
+          {
+            "title": "D7 — `_log_worker_boot_once` uses a module-level global guard",
+            "group": "Артефакты",
+            "dz_id": "D7",
+            "ref": null
+          },
+          {
+            "title": "D10 — Two orphan ChromaDB scaffolds on disk",
+            "group": "Артефакты",
+            "dz_id": "D10",
+            "ref": null
+          },
+          {
+            "title": "D9 — Shared OpenRouter key between THAI and Prism",
+            "group": "Внешнее",
+            "dz_id": "D9",
+            "ref": null
+          },
+          {
+            "title": "D21 — `daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter",
+            "group": "Внешнее",
+            "dz_id": "D21",
+            "ref": null
+          },
+          {
+            "title": "D24 — `inner_critic` does not block — it injects advice as a system message",
+            "group": "Внешнее",
+            "dz_id": "D24",
+            "ref": null
+          }
+        ]
+      }
+    ]
+  },
+  "external_nodes": [
+    "telegram_api",
+    "openrouter"
+  ]
 }

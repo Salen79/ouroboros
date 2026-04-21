@@ -28,9 +28,9 @@ export function renderNode(node, snapshot) {
     );
     if (own) {
       ownership = `
-        <h3>Writers</h3>
+        <h3>Пишут</h3>
         <p>${esc(own.writers_md)}</p>
-        <h3>Readers</h3>
+        <h3>Читают</h3>
         <p>${esc(own.readers_md)}</p>`;
     }
   }
@@ -43,7 +43,7 @@ export function renderNode(node, snapshot) {
       m.name.replace(/[\s\.]/g, '').includes(node.label.replace(/[\s\.]/g, ''))
     ));
     if (m) {
-      moduleRow = `<h3>Role</h3><p>${esc(m.role)}</p>`;
+      moduleRow = `<h3>Роль</h3><p>${esc(m.role)}</p>`;
     }
   }
 
@@ -51,16 +51,16 @@ export function renderNode(node, snapshot) {
     <h2>${esc(node.label)}</h2>
     <div class="subline">
       ${node.path ? `<code>${esc(node.path)}</code> ` : ''}
-      ${node.loc ? `· ${node.loc} LoC ` : ''}
-      · layer: <code>${esc(node.layer)}</code>
-      · kind: <code>${esc(node.kind)}</code>
+      ${node.loc ? `· ${node.loc} строк ` : ''}
+      · слой: <code>${esc(node.layer)}</code>
+      · тип: <code>${esc(node.kind)}</code>
     </div>
     ${dzChips(node.dark_zones)}
-    ${node.description ? `<h3>Description</h3><p>${esc(node.description)}</p>` : ''}
+    ${node.description ? `<h3>Описание</h3><p>${esc(node.description)}</p>` : ''}
     ${moduleRow}
     ${ownership}
     ${dark.length ? `
-      <h3>Dark Zones (${dark.length})</h3>
+      <h3>Известные слабости (${dark.length})</h3>
       ${dark.map(d => `
         <div style="margin-bottom:10px;">
           <div style="font-weight:600;color:var(--accent-2);">
@@ -88,17 +88,17 @@ export function renderTool(tool, snapshot) {
     <h2 style="font-family:'SF Mono',monospace">${esc(tool.name)}</h2>
     <div class="subline">
       <code>${esc(tool.module)}:${tool.line}</code>
-      · timeout ${tool.timeout_sec}s
+      · таймаут ${tool.timeout_sec} сек
       ${tool.is_code_tool ? '· code_tool' : ''}
     </div>
     <div class="badges">${chips.join('')}</div>
     ${dzChips(tool.dark_zone_ids)}
-    <h3>Description</h3>
-    <p>${esc(tool.description) || '<span class="muted">No description</span>'}</p>
+    <h3>Описание</h3>
+    <p>${esc(tool.description) || '<span class="muted">Описание отсутствует</span>'}</p>
     ${hasParams ? `
-      <h3>Parameters</h3>
+      <h3>Параметры</h3>
       <pre>${esc(JSON.stringify(params, null, 2))}</pre>
-    ` : '<h3>Parameters</h3><p class="muted">none</p>'}
+    ` : '<h3>Параметры</h3><p class="muted">нет</p>'}
   `;
 }
 
@@ -107,13 +107,13 @@ export function renderDarkZone(dz) {
     <h2><span class="dz-id">${dz.id}</span>${esc(dz.title)}</h2>
     <div class="dz-body">${esc(dz.body_md)}</div>
     ${dz.files && dz.files.length ? `
-      <h3 style="margin-top:20px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Referenced files</h3>
+      <h3 style="margin-top:20px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Упомянутые файлы</h3>
       <div class="files-list">
         ${dz.files.map(f => `<span class="file-tag">${esc(f)}</span>`).join('')}
       </div>
     ` : ''}
     ${dz.file_lines && dz.file_lines.length ? `
-      <h3 style="margin-top:16px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">File:line references</h3>
+      <h3 style="margin-top:16px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Ссылки file:line</h3>
       <div class="files-list">
         ${dz.file_lines.map(f => `<span class="file-tag">${esc(f)}</span>`).join('')}
       </div>

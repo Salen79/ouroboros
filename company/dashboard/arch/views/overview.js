@@ -1,23 +1,14 @@
-// Overview view — Phase 1.6 ecosystem composition with semantic zoom.
-//
-// One SVG holds every organ, node and typed edge at fixed coordinates.
-// Zoom is achieved by tweening the SVG's viewBox to a target window
-// (defined in snapshot.layout.zoom_states). Detail elements fade in/out
-// via CSS selectors keyed on data-zoom on the <svg> root.
-//
-// Levels:
-//   L0             → full composition, shows all 5 organs + L0 typed edges
-//   L1 <organ>     → viewBox zoomed to one organ, internal edges appear
-//   L2 / L3        → opens the side panel for a specific node or tool
-//
-// Back button + breadcrumb reuse URL hash routing from Phase 1.5.
+// Обзор — Phase 1.7 ecosystem composition (block-level, SAFETY organ,
+// simplified 2-type edges + filter + legend + static DZ markers, RU UI).
 
 const EDGE_COLORS = {
-  invokes:    '#74b9ff',
-  writes_to:  '#fdcb6e',
-  reads_from: '#55efc4',
-  observes:   '#a29bfe',
-  governs:    '#e17055',
+  control: '#74b9ff',  // Управление (invokes / governs)
+  data:    '#55efc4',  // Данные (reads_from / writes_to / observes)
+};
+
+const EDGE_LABELS_RU = {
+  control: 'Управление',
+  data:    'Данные',
 };
 
 export class OverviewView {
@@ -28,6 +19,7 @@ export class OverviewView {
     this.navigateExternalView = navigateExternalView || (() => {});
     this.container = document.getElementById(containerId);
     this.zoom = 'l0';
+    this.filter = 'all'; // all | control | data
     this.animating = false;
     this._suppressHash = false;
   }
@@ -38,12 +30,12 @@ export class OverviewView {
         <nav class="ov-crumbs" id="ov-crumbs"></nav>
         <div class="ov-stage">
           ${this._renderSVG()}
+          ${this._renderLegend()}
         </div>
       </div>
     `;
     this.crumbsEl = document.getElementById('ov-crumbs');
     this.svg = this.container.querySelector('svg.ecosystem');
-    this.vbGroup = this.svg.querySelector('.zoom-group');
     this._installInteractions();
     window.addEventListener('hashchange', () => {
       if (this._suppressHash) return;
@@ -52,30 +44,31 @@ export class OverviewView {
     this._restoreFromHash();
   }
 
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
   // SVG composition
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
 
   _renderSVG() {
-    const L = this.snap.layout;
-    const vb = L.viewbox;
+    const vb = this.snap.layout.viewbox;
     return `
-      <svg class="ecosystem" data-zoom="l0"
+      <svg class="ecosystem" data-zoom="l0" data-filter="all"
            viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}"
            preserveAspectRatio="xMidYMid meet"
            overflow="hidden">
         <defs>
           ${this._defs()}
           <clipPath id="viewBoxClip" clipPathUnits="userSpaceOnUse">
-            <rect class="vbclip-rect"
-                  x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}"/>
+            <rect class="vbclip-rect" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}"/>
           </clipPath>
         </defs>
         <g class="zoom-group" clip-path="url(#viewBoxClip)">
           ${this._renderOrganBodies()}
           ${this._renderMemoryBands()}
+          ${this._renderBlocks()}
           ${this._renderEdges()}
           ${this._renderNodes()}
+          ${this._renderToolBlockBodies()}
+          ${this._renderSafetyBlockBodies()}
           ${this._renderOrganLabels()}
         </g>
       </svg>
@@ -83,7 +76,6 @@ export class OverviewView {
   }
 
   _defs() {
-    // Per-edge-kind arrowhead markers, pulse keyframe, organ gradient
     const kinds = Object.entries(EDGE_COLORS);
     const markers = kinds.map(([k, c]) => `
       <marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5"
@@ -92,44 +84,49 @@ export class OverviewView {
       </marker>
     `).join('');
 
-    const organGradients = `
+    const gradients = `
       <linearGradient id="g-external" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#636e72" stop-opacity="0.12"/>
+        <stop offset="0" stop-color="#636e72" stop-opacity="0.10"/>
         <stop offset="1" stop-color="#636e72" stop-opacity="0.02"/>
       </linearGradient>
       <linearGradient id="g-interface" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#74b9ff" stop-opacity="0.13"/>
-        <stop offset="1" stop-color="#74b9ff" stop-opacity="0.03"/>
+        <stop offset="0" stop-color="#74b9ff" stop-opacity="0.12"/>
+        <stop offset="1" stop-color="#74b9ff" stop-opacity="0.02"/>
       </linearGradient>
       <radialGradient id="g-brain" cx="0.5" cy="0.5" r="0.7">
-        <stop offset="0" stop-color="#6c5ce7" stop-opacity="0.22"/>
+        <stop offset="0" stop-color="#6c5ce7" stop-opacity="0.20"/>
         <stop offset="1" stop-color="#6c5ce7" stop-opacity="0.02"/>
       </radialGradient>
       <linearGradient id="g-tools" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#00b894" stop-opacity="0.16"/>
-        <stop offset="1" stop-color="#00b894" stop-opacity="0.04"/>
+        <stop offset="0" stop-color="#00b894" stop-opacity="0.15"/>
+        <stop offset="1" stop-color="#00b894" stop-opacity="0.03"/>
       </linearGradient>
       <linearGradient id="g-memory" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#fdcb6e" stop-opacity="0.04"/>
         <stop offset="1" stop-color="#fdcb6e" stop-opacity="0.18"/>
       </linearGradient>
+      <linearGradient id="g-safety" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e17055" stop-opacity="0.09"/>
+        <stop offset="1" stop-color="#e17055" stop-opacity="0.03"/>
+      </linearGradient>
     `;
-    return markers + organGradients;
+    return markers + gradients;
   }
 
   _renderOrganBodies() {
-    const L = this.snap.layout;
     const parts = [];
-    for (const [id, r] of Object.entries(L.organs)) {
-      const cls = `organ organ-${id}`;
+    for (const [id, r] of Object.entries(this.snap.layout.organs)) {
+      const extraCls = id === 'safety' ? ' organ-safety-outline' : '';
       parts.push(`
-        <g class="${cls}" data-organ="${id}">
+        <g class="organ organ-${id}${extraCls}" data-organ="${id}">
           <rect class="organ-bg"
                 x="${r.x + 6}" y="${r.y + 6}"
                 width="${r.w - 12}" height="${r.h - 12}"
                 rx="28" ry="28"
                 fill="url(#g-${id})"
-                stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                stroke="rgba(255,255,255,${id === 'safety' ? '0.18' : '0.08'})"
+                stroke-dasharray="${id === 'safety' ? '6 5' : ''}"
+                stroke-width="${id === 'safety' ? '2' : '1.5'}"/>
         </g>
       `);
     }
@@ -137,29 +134,28 @@ export class OverviewView {
   }
 
   _renderOrganLabels() {
-    const L = this.snap.layout;
     const parts = [];
-    for (const [id, r] of Object.entries(L.organs)) {
+    for (const [id, r] of Object.entries(this.snap.layout.organs)) {
       parts.push(`
         <text class="organ-label l0-label"
               x="${r.label_x}" y="${r.label_y}"
-              text-anchor="middle"
-              dominant-baseline="hanging">${this._esc(r.label)}</text>
+              text-anchor="middle" dominant-baseline="hanging">${this._esc(r.label)}</text>
       `);
     }
     return parts.join('');
   }
 
   _renderMemoryBands() {
-    const bands = this.snap.layout.memory_bands;
+    const bands = this.snap.layout.memory_bands || {};
     const parts = [];
     for (const [id, b] of Object.entries(bands)) {
       parts.push(`
-        <g class="mem-band mem-band-${id} detail-only">
+        <g class="mem-band mem-band-${id}">
           <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"
                 rx="16" ry="16"
-                fill="rgba(253,203,110,0.04)"
-                stroke="rgba(253,203,110,0.25)" stroke-dasharray="6 6" stroke-width="1"/>
+                fill="rgba(253,203,110,0.03)"
+                stroke="rgba(253,203,110,0.22)"
+                stroke-dasharray="6 6" stroke-width="1"/>
           <text x="${b.label_x}" y="${b.label_y}"
                 text-anchor="middle"
                 class="mem-band-label">${this._esc(b.label)}</text>
@@ -169,90 +165,30 @@ export class OverviewView {
     return parts.join('');
   }
 
-  _renderEdges() {
-    const placements = this.snap.layout.nodes;
-    const edges = this.snap.typed_edges || [];
+  _renderBlocks() {
+    // Render lightweight block backgrounds + labels/questions for every
+    // block in layout.blocks. Tools/safety have their content rendered
+    // separately below; this is the background chrome for all of them.
     const parts = [];
-    for (const e of edges) {
-      const s = placements[e.source];
-      const t = placements[e.target];
-      if (!s || !t) continue;
-      const color = EDGE_COLORS[e.kind] || '#8b8fa3';
-      const dash = (e.kind === 'reads_from' || e.kind === 'observes') ? '6 5' :
-                   (e.kind === 'governs') ? '2 6' : '';
-      const path = this._routePath(s, t);
-      const cls = `edge edge-${e.kind} vis-${e.visibility}`;
+    const blocks = this.snap.layout.blocks || {};
+    const blockMeta = this._buildBlockMetaMap();
+    for (const [bid, b] of Object.entries(blocks)) {
+      const meta = blockMeta[bid] || {};
+      const organ = meta.organ || (bid.split('_')[0]);
       parts.push(`
-        <g class="${cls}" data-edge="${e.source}->${e.target}">
-          <path d="${path}"
-                stroke="${color}"
-                stroke-width="${e.kind === 'governs' ? 2.2 : 1.8}"
-                stroke-dasharray="${dash}"
-                fill="none"
-                marker-end="url(#arrow-${e.kind})"
-                opacity="0.82"/>
-          <title>${this._esc(e.source + ' → ' + e.target + ': ' + (e.label || e.kind))}</title>
-        </g>
-      `);
-    }
-    return parts.join('');
-  }
-
-  // Simple orthogonal-ish curve — bezier between endpoints, auto-offset
-  // for readability so same-direction edges don't stack.
-  _routePath(s, t) {
-    const sx = s.cx, sy = s.cy;
-    const tx = t.cx, ty = t.cy;
-    const dx = tx - sx, dy = ty - sy;
-    const dist = Math.hypot(dx, dy);
-    // Short edges: straight line; long edges: gentle bezier with midpoint lift
-    if (dist < 200) {
-      return `M ${sx} ${sy} L ${tx} ${ty}`;
-    }
-    const mx = (sx + tx) / 2;
-    const my = (sy + ty) / 2;
-    // Perpendicular offset scaled to distance (small for aesthetic curve)
-    const perpX = -dy / dist;
-    const perpY = dx / dist;
-    const lift = Math.min(80, dist * 0.12);
-    const cx = mx + perpX * lift;
-    const cy = my + perpY * lift;
-    return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
-  }
-
-  _renderNodes() {
-    const placements = this.snap.layout.nodes;
-    const parts = [];
-    for (const n of this.snap.topology.nodes) {
-      const p = placements[n.id];
-      if (!p) continue;
-      const w = p.w || 130, h = p.h || 46;
-      const x = p.cx - w / 2, y = p.cy - h / 2;
-      const hasDZ = (n.dark_zone_ids || []).length > 0;
-      const organ = n.organ || 'memory';
-      const role = n.functional_role || '';
-      const kind = n.kind || '';
-      const isPaused = (n.id === 'strategic_planner');
-
-      const cls = [
-        'node',
-        `node-${n.id}`,
-        `organ-${organ}`,
-        role ? `role-${role}` : '',
-        hasDZ ? 'has-dz' : '',
-        isPaused ? 'paused' : '',
-        `kind-${kind}`,
-      ].filter(Boolean).join(' ');
-
-      parts.push(`
-        <g class="${cls}" data-node-id="${n.id}" transform="translate(${x}, ${y})">
-          <rect class="node-rect" x="0" y="0" width="${w}" height="${h}"
-                rx="8" ry="8"/>
-          <text class="node-label" x="${w/2}" y="${h/2}"
-                text-anchor="middle" dominant-baseline="central">${this._esc(n.label)}</text>
-          ${hasDZ ? `
-            <circle class="dz-pulse" cx="${w - 6}" cy="6" r="5" fill="#e17055"/>
-            <title>${this._esc(n.label + ' — Dark Zones: ' + (n.dark_zone_ids || []).join(', '))}</title>
+        <g class="block block-${bid}" data-block-id="${this._esc(bid)}" data-block-organ="${organ}">
+          <rect class="block-bg"
+                x="${b.x + 4}" y="${b.y + 4}"
+                width="${b.w - 8}" height="${b.h - 8}"
+                rx="12" ry="12"
+                fill="rgba(255,255,255,0.015)"
+                stroke="rgba(255,255,255,0.06)"
+                stroke-width="1"/>
+          <text class="block-label" x="${b.label_x}" y="${b.label_y}"
+                text-anchor="middle" dominant-baseline="hanging">${this._esc(meta.label || '')}</text>
+          ${meta.question ? `
+            <text class="block-question" x="${b.label_x}" y="${b.label_y + 22}"
+                  text-anchor="middle" dominant-baseline="hanging">${this._esc(meta.question)}</text>
           ` : ''}
         </g>
       `);
@@ -260,35 +196,269 @@ export class OverviewView {
     return parts.join('');
   }
 
-  // ------------------------------------------------------------------
+  _buildBlockMetaMap() {
+    const map = {};
+    const blocks = this.snap.blocks || {};
+    for (const organKey of Object.keys(blocks)) {
+      for (const b of blocks[organKey]) {
+        map[b.id] = b;
+      }
+    }
+    return map;
+  }
+
+  _renderEdges() {
+    const placements = this._blockCenterMap();
+    const edges = this.snap.typed_edges || [];
+    const parts = [];
+    for (const e of edges) {
+      const s = placements[e.source];
+      const t = placements[e.target];
+      if (!s || !t) continue;
+      const color = EDGE_COLORS[e.kind] || '#8b8fa3';
+      const dash = e.kind === 'data' ? '7 5' : '';
+      const path = this._routePath(s, t);
+      parts.push(`
+        <g class="edge edge-${e.kind} vis-${e.visibility || 'l0'}"
+           data-edge="${this._esc(e.source + '->' + e.target)}"
+           data-kind="${e.kind}">
+          <path d="${path}"
+                stroke="${color}"
+                stroke-width="2"
+                stroke-dasharray="${dash}"
+                fill="none"
+                marker-end="url(#arrow-${e.kind})"
+                opacity="0.82"/>
+          <title>${this._esc((EDGE_LABELS_RU[e.kind] || e.kind) + ': ' + (e.label || ''))}</title>
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _blockCenterMap() {
+    // For block-level edges, endpoints are block IDs → use block center.
+    const m = {};
+    const blocks = this.snap.layout.blocks || {};
+    for (const [bid, b] of Object.entries(blocks)) {
+      m[bid] = { cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+    }
+    // Also include every node center so legacy edges still work.
+    for (const [nid, n] of Object.entries(this.snap.layout.nodes || {})) {
+      m[nid] = { cx: n.cx, cy: n.cy };
+    }
+    return m;
+  }
+
+  _routePath(s, t) {
+    const sx = s.cx, sy = s.cy;
+    const tx = t.cx, ty = t.cy;
+    const dx = tx - sx, dy = ty - sy;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 180) return `M ${sx} ${sy} L ${tx} ${ty}`;
+    const mx = (sx + tx) / 2;
+    const my = (sy + ty) / 2;
+    const perpX = -dy / dist;
+    const perpY = dx / dist;
+    const lift = Math.min(80, dist * 0.12);
+    return `M ${sx} ${sy} Q ${mx + perpX * lift} ${my + perpY * lift} ${tx} ${ty}`;
+  }
+
+  _renderNodes() {
+    // Only render topology nodes that have layout placements AND belong
+    // to node-based organs (interface, brain, memory, external).
+    // Tools / safety blocks have their own renderers.
+    const placements = this.snap.layout.nodes;
+    const parts = [];
+    for (const n of this.snap.topology.nodes) {
+      const p = placements[n.id];
+      if (!p) continue;
+      if (n.organ === 'tools' && n.id !== 'registry') continue;
+      const w = p.w || 130, h = p.h || 40;
+      const x = p.cx - w / 2, y = p.cy - h / 2;
+      const hasDZ = (n.dark_zone_ids || []).length > 0;
+      const organ = n.organ || 'memory';
+      const isPaused = !!n.paused;
+
+      const cls = [
+        'node',
+        `node-${n.id}`,
+        `organ-${organ}`,
+        hasDZ ? 'has-dz' : '',
+        isPaused ? 'paused' : '',
+      ].filter(Boolean).join(' ');
+
+      parts.push(`
+        <g class="${cls}" data-node-id="${n.id}" transform="translate(${x}, ${y})">
+          <rect class="node-rect" x="0" y="0" width="${w}" height="${h}" rx="6" ry="6"/>
+          <text class="node-label" x="${w/2}" y="${h/2}"
+                text-anchor="middle" dominant-baseline="central">${this._esc(n.label)}</text>
+          ${hasDZ ? `
+            <g class="dz-marker" transform="translate(${w - 10}, 10)">
+              <circle class="dz-dot" cx="0" cy="0" r="7" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
+              <text class="dz-glyph" x="0" y="1" text-anchor="middle" dominant-baseline="central">⚠</text>
+              <title>${(n.dark_zone_ids || []).length} известных слабостей: ${(n.dark_zone_ids || []).join(', ')}</title>
+            </g>
+          ` : ''}
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _renderToolBlockBodies() {
+    // For each TOOLS block, render a label + count + 1-2 example tool names.
+    const blocks = this.snap.layout.blocks || {};
+    const toolsBlocks = (this.snap.blocks || {}).tools || [];
+    const parts = [];
+    for (const tb of toolsBlocks) {
+      const b = blocks[tb.id];
+      if (!b) continue;
+      const examples = tb.tools.slice(0, 2).join(', ');
+      const count = tb.tools.length;
+      const dzSet = new Set();
+      for (const name of tb.tools) {
+        const t = this.snap.tools.find(x => x.name === name);
+        if (t) (t.dark_zone_ids || []).forEach(d => dzSet.add(d));
+      }
+      const dzCount = dzSet.size;
+      parts.push(`
+        <g class="tool-block-body" data-block-id="${tb.id}" data-block-organ="tools">
+          <text class="tool-block-count" x="${b.x + b.w - 14}" y="${b.y + 22}"
+                text-anchor="end" dominant-baseline="hanging">${count}</text>
+          <text class="tool-block-examples" x="${b.x + 14}" y="${b.y + b.h - 12}"
+                text-anchor="start" dominant-baseline="alphabetic">${this._esc(examples)}${count > 2 ? ' …' : ''}</text>
+          ${dzCount ? `
+            <g class="dz-marker" transform="translate(${b.x + b.w - 14}, ${b.y + b.h - 12})">
+              <circle class="dz-dot" cx="0" cy="0" r="6" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
+              <text class="dz-glyph" x="0" y="1" text-anchor="middle" dominant-baseline="central" style="font-size:8px">⚠</text>
+              <title>${dzCount} слабостей в этой категории</title>
+            </g>` : ''}
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _renderSafetyBlockBodies() {
+    // Each SAFETY block is a stack of labeled items (not topology nodes).
+    const blocks = this.snap.layout.blocks || {};
+    const safetyBlocks = (this.snap.blocks || {}).safety || [];
+    const parts = [];
+    for (const sb of safetyBlocks) {
+      const b = blocks[sb.id];
+      if (!b) continue;
+      const items = sb.items || [];
+      const innerTop = b.y + 70; // below the label + question
+      const rowH = 26;
+      const isWeaknesses = sb.id === 'safety_weaknesses';
+
+      const visible = isWeaknesses ? items.slice(0, 8) : items;
+      const rows = visible.map((it, i) => {
+        const y = innerTop + i * rowH;
+        if (isWeaknesses) {
+          return `
+            <g class="safety-row safety-row-dz" data-goto-dz="${this._esc(it.dz_id || '')}"
+               transform="translate(${b.x + 16}, ${y})">
+              <circle cx="6" cy="13" r="5" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
+              <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(it.title)}</text>
+            </g>`;
+        }
+        return `
+          <g class="safety-row" transform="translate(${b.x + 16}, ${y})">
+            <circle cx="6" cy="13" r="4" fill="#74b9ff" stroke="none"/>
+            <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(it.title)}</text>
+            ${it.ref ? `<title>${this._esc(it.ref)}</title>` : ''}
+          </g>`;
+      }).join('');
+
+      const more = (isWeaknesses && items.length > 8)
+        ? `<text class="safety-more" x="${b.x + b.w / 2}" y="${innerTop + 8 * rowH + 16}"
+              text-anchor="middle">+ ещё ${items.length - 8} — открыть «Тёмные зоны»</text>`
+        : '';
+
+      parts.push(`
+        <g class="safety-block-body" data-block-id="${sb.id}" data-block-organ="safety">
+          ${rows}${more}
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  // -------------------------------------------------------------------
+  // Legend + filter bar (rendered as HTML siblings of the SVG)
+  // -------------------------------------------------------------------
+
+  _renderLegend() {
+    return `
+      <div class="ov-legend">
+        <div class="legend-row">
+          <span class="edge-sample control"></span>
+          <span class="legend-label">Управление</span>
+          <span class="legend-hint">вызов, контроль</span>
+        </div>
+        <div class="legend-row">
+          <span class="edge-sample data"></span>
+          <span class="legend-label">Данные</span>
+          <span class="legend-hint">чтение, запись, наблюдение</span>
+        </div>
+        <div class="legend-row legend-marker-row">
+          <span class="legend-marker">
+            <svg width="14" height="14" viewBox="-8 -8 16 16">
+              <circle cx="0" cy="0" r="7" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
+              <text x="0" y="1" text-anchor="middle" dominant-baseline="central" font-size="9">⚠</text>
+            </svg>
+          </span>
+          <span class="legend-label">Известные слабости</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // -------------------------------------------------------------------
   // Interactions
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
 
   _installInteractions() {
-    // Click on a node → open the detail panel (L2)
     this.svg.addEventListener('click', e => {
+      // Dark-Zone chip click (inside safety weaknesses)
+      const gotoDz = e.target.closest('[data-goto-dz]');
+      if (gotoDz && gotoDz.dataset.gotoDz) {
+        e.stopPropagation();
+        this.navigateExternalView('darkzones', gotoDz.dataset.gotoDz);
+        return;
+      }
+      // Node click → open side panel
       const nodeG = e.target.closest('[data-node-id]');
       if (nodeG) {
         this._selectNode(nodeG.dataset.nodeId);
         return;
       }
-      // Click on an organ body or label → zoom into (or out of) that organ
+      // Tool-block body → open Tools view (preserving phase-1 behavior)
+      const toolBody = e.target.closest('.tool-block-body');
+      if (toolBody) {
+        this.navigateExternalView('tools');
+        return;
+      }
+      // Block background → zoom into its organ
+      const blockG = e.target.closest('[data-block-organ]');
+      if (blockG) {
+        const organ = blockG.dataset.blockOrgan;
+        const target = `l1-${organ}`;
+        this.zoomTo(this.zoom === target ? 'l0' : target, { push: true });
+        return;
+      }
+      // Organ body → zoom in / out
       const organG = e.target.closest('[data-organ]');
       if (organG) {
         const target = `l1-${organG.dataset.organ}`;
-        if (this.zoom === target) {
-          // second click on an already-zoomed organ → zoom out
-          this.zoomTo('l0', { push: true });
-        } else {
-          this.zoomTo(target, { push: true });
-        }
+        this.zoomTo(this.zoom === target ? 'l0' : target, { push: true });
         return;
       }
-      // Click on empty svg → zoom out
       if (this.zoom !== 'l0') this.zoomTo('l0', { push: true });
     });
 
-    // Hover: highlight neighborhood
     this.svg.addEventListener('mouseover', e => {
       const nodeG = e.target.closest('[data-node-id]');
       if (nodeG) this._highlightNeighborhood(nodeG.dataset.nodeId);
@@ -300,28 +470,34 @@ export class OverviewView {
   }
 
   _highlightNeighborhood(nodeId) {
-    this.svg.classList.add('hovering');
-    // Tag connected edges and peer nodes
-    const edges = this.snap.typed_edges || [];
-    const neighbors = new Set([nodeId]);
-    for (const e of edges) {
-      if (e.source === nodeId) neighbors.add(e.target);
-      if (e.target === nodeId) neighbors.add(e.source);
+    const nodeToBlock = {};
+    for (const o of ['brain', 'interface', 'memory']) {
+      for (const b of (this.snap.blocks[o] || [])) {
+        for (const nid of (b.nodes || [])) nodeToBlock[nid] = b.id;
+      }
     }
+    const myBlock = nodeToBlock[nodeId];
+    const edges = this.snap.typed_edges || [];
+    const activeEndpoints = new Set([nodeId, myBlock].filter(Boolean));
+    for (const e of edges) {
+      if (e.source === myBlock) activeEndpoints.add(e.target);
+      if (e.target === myBlock) activeEndpoints.add(e.source);
+    }
+
     this.svg.querySelectorAll('[data-node-id]').forEach(el => {
-      el.classList.toggle('hl-neighbor', neighbors.has(el.dataset.nodeId));
-      el.classList.toggle('hl-dim', !neighbors.has(el.dataset.nodeId));
+      const isMe = el.dataset.nodeId === nodeId;
+      el.classList.toggle('hl-neighbor', isMe);
+      el.classList.toggle('hl-dim', !isMe);
     });
     this.svg.querySelectorAll('[data-edge]').forEach(el => {
       const [s, t] = el.dataset.edge.split('->');
-      const active = (s === nodeId || t === nodeId);
+      const active = activeEndpoints.has(s) && activeEndpoints.has(t);
       el.classList.toggle('hl-active', active);
       el.classList.toggle('hl-dim', !active);
     });
   }
 
   _clearHighlight() {
-    this.svg.classList.remove('hovering');
     this.svg.querySelectorAll('.hl-neighbor,.hl-dim,.hl-active').forEach(el => {
       el.classList.remove('hl-neighbor', 'hl-dim', 'hl-active');
     });
@@ -330,11 +506,7 @@ export class OverviewView {
   _selectNode(id) {
     const node = this.snap.topology.nodes.find(n => n.id === id);
     if (!node) return;
-    // Tools registry: if clicked node is registry, open the Tools view instead
-    if (id === 'registry') {
-      this.navigateExternalView('tools');
-      return;
-    }
+    if (id === 'registry') { this.navigateExternalView('tools'); return; }
     const data = {
       id: node.id, label: node.label, kind: node.kind, layer: node.layer,
       path: node.path || '', loc: node.loc || 0,
@@ -346,43 +518,50 @@ export class OverviewView {
     this.onSelectLeaf && this.onSelectLeaf({ kind: 'node', data });
   }
 
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
+  // Filter
+  // -------------------------------------------------------------------
+
+  setFilter(mode) {
+    this.filter = mode;
+    this.svg.setAttribute('data-filter', mode);
+  }
+
+  // -------------------------------------------------------------------
   // Zoom
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
 
   zoomTo(state, { push = true } = {}) {
     if (this.animating) return;
-    const layout = this.snap.layout;
-    const states = layout.zoom_states;
+    const states = this.snap.layout.zoom_states;
     const target = states[state] || states.l0;
-    const current = this._parseViewBox(this.svg.getAttribute('viewBox'));
+    const current = this._parseVB(this.svg.getAttribute('viewBox'));
     this.zoom = state;
     this.svg.setAttribute('data-zoom', state);
-    if (push) this._setHash(this._stateToHash(state));
+    if (push) this._setHash(state === 'l0' ? '#/l0' : `#/${state}`);
     this._renderBreadcrumb();
-    this._animateViewBox(current, target);
+    this._tweenVB(current, target);
   }
 
-  _parseViewBox(v) {
+  _parseVB(v) {
     const [x, y, w, h] = v.split(/\s+/).map(Number);
     return { x, y, w, h };
   }
 
-  _animateViewBox(from, to) {
+  _tweenVB(from, to) {
     this.animating = true;
     const start = performance.now();
-    const dur = 520; // ms
-    const tween = (a, b, t) => a + (b - a) * t;
-    const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const dur = 520;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
     const clipRect = this.svg.querySelector('.vbclip-rect');
-
     const step = now => {
       const t = Math.min(1, (now - start) / dur);
-      const k = easeInOut(t);
-      const x = tween(from.x, to.x, k);
-      const y = tween(from.y, to.y, k);
-      const w = tween(from.w, to.w, k);
-      const h = tween(from.h, to.h, k);
+      const k = ease(t);
+      const x = lerp(from.x, to.x, k);
+      const y = lerp(from.y, to.y, k);
+      const w = lerp(from.w, to.w, k);
+      const h = lerp(from.h, to.h, k);
       this.svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
       if (clipRect) {
         clipRect.setAttribute('x', x);
@@ -390,53 +569,60 @@ export class OverviewView {
         clipRect.setAttribute('width', w);
         clipRect.setAttribute('height', h);
       }
-      if (t < 1) {
-        requestAnimationFrame(step);
-      } else {
-        this.animating = false;
-      }
+      if (t < 1) requestAnimationFrame(step);
+      else this.animating = false;
     };
     requestAnimationFrame(step);
   }
 
-  // ------------------------------------------------------------------
-  // Breadcrumb + URL hash
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------
+  // Crumbs + hash
+  // -------------------------------------------------------------------
 
   _renderBreadcrumb() {
-    const L = this.snap.layout;
-    const crumbs = [
-      { label: 'Overview', state: 'l0' },
-    ];
+    const ORGAN_LABELS_RU = {
+      external: 'ВНЕШНЕЕ',
+      interface: 'ИНТЕРФЕЙС',
+      brain: 'МОЗГ',
+      tools: 'ИНСТРУМЕНТЫ',
+      memory: 'ПАМЯТЬ',
+      safety: 'БЕЗОПАСНОСТЬ',
+    };
+    const crumbs = [{ label: 'Обзор', state: 'l0' }];
     if (this.zoom && this.zoom !== 'l0') {
       const organId = this.zoom.replace(/^l1-/, '');
-      const organ = L.organs[organId];
-      if (organ) {
-        crumbs.push({ label: organ.label, state: this.zoom });
-      }
+      const lbl = ORGAN_LABELS_RU[organId] || organId.toUpperCase();
+      crumbs.push({ label: lbl, state: this.zoom });
     }
-    this.crumbsEl.innerHTML = crumbs.map((c, i) => {
-      const last = i === crumbs.length - 1;
-      return `<span class="crumb ${last ? 'current' : ''}" data-state="${c.state}">${this._esc(c.label)}</span>` +
-             (last ? '' : '<span class="crumb-sep">›</span>');
-    }).join('') + `
+    this.crumbsEl.innerHTML = `
+      ${crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1;
+        return `<span class="crumb ${last ? 'current' : ''}" data-state="${c.state}">${this._esc(c.label)}</span>` +
+               (last ? '' : '<span class="crumb-sep">›</span>');
+      }).join('')}
       <span class="crumb-spacer"></span>
+      <div class="filter-chips" role="group" aria-label="Фильтр связей">
+        <button class="fchip ${this.filter === 'all' ? 'active' : ''}" data-filter="all">Все связи</button>
+        <button class="fchip ${this.filter === 'control' ? 'active' : ''}" data-filter="control">Только управление</button>
+        <button class="fchip ${this.filter === 'data' ? 'active' : ''}" data-filter="data">Только данные</button>
+      </div>
       <button class="safety-pill" data-safety="open"
-              title="${this.snap.summary.dark_zones} Dark Zones — open taxonomy">
-        ⚠ ${this.snap.summary.dark_zones} zones
+              title="${this.snap.summary.dark_zones} известных слабостей — открыть таксономию">
+        ⚠ ${this.snap.summary.dark_zones} слабостей
       </button>
-      <span class="zoom-hint">${this.zoom === 'l0' ? 'click an organ to zoom' : 'click background or breadcrumb to zoom out'}</span>
     `;
-
     this.crumbsEl.querySelectorAll('.crumb').forEach(el => {
-      if (!el.classList.contains('current')) {
+      if (!el.classList.contains('current'))
         el.addEventListener('click', () => this.zoomTo(el.dataset.state, { push: true }));
-      }
+    });
+    this.crumbsEl.querySelectorAll('.fchip').forEach(el => {
+      el.addEventListener('click', () => {
+        this.setFilter(el.dataset.filter);
+        this._renderBreadcrumb();
+      });
     });
     const safety = this.crumbsEl.querySelector('[data-safety="open"]');
-    safety && safety.addEventListener('click', () => {
-      this.navigateExternalView('darkzones');
-    });
+    safety && safety.addEventListener('click', () => this.navigateExternalView('darkzones'));
   }
 
   _setHash(h) {
@@ -445,20 +631,16 @@ export class OverviewView {
     setTimeout(() => { this._suppressHash = false; }, 0);
   }
 
-  _stateToHash(state) {
-    return state === 'l0' ? '#/l0' : `#/${state}`;
-  }
-
   _restoreFromHash() {
     const raw = (window.location.hash || '').replace(/^#\/?/, '');
-    if (raw.startsWith('l1-')) {
-      this.zoomTo(raw, { push: false });
-    } else {
-      this.zoomTo('l0', { push: false });
-    }
+    if (raw.startsWith('l1-')) this.zoomTo(raw, { push: false });
+    else this.zoomTo('l0', { push: false });
   }
 
-  // Public API called by main.js
+  // -------------------------------------------------------------------
+  // API used by main.js
+  // -------------------------------------------------------------------
+
   showL0() { this.zoomTo('l0', { push: true }); }
 
   search(query) {
@@ -478,10 +660,9 @@ export class OverviewView {
   }
 
   applyFilter(mode) {
-    // "filter" maps to zoom shortcuts.
     if (mode === 'memory') this.zoomTo('l1-memory');
     else if (mode === 'tools') this.zoomTo('l1-tools');
-    else if (mode === 'dark') this.navigateExternalView('darkzones');
+    else if (mode === 'dark') this.zoomTo('l1-safety');
     else if (mode === 'write') this.zoomTo('l1-brain');
     else this.zoomTo('l0');
   }

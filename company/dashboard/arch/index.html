@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAI Architecture — Phase 1</title>
+<link rel="stylesheet" href="styles.css?v=phase1">
+<!-- Cytoscape via CDN with dagre layout for hierarchical graph -->
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="title">THAI Architecture</div>
+      <div class="subtitle" id="meta-sub">Loading…</div>
+    </div>
+    <nav class="views">
+      <button class="view-btn active" data-view="overview">Overview</button>
+      <button class="view-btn" data-view="darkzones">Dark Zones <span class="pill" id="dz-count">0</span></button>
+      <button class="view-btn" data-view="memory">Memory</button>
+      <button class="view-btn" data-view="tools">Tools <span class="pill" id="tool-count">0</span></button>
+    </nav>
+    <div class="right">
+      <input type="search" id="search" placeholder="Search files, tools, D-IDs…" autocomplete="off">
+      <select id="filter">
+        <option value="all">Filter: all</option>
+        <option value="write">Write paths</option>
+        <option value="memory">Memory only</option>
+        <option value="dark">Dark-Zone nodes</option>
+        <option value="tools">Tool nodes</option>
+      </select>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="view-overview" class="view active">
+      <div id="cy" class="cy-container"></div>
+      <div class="legend">
+        <div class="legend-row"><span class="dot process"></span> Process / worker</div>
+        <div class="legend-row"><span class="dot external"></span> External</div>
+        <div class="legend-row"><span class="dot infra"></span> Infra</div>
+        <div class="legend-row"><span class="dot module"></span> Module</div>
+        <div class="legend-row"><span class="dot file"></span> File memory</div>
+        <div class="legend-row"><span class="dot log"></span> Log</div>
+        <div class="legend-row"><span class="dot state"></span> State JSON</div>
+        <div class="legend-row"><span class="dot chroma"></span> ChromaDB</div>
+        <div class="legend-row"><span class="edge-sample solid"></span> Normal flow</div>
+        <div class="legend-row"><span class="edge-sample dashed"></span> Conditional</div>
+        <div class="legend-row"><span class="edge-sample unsafe"></span> Unsafe / Dark-Zone</div>
+      </div>
+    </section>
+
+    <section id="view-darkzones" class="view">
+      <div class="dz-layout">
+        <div id="dz-list" class="dz-list"></div>
+        <div id="dz-detail" class="dz-detail">
+          <div class="muted">Select a Dark Zone to view details.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-memory" class="view">
+      <div id="cy-memory" class="cy-container"></div>
+    </section>
+
+    <section id="view-tools" class="view">
+      <div class="tool-layout">
+        <div class="tool-filterbar">
+          <button class="tool-chip active" data-tool-filter="all">All</button>
+          <button class="tool-chip" data-tool-filter="core">Core</button>
+          <button class="tool-chip" data-tool-filter="write">Write</button>
+          <button class="tool-chip" data-tool-filter="destructive">Destructive</button>
+          <button class="tool-chip" data-tool-filter="consciousness">Consciousness whitelist</button>
+        </div>
+        <div id="tool-grid" class="tool-grid"></div>
+      </div>
+    </section>
+
+    <aside id="panel" class="panel">
+      <button id="panel-close" class="panel-close" title="Close">×</button>
+      <div id="panel-body"></div>
+    </aside>
+  </main>
+
+  <script type="module" src="main.js?v=phase1"></script>
+</body>
+</html>

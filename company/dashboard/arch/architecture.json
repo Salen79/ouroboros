@@ -1,0 +1,3613 @@
+{
+  "meta": {
+    "generated_at": "2026-04-21T16:11:22.394870+00:00",
+    "git": {
+      "sha": "f3c50d31ed8df4c65897b55c8f800a5ccccb1975",
+      "branch": "feat/architecture-dashboard-phase1",
+      "subject": "docs: clarify MAX_TASK_COST runtime source + log Strategic Planner pause"
+    },
+    "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
+    "repo": "/home/deploy/ouroboros",
+    "schema_version": 1,
+    "phase": 1
+  },
+  "summary": {
+    "tools_total": 64,
+    "tools_core": 37,
+    "tools_write": 22,
+    "tools_destructive": 7,
+    "tools_consciousness": 14,
+    "dark_zones": 25,
+    "modules": 23,
+    "memory_files": 11,
+    "nodes": 53,
+    "edges": 64
+  },
+  "tools": [
+    {
+      "name": "analyze_screenshot",
+      "description": "Analyze the last browser screenshot using a Vision LLM. Must call browse_page(output='screenshot') or browser_action(action='screenshot') first. Returns a text description and analysis of the screenshot. Use this to verify UI, check for visual errors, or understand page layout.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "What to look for or analyze in the screenshot (default: general description)"
+          },
+          "model": {
+            "type": "string",
+            "description": "VLM model to use (default: current OUROBOROS_MODEL)"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/vision.py",
+      "line": 126,
+      "is_code_tool": false,
+      "timeout_sec": 30,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "apply_change",
+      "description": "Apply a code change: optionally delegate edits to Claude Code CLI, commit, run smoke tests, optionally auto-merge. For code files (.py/.js/.ts): provide task_description and Claude Code CLI handles the actual edits. For non-code files: write them first with write_file, then call apply_change to commit. Auto-merge only works for GREEN zone changes.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "branch_name": {
+            "type": "string",
+            "description": "Branch name for the change"
+          },
+          "commit_message": {
+            "type": "string",
+            "description": "Git commit message"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific files to stage (null = all tracked changes)"
+          },
+          "auto_merge": {
+            "type": "boolean",
+            "description": "Whether to auto-merge if zone allows (GREEN only)",
+            "default": false
+          },
+          "target_branch": {
+            "type": "string",
+            "description": "Branch to merge into (default: ouroboros)",
+            "default": "ouroboros"
+          },
+          "use_claude_code": {
+            "type": "boolean",
+            "description": "Whether to delegate edits to Claude Code CLI. Auto-detected if omitted: True for code files (.py/.js/.ts) or YELLOW/RED zone. False for non-code GREEN zone files."
+          },
+          "task_description": {
+            "type": "string",
+            "description": "WHAT to change and WHY — Claude Code CLI handles HOW. Required when use_claude_code is True."
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Constraints for Claude Code CLI: patterns to follow, tests that must pass, files to avoid, etc."
+          }
+        },
+        "required": [
+          "branch_name",
+          "commit_message"
+        ]
+      },
+      "module": "ouroboros/tools/evolution.py",
+      "line": 247,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "browse_page",
+      "description": "Open a URL in headless browser. Returns page content as text, html, markdown, or screenshot (base64 PNG). Browser persists across calls within a task. For screenshots: use send_photo tool to deliver the image to owner.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to open"
+          },
+          "output": {
+            "type": "string",
+            "enum": [
+              "text",
+              "html",
+              "markdown",
+              "screenshot"
+            ],
+            "description": "Output format (default: text)"
+          },
+          "wait_for": {
+            "type": "string",
+            "description": "CSS selector to wait for before extraction"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Page load timeout in ms (default: 30000)"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "module": "ouroboros/tools/browser.py",
+      "line": 335,
+      "is_code_tool": false,
+      "timeout_sec": 60,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "browser_action",
+      "description": "Perform action on current browser page. Actions: click (selector), fill (selector + value), select (selector + value), screenshot (base64 PNG), evaluate (JS code in value), scroll (value: up/down/top/bottom).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "click",
+              "fill",
+              "select",
+              "screenshot",
+              "evaluate",
+              "scroll"
+            ],
+            "description": "Action to perform"
+          },
+          "selector": {
+            "type": "string",
+            "description": "CSS selector for click/fill/select"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value for fill/select, JS for evaluate, direction for scroll"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Action timeout in ms (default: 5000)"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "module": "ouroboros/tools/browser.py",
+      "line": 369,
+      "is_code_tool": false,
+      "timeout_sec": 60,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "cancel_task",
+      "description": "Cancel a task by ID.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 274,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "chat_history",
+      "description": "Retrieve messages from chat history. Supports search.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "default": 100,
+            "description": "Number of messages (from latest)"
+          },
+          "offset": {
+            "type": "integer",
+            "default": 0,
+            "description": "Skip N from end (pagination)"
+          },
+          "search": {
+            "type": "string",
+            "default": "",
+            "description": "Text filter"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 286,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "check_evolution_status",
+      "description": "Check the current state of the self-evolution pipeline. Shows health check, zone config status, active modifications, and runs smoke tests to verify system integrity.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/evolution.py",
+      "line": 314,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "chromadb_stats",
+      "description": "Read-only health check for ChromaDB memory. Returns per-collection item counts and the timestamp of the most recent write, for thai_episodes, thai_skills, thai_history. Use this to verify memory store state instead of ad-hoc python via run_shell. Takes no arguments.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "module": "ouroboros/tools/semantic_memory.py",
+      "line": 455,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D10",
+        "D16"
+      ]
+    },
+    {
+      "name": "claude_code_edit",
+      "description": "Delegate code edits to Claude Code CLI. Preferred for multi-file changes and refactors. Follow with repo_commit_push.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "module": "ouroboros/tools/shell.py",
+      "line": 369,
+      "is_code_tool": true,
+      "timeout_sec": 300,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D16"
+      ]
+    },
+    {
+      "name": "close_github_issue",
+      "description": "Close a GitHub issue with optional closing comment.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Issue number"
+          },
+          "comment": {
+            "type": "string",
+            "default": "",
+            "description": "Optional closing comment"
+          }
+        },
+        "required": [
+          "number"
+        ]
+      },
+      "module": "ouroboros/tools/github.py",
+      "line": 248,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "codebase_digest",
+      "description": "Get a compact digest of the entire codebase: files, sizes, classes, functions. One call instead of many repo_read calls.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 376,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "codebase_health",
+      "description": "Get codebase complexity metrics: file sizes, longest functions, modules exceeding limits. Useful for self-assessment per Bible Principle 5 (Minimalism).",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/health.py",
+      "line": 74,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "comment_on_issue",
+      "description": "Add a comment to a GitHub issue. Use to respond to issues, share progress, or ask clarifying questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Issue number"
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text (markdown)"
+          }
+        },
+        "required": [
+          "number",
+          "body"
+        ]
+      },
+      "module": "ouroboros/tools/github.py",
+      "line": 239,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "compact_context",
+      "description": "Selectively compress old tool results in conversation history to save context tokens. Call this when you notice context is getting large (e.g., after self-check reminder). Keeps recent N tool rounds intact; older rounds get summarized to 1-line summaries. You decide what to keep (via keep_last_n) — no information is lost, just compressed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keep_last_n": {
+            "type": "integer",
+            "description": "Number of recent tool rounds to keep fully intact (default 6, range 2-20). Lower = more compression.",
+            "default": 6
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/compact_context.py",
+      "line": 55,
+      "is_code_tool": false,
+      "timeout_sec": 5,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "create_github_issue",
+      "description": "Create a new GitHub issue. Use for tracking tasks, documenting bugs, or planning features.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Issue title"
+          },
+          "body": {
+            "type": "string",
+            "default": "",
+            "description": "Issue body (markdown)"
+          },
+          "labels": {
+            "type": "string",
+            "default": "",
+            "description": "Labels (comma-separated)"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "module": "ouroboros/tools/github.py",
+      "line": 257,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "deep_reflection",
+      "description": "Выполняет глубокую рефлексию за указанный период: анализирует events.jsonl и chat.jsonl, показывает выполненные задачи, задачи остановленные MAX_ROUNDS, конституционный аудит, метрики бюджета. Использовать при запросах 'рефлексия', 'reflection', 'что делали за X'. По умолчанию — последний час.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Период: '1h' (последний час, по умолчанию), 'today'/'сегодня', '2h', '6h', '24h', 'day', 'week'. Формат: '<число>h' или '<число>d'."
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/deep_reflection.py",
+      "line": 451,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "drive_list",
+      "description": "List files under a Drive directory.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "dir": {
+            "type": "string",
+            "default": "."
+          },
+          "max_entries": {
+            "type": "integer",
+            "default": 500
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 347,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "drive_read",
+      "description": "Read a UTF-8 text file from Google Drive (relative to MyDrive/Ouroboros/).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 342,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "drive_write",
+      "description": "Write a UTF-8 text file on Google Drive.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "overwrite",
+              "append"
+            ],
+            "default": "overwrite"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ]
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 355,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "enable_tools",
+      "description": "Enable specific additional tools by name (comma-separated). Their schemas will be added to your active tool set for the remainder of this task. Example: enable_tools(tools='multi_model_review,generate_evolution_stats')",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tools": {
+            "type": "string",
+            "description": "Comma-separated tool names to enable"
+          }
+        },
+        "required": [
+          "tools"
+        ]
+      },
+      "module": "ouroboros/tools/tool_discovery.py",
+      "line": 81,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "find_skills",
+      "description": "Search for learned skills/procedures in episodic memory. Use BEFORE starting a task to check if a similar procedure was already learned. Searches only skill-type entries from the last 365 days.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search terms — skill name, tools, or task description"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max skills to return (default: 3)",
+            "default": 3
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/episodic_memory.py",
+      "line": 569,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D4"
+      ]
+    },
+    {
+      "name": "forward_to_worker",
+      "description": "Forward a message to a running worker task's mailbox. Use when the owner sends a message during your active conversation that is relevant to a specific running background task. The worker will see it as [Owner message during task] on its next LLM round.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "ID of the running task to forward to"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message text to forward"
+          }
+        },
+        "required": [
+          "task_id",
+          "message"
+        ]
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 388,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "generate_evolution_stats",
+      "description": "Generate Evolution Time-Lapse data from git history and push to the webapp dashboard. Collects per-commit metrics across three axes: Technical (Python lines of code), Philosophical (BIBLE.md size), Self-Concept (SYSTEM.md size). Pushes docs/evolution.json via GitHub API. Safe to call anytime; takes 15-30s for full history scan.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/evolution_stats.py",
+      "line": 413,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "get_github_issue",
+      "description": "Get full details of a GitHub issue including body and comments.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Issue number"
+          }
+        },
+        "required": [
+          "number"
+        ]
+      },
+      "module": "ouroboros/tools/github.py",
+      "line": 231,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "get_task_result",
+      "description": "Read the result of a completed subtask. Use after schedule_task to collect results.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Task ID returned by schedule_task"
+          }
+        }
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 346,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "git_diff",
+      "description": "git diff (use staged=true to see staged changes after git add)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "staged": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, show staged changes (--staged)"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/git.py",
+      "line": 277,
+      "is_code_tool": true,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "git_status",
+      "description": "git status --porcelain",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/git.py",
+      "line": 272,
+      "is_code_tool": true,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "knowledge_list",
+      "description": "List all topics in the knowledge base with summaries.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/knowledge.py",
+      "line": 301,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "knowledge_read",
+      "description": "Read a topic from the persistent knowledge base on Drive.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic name (alphanumeric, hyphens, underscores). E.g. 'browser-automation', 'joi_gotchas'"
+          }
+        },
+        "required": [
+          "topic"
+        ]
+      },
+      "module": "ouroboros/tools/knowledge.py",
+      "line": 264,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "knowledge_write",
+      "description": "Write or append to a knowledge topic. Use for recipes, gotchas, patterns learned from experience.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic name (alphanumeric, hyphens, underscores)"
+          },
+          "content": {
+            "type": "string",
+            "description": "Content to write (markdown)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "overwrite",
+              "append"
+            ],
+            "description": "Write mode: 'overwrite' (default) or 'append'"
+          }
+        },
+        "required": [
+          "topic",
+          "content"
+        ]
+      },
+      "module": "ouroboros/tools/knowledge.py",
+      "line": 278,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "list_available_tools",
+      "description": "List all additional tools not currently in your active tool set. Returns name + description for each. Use this to discover tools you might need for specific tasks.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "module": "ouroboros/tools/tool_discovery.py",
+      "line": 64,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "list_github_issues",
+      "description": "List GitHub issues. Use to check for new tasks, bug reports, or feature requests from the creator or contributors.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "default": "open",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ],
+            "description": "Filter by state"
+          },
+          "labels": {
+            "type": "string",
+            "default": "",
+            "description": "Filter by label (comma-separated)"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 20,
+            "description": "Max issues to return (max 50)"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/github.py",
+      "line": 221,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "memory_search",
+      "description": "Search episodic memory for relevant entries. Use to recall past decisions, conversations, insights, patterns. Example: memory_search('prism jtbd') or memory_search('budget sergey support')",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search terms — keywords, tags, or topic description"
+          },
+          "days": {
+            "type": "integer",
+            "description": "How many days back to search (default: 60)",
+            "default": 60
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max entries to return (default: 10)",
+            "default": 10
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/episodic_memory.py",
+      "line": 453,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D4"
+      ]
+    },
+    {
+      "name": "multi_model_review",
+      "description": "Send code or text to multiple LLM models for review/consensus. Each model reviews independently. Returns structured verdicts. Choose diverse models yourself. Budget is tracked automatically.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The code or text to review"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Review instructions — what to check for. Fully specified by the LLM at call time."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OpenRouter model identifiers to query (e.g. 3 diverse models for good coverage)"
+          }
+        },
+        "required": [
+          "content",
+          "prompt",
+          "models"
+        ]
+      },
+      "module": "ouroboros/tools/review.py",
+      "line": 30,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "promote_to_stable",
+      "description": "Promote ouroboros -> ouroboros-stable. Call when you consider the code stable.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 260,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "propose_change",
+      "description": "Propose a code modification and get zone classification. Returns GREEN/YELLOW/RED zone level which determines approval needed. GREEN = auto-merge after smoke tests. YELLOW = owner approval. RED = explicit owner permission required. File deletions are ALWAYS RED zone.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of file paths to be modified (relative to repo root)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the proposed change"
+          },
+          "has_deletions": {
+            "type": "boolean",
+            "description": "Whether any files will be deleted (always elevates to RED)",
+            "default": false
+          }
+        },
+        "required": [
+          "files",
+          "description"
+        ]
+      },
+      "module": "ouroboros/tools/evolution.py",
+      "line": 213,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "read_service_logs",
+      "description": "Read recent logs from a production systemd service. Use to diagnose errors, crashes, or unexpected behavior. Returns journalctl output with timestamps. Known services: prism-backend, prism-frontend, vendorlens-backend, caddy.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service name. Accepts short names: 'prism', 'vendorlens', 'caddy', etc."
+          },
+          "lines": {
+            "type": "integer",
+            "description": "Number of log lines to return (default: 50, max: 500).",
+            "default": 50
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "module": "ouroboros/tools/ops.py",
+      "line": 300,
+      "is_code_tool": false,
+      "timeout_sec": 20,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D20"
+      ]
+    },
+    {
+      "name": "recall",
+      "description": "Search conversation history and event logs via ChromaDB. Use to recall past conversations, task results, and system events. Example: recall('what did sergey say about budget') source: 'chat' for conversations, 'events' for system events, 'all' for both.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural language query about past events or conversations"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "chat",
+              "events"
+            ],
+            "description": "Source to search (default: all)",
+            "default": "all"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Max results to return (default: 5)",
+            "default": 5
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/semantic_memory.py",
+      "line": 421,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": [
+        "D10",
+        "D16"
+      ]
+    },
+    {
+      "name": "recent_session",
+      "description": "Show recent activity summary — what was discussed and done in the last N hours. Use after /panic restart to quickly catch up on context without re-running diagnostics.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "hours": {
+            "type": "integer",
+            "description": "How many hours back to look",
+            "default": 2
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/episodic_memory.py",
+      "line": 596,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D4"
+      ]
+    },
+    {
+      "name": "record_memory",
+      "description": "Record an important entry to episodic memory. Use when: significant insight realized, key decision made, important conversation happened, pattern noticed, milestone reached. High importance (4-5) = worth distilling to wisdom layer later.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short, descriptive title (1 line)"
+          },
+          "content": {
+            "type": "string",
+            "description": "What happened, what was understood, why it matters"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "insight",
+              "decision",
+              "conversation",
+              "milestone",
+              "error_pattern",
+              "skill"
+            ],
+            "description": "Type of memory entry",
+            "default": "insight"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Topic tags for search (e.g. ['prism', 'budget', 'sergey'])"
+          },
+          "importance": {
+            "type": "integer",
+            "description": "1-5 scale: 5=wisdom-worthy, 3=useful, 1=minor",
+            "default": 3
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ]
+      },
+      "module": "ouroboros/tools/episodic_memory.py",
+      "line": 485,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D4"
+      ]
+    },
+    {
+      "name": "repo_commit_push",
+      "description": "Commit + push already-changed files. Does pull --rebase before push.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "commit_message": {
+            "type": "string"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Files to add (empty = git add -A)"
+          }
+        },
+        "required": [
+          "commit_message"
+        ]
+      },
+      "module": "ouroboros/tools/git.py",
+      "line": 264,
+      "is_code_tool": true,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D20"
+      ]
+    },
+    {
+      "name": "repo_list",
+      "description": "List files under a repo directory (relative path).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "dir": {
+            "type": "string",
+            "default": "."
+          },
+          "max_entries": {
+            "type": "integer",
+            "default": 500
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 334,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "repo_read",
+      "description": "Read a UTF-8 text file from the GitHub repo (relative path).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 329,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "repo_write_commit",
+      "description": "Write one file + commit + push to ouroboros branch. For small deterministic edits.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "commit_message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content",
+          "commit_message"
+        ]
+      },
+      "module": "ouroboros/tools/git.py",
+      "line": 255,
+      "is_code_tool": true,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "request_restart",
+      "description": "Ask supervisor to restart runtime (after successful push).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 255,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "request_review",
+      "description": "Request a deep review of code, prompts, and state. You decide when a review is needed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why you want a review (context for the reviewer)"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 279,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "restart_service",
+      "description": "Restart a production systemd service. Use when a service is down or needs a restart after config changes. Always run run_ops_check after to verify the service came back up. Known services: prism-backend, prism-frontend, vendorlens-backend, caddy.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service name. Accepts short names: 'prism', 'vendorlens', 'caddy', etc."
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "module": "ouroboros/tools/ops.py",
+      "line": 276,
+      "is_code_tool": false,
+      "timeout_sec": 40,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D20"
+      ]
+    },
+    {
+      "name": "run_ops_check",
+      "description": "Run operational health check on production services. Checks systemd status, HTTP health endpoints, disk, and memory. Use this instead of manually running shell commands to diagnose service issues. For 'service' param use: 'prism', 'vendorlens', 'caddy', or empty for all.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service to check (partial name match). Empty = check all.",
+            "default": ""
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "human",
+              "json"
+            ],
+            "description": "Output format. 'human' for readable, 'json' for structured.",
+            "default": "human"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/ops.py",
+      "line": 245,
+      "is_code_tool": false,
+      "timeout_sec": 35,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D20"
+      ]
+    },
+    {
+      "name": "run_shell",
+      "description": "Run a shell command (list of args) inside the repo. Returns stdout+stderr.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "cmd": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cwd": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "cmd"
+        ]
+      },
+      "module": "ouroboros/tools/shell.py",
+      "line": 361,
+      "is_code_tool": true,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D10",
+        "D16"
+      ]
+    },
+    {
+      "name": "save_skill",
+      "description": "Save a learned procedure/skill to episodic memory. Use after completing a multi-step task successfully to remember how to do it next time. Wraps record_memory with type='skill'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Short skill name (e.g. 'deploy-prism', 'fix-registry-crash')"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this skill does and when to use it"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ordered list of steps to execute"
+          },
+          "tools_used": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tools involved (e.g. ['claude_code_edit', 'run_shell'])"
+          },
+          "pitfalls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Known pitfalls and things to avoid"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
+      "module": "ouroboros/tools/episodic_memory.py",
+      "line": 528,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D4"
+      ]
+    },
+    {
+      "name": "schedule_task",
+      "description": "Schedule a background task. Returns task_id for later retrieval. For complex tasks, decompose into focused subtasks with clear scope.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Task description — be specific about scope and expected deliverable"
+          },
+          "context": {
+            "type": "string",
+            "description": "Optional context from parent task: background info, constraints, style guide, etc."
+          },
+          "parent_task_id": {
+            "type": "string",
+            "description": "Optional parent task ID for tracking lineage"
+          }
+        },
+        "required": [
+          "description"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 265,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "semantic_find_skills",
+      "description": "Semantic search for learned skills/procedures in ChromaDB. Finds skills by meaning — better than keyword match for 'how to' queries. Example: semantic_find_skills('restart crashed service') Falls back gracefully if ChromaDB is down.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural language query describing what skill you need"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Max results to return (default: 3)",
+            "default": 3
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/semantic_memory.py",
+      "line": 393,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": [
+        "D10",
+        "D16"
+      ]
+    },
+    {
+      "name": "semantic_search",
+      "description": "Semantic search across ChromaDB memory collections. Finds entries by meaning, not just keywords. Collections: thai_episodes, thai_skills, thai_history, or 'all'. Example: semantic_search('how to deploy vendorlens') Falls back gracefully if ChromaDB is down.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural language search query"
+          },
+          "collection": {
+            "type": "string",
+            "enum": [
+              "all",
+              "thai_episodes",
+              "thai_skills",
+              "thai_history"
+            ],
+            "description": "Which collection to search (default: all)",
+            "default": "all"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Max results to return (default: 5)",
+            "default": 5
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/semantic_memory.py",
+      "line": 358,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": [
+        "D10",
+        "D16"
+      ]
+    },
+    {
+      "name": "send_owner_message",
+      "description": "Send a proactive message to the owner. Use when you have something genuinely worth saying — an insight, a question, or an invitation to collaborate. This is NOT for task responses (those go automatically).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Message text"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why you're reaching out (logged, not sent)"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 303,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "send_photo",
+      "description": "Send a base64-encoded image (PNG) to the owner's Telegram chat. Use after browse_page(output='screenshot') or browser_action(action='screenshot'). Pass the base64 string from the screenshot result as image_base64.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "image_base64": {
+            "type": "string",
+            "description": "Base64-encoded PNG image data"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Optional caption for the photo"
+          }
+        },
+        "required": [
+          "image_base64"
+        ]
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 364,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "summarize_dialogue",
+      "description": "Summarize dialogue history into key moments, decisions, and creator preferences. Writes to memory/dialogue_summary.md.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "last_n": {
+            "type": "integer",
+            "description": "Number of recent messages to summarize (default 200)"
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/core.py",
+      "line": 381,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "switch_model",
+      "description": "Switch to a different LLM model or reasoning effort level. Use when you need more power (complex code, deep reasoning) or want to save budget (simple tasks). Takes effect on next round.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model name (e.g. anthropic/claude-sonnet-4). Leave empty to keep current."
+          },
+          "effort": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ],
+            "description": "Reasoning effort level. Leave empty to keep current."
+          }
+        },
+        "required": []
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 335,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "toggle_consciousness",
+      "description": "Control background consciousness: 'start', 'stop', or 'status'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "stop",
+              "status"
+            ],
+            "description": "Action to perform"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 328,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "toggle_evolution",
+      "description": "Enable or disable evolution mode. When enabled, Ouroboros runs continuous self-improvement cycles.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "true to enable, false to disable"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 321,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": false,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "update_identity",
+      "description": "Update your identity manifest (who you are, who you want to become). Persists across sessions. Obligation to yourself (Principle 1: Continuity).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Full identity content"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 313,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": true,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "update_scratchpad",
+      "description": "Update your working memory. Write freely — any format you find useful. This persists across sessions and is read at every task start.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Full scratchpad content"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 295,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": true,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "vlm_query",
+      "description": "Analyze any image using a Vision LLM. Provide either image_url (public URL) or image_base64 (base64-encoded PNG/JPEG). Use for: analyzing charts, reading diagrams, understanding screenshots, checking UI.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "What to analyze or describe about the image"
+          },
+          "image_url": {
+            "type": "string",
+            "description": "Public URL of the image to analyze"
+          },
+          "image_base64": {
+            "type": "string",
+            "description": "Base64-encoded image data"
+          },
+          "image_mime": {
+            "type": "string",
+            "description": "MIME type for base64 image (default: image/png)"
+          },
+          "model": {
+            "type": "string",
+            "description": "VLM model to use (default: current OUROBOROS_MODEL)"
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "module": "ouroboros/tools/vision.py",
+      "line": 154,
+      "is_code_tool": false,
+      "timeout_sec": 30,
+      "is_core": false,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "wait_for_task",
+      "description": "Check if a subtask has completed. Returns result if done, or 'still running' message. Call repeatedly to poll. Default timeout: 120s.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Task ID to check"
+          }
+        }
+      },
+      "module": "ouroboros/tools/control.py",
+      "line": 353,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": false,
+      "dark_zone_ids": []
+    },
+    {
+      "name": "web_search",
+      "description": "Search the web via OpenAI Responses API. Returns JSON with answer + sources.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "module": "ouroboros/tools/search.py",
+      "line": 43,
+      "is_code_tool": false,
+      "timeout_sec": 120,
+      "is_core": true,
+      "is_write": false,
+      "is_destructive": false,
+      "is_consciousness": true,
+      "dark_zone_ids": []
+    }
+  ],
+  "core_tool_names": [
+    "analyze_screenshot",
+    "browse_page",
+    "browser_action",
+    "chat_history",
+    "claude_code_edit",
+    "drive_list",
+    "drive_read",
+    "drive_write",
+    "find_skills",
+    "get_task_result",
+    "git_diff",
+    "git_status",
+    "knowledge_read",
+    "knowledge_write",
+    "memory_search",
+    "promote_to_stable",
+    "read_service_logs",
+    "recall",
+    "record_memory",
+    "repo_commit_push",
+    "repo_list",
+    "repo_read",
+    "repo_write_commit",
+    "request_restart",
+    "restart_service",
+    "run_ops_check",
+    "run_shell",
+    "save_skill",
+    "schedule_task",
+    "semantic_find_skills",
+    "semantic_search",
+    "send_owner_message",
+    "switch_model",
+    "update_identity",
+    "update_scratchpad",
+    "wait_for_task",
+    "web_search"
+  ],
+  "consciousness_whitelist": [
+    "chat_history",
+    "drive_list",
+    "drive_read",
+    "knowledge_list",
+    "knowledge_read",
+    "knowledge_write",
+    "recall",
+    "repo_list",
+    "repo_read",
+    "schedule_task",
+    "semantic_search",
+    "send_owner_message",
+    "set_next_wakeup",
+    "update_scratchpad",
+    "web_search"
+  ],
+  "file_zones": {
+    "red": {
+      "description": "Critical infrastructure — requires explicit owner permission",
+      "paths": [
+        "ouroboros/agent.py",
+        "ouroboros/loop.py",
+        "ouroboros/llm.py",
+        "supervisor/**",
+        "BIBLE.md",
+        "docs/**",
+        ".env",
+        "config/FILE_ZONES.yaml",
+        "colab_launcher.py",
+        "pyproject.toml",
+        "VERSION"
+      ],
+      "patterns": [
+        "*.key",
+        "*.pem",
+        "*.secret"
+      ]
+    },
+    "yellow": {
+      "description": "Important but modifiable — auto-modify OK, owner approval before merge",
+      "paths": [
+        "ouroboros/context.py",
+        "ouroboros/memory.py",
+        "ouroboros/review.py",
+        "ouroboros/utils.py",
+        "ouroboros/consciousness.py",
+        "ouroboros/tools/registry.py",
+        "ouroboros/tools/core.py",
+        "ouroboros/tools/git.py",
+        "ouroboros/tools/shell.py",
+        "ouroboros/owner_inject.py",
+        "tests/**",
+        "scripts/**",
+        "ouroboros/self_evolution.py"
+      ],
+      "patterns": []
+    },
+    "green": {
+      "description": "Safe for autonomous modification — auto-merge after smoke tests",
+      "paths": [
+        "prompts/SYSTEM.md",
+        "prompts/**",
+        "ouroboros/tools/episodic_memory.py",
+        "ouroboros/tools/semantic_memory.py",
+        "ouroboros/tools/knowledge.py",
+        "ouroboros/tools/evolution_stats.py",
+        "ouroboros/tools/evolution.py",
+        "ouroboros/tools/search.py",
+        "ouroboros/tools/browser.py",
+        "ouroboros/tools/vision.py",
+        "ouroboros/tools/health.py",
+        "ouroboros/tools/ops.py",
+        "ouroboros/tools/review.py",
+        "ouroboros/tools/compact_context.py",
+        "ouroboros/tools/tool_discovery.py",
+        "ouroboros/tools/github.py",
+        "ouroboros/tools/control.py",
+        "company/**",
+        "README.md"
+      ],
+      "patterns": []
+    }
+  },
+  "modules": [
+    {
+      "name": "OuroborosAgent",
+      "file_line": "ouroboros/agent.py:180-199",
+      "role": "Per-worker instance; owns `LLMClient`, `ToolRegistry`, `Memory`."
+    },
+    {
+      "name": "_log_worker_boot_once",
+      "file_line": "ouroboros/agent.py:212-228",
+      "role": "Emits `worker_boot` exactly once per process via module-level `_worker_boot_logged` guard + `threading.Lock`."
+    },
+    {
+      "name": "_verify_system_state",
+      "file_line": "ouroboros/agent.py:470-510",
+      "role": "4 startup checks: uncommitted changes, VERSION sync, budget, memory_core."
+    },
+    {
+      "name": "_ensure_memory_core",
+      "file_line": "ouroboros/agent.py:423-468",
+      "role": "R1: creates `identity.md` + `scratchpad.md` from placeholders if missing or 0-byte; emits `startup_memory_restore`. Added after 04-12 distress loop."
+    },
+    {
+      "name": "_classify_message_for_routing",
+      "file_line": "ouroboros/agent.py:41-149",
+      "role": "Returns `\"light\"` or `\"full\"`. See §4."
+    },
+    {
+      "name": "handle_task",
+      "file_line": "ouroboros/agent.py:520-727",
+      "role": "Dispatches to `run_llm_loop`, emits `task_received`/`task_done`."
+    },
+    {
+      "name": "run_llm_loop",
+      "file_line": "ouroboros/loop.py:1000-1014",
+      "role": "Main tool loop with MAX_ROUNDS, memory injection, critic, cost caps."
+    },
+    {
+      "name": "_inject_memory_lookup_prompt",
+      "file_line": "ouroboros/loop.py:623-675`, injected at `:1058",
+      "role": "Code-enforced memory protocol: `find_skills` + `memory_search` as first actions."
+    },
+    {
+      "name": "_post_task_scratchpad_write",
+      "file_line": "ouroboros/loop.py:817-896",
+      "role": "REPLACES scratchpad.md after every task — clears stale /panic banners."
+    },
+    {
+      "name": "Consciousness._loop",
+      "file_line": "ouroboros/consciousness.py:191-246",
+      "role": "Background cycle — see §5."
+    },
+    {
+      "name": "StuckDetector",
+      "file_line": "ouroboros/consciousness.py:44-78",
+      "role": "3-thought similarity via word-set ratio > 0.7."
+    },
+    {
+      "name": "ExperimentEngine",
+      "file_line": "ouroboros/experiment_engine.py:*",
+      "role": "Pattern→hypothesis→action→measure→revert. Emits to `experiments.json`, NOT events.jsonl."
+    },
+    {
+      "name": "SkillManager.process_completed_task",
+      "file_line": "ouroboros/skill_manager.py:216-260",
+      "role": "Called post-task. Writes ChromaDB + episodic JSONL. NOT events.jsonl."
+    },
+    {
+      "name": "InnerCritic",
+      "file_line": "ouroboros/inner_critic.py:*",
+      "role": "Fires at 40% and 75% of MAX_ROUNDS; **advisory only, no blocking**."
+    },
+    {
+      "name": "StrategicPlanner",
+      "file_line": "ouroboros/strategic_planner.py:103-138",
+      "role": "Generates 1-3 `PlannedTask`s. Kill switch lives in `consciousness.py:328` (`STRATEGIC_PLANNER_ENABLED` env)."
+    },
+    {
+      "name": "SelfEvolution",
+      "file_line": "ouroboros/self_evolution.py:69-146",
+      "role": "Loads `config/FILE_ZONES.yaml`, classifies file/changeset."
+    },
+    {
+      "name": "SelfModCooldown",
+      "file_line": "ouroboros/self_evolution.py:601-660",
+      "role": "3 normal tasks between self-mods."
+    },
+    {
+      "name": "queue.py",
+      "file_line": "supervisor/queue.py",
+      "role": "In-memory `PENDING` list + `RUNNING` dict; persisted to `queue_snapshot.json`."
+    },
+    {
+      "name": "CommitmentTracker",
+      "file_line": "supervisor/queue.py:481-567",
+      "role": "Tracks announced plans with deadlines; expired→consciousness nudge."
+    },
+    {
+      "name": "workers.py",
+      "file_line": "supervisor/workers.py:299-360",
+      "role": "`worker_main` loop; destructive-keyword guard at `:320-351`."
+    },
+    {
+      "name": "telegram.py",
+      "file_line": "supervisor/telegram.py:454-532",
+      "role": "`send_with_budget` with 5-min / 80% word-overlap dedup at `:31-47`."
+    },
+    {
+      "name": "state.py",
+      "file_line": "supervisor/state.py:126-153",
+      "role": "Defines state.json schema; budget + session fields."
+    },
+    {
+      "name": "git_ops.py",
+      "file_line": "supervisor/git_ops.py:208-315",
+      "role": "`checkout_and_reset()`: `git reset --hard origin/<branch>` + `__pycache__` purge. Destructive."
+    }
+  ],
+  "memory_ownership": [
+    {
+      "file": "identity.md",
+      "writers_md": "`tools/control.py:179-181` (_update_identity), `agent.py:448` (R1 placeholder)",
+      "readers_md": "`memory.py:59-65`, `consciousness.py:1100-1103`, `strategic_planner.py:158-160`, `context.py:285-286`, `context.py:395-406` (staleness), `scripts/memory_stats.py:75`"
+    },
+    {
+      "file": "scratchpad.md",
+      "writers_md": "`loop.py:892` (REPLACE post-task), `colab_launcher.py:391-479` (pre-shutdown snapshot), `memory.py:57`",
+      "readers_md": "`memory.py:48-57`, `context.py:_build_memory_sections`, `context.py:140-170` (restart banner loads scratchpad first 800 chars)"
+    },
+    {
+      "file": "chat.jsonl",
+      "writers_md": "`telegram.py:443-451` only",
+      "readers_md": "`memory.py:78-153` (`chat_history` tool), `memory.py:237-274` (`_load_recent_chat`), `scripts/index_history.py`"
+    },
+    {
+      "file": "events.jsonl",
+      "writers_md": "see §2.1 (7 modules)",
+      "readers_md": "`scripts/consciousness_metrics.py`, `pattern_detector.py` (via task_results only, not events), `memory.py:78-153` (merged with chat history)"
+    },
+    {
+      "file": "supervisor.jsonl",
+      "writers_md": "supervisor + launcher",
+      "readers_md": "`workers.py:383-410` (`_first_worker_boot_event_since`)"
+    },
+    {
+      "file": "episodic/*.jsonl",
+      "writers_md": "`tools/episodic_memory.py`, `skill_manager.py:195-208`",
+      "readers_md": "`consciousness.py`, `recall` tool (via ChromaDB `thai_episodes` semantic layer)"
+    },
+    {
+      "file": "thai_episodes` (ChromaDB)",
+      "writers_md": "`consciousness.py:1049`, `tools/episodic_memory.py`",
+      "readers_md": "`recall`, `semantic_search`, `memory_search`"
+    },
+    {
+      "file": "thai_skills` (ChromaDB)",
+      "writers_md": "`skill_manager.py:186-190` + `tools/episodic_memory.py` (dual writers)",
+      "readers_md": "`find_skills`, `semantic_find_skills`"
+    },
+    {
+      "file": "thai_history` (ChromaDB)",
+      "writers_md": "`scripts/index_history.py` only (offline)",
+      "readers_md": "`recall`"
+    },
+    {
+      "file": "experiments.json",
+      "writers_md": "`experiment_engine.py:83-85`",
+      "readers_md": "`experiment_engine.py` on next cycle; `consciousness.py` for status"
+    },
+    {
+      "file": "state.json",
+      "writers_md": "`supervisor/state.py:319-410`, `git_ops.py:310-313`",
+      "readers_md": "everywhere; single lock via `state.py:_STATE_LOCK`"
+    }
+  ],
+  "flow_sink": [
+    {
+      "sink": "logs/chat.jsonl",
+      "path": "owner↔agent transcript",
+      "writers_md": "`supervisor/telegram.py:443-451` `log_chat()`; called from inbound at `colab_launcher.py:797,804,923` and outbound at `supervisor/telegram.py:478` (inside `send_with_budget`)"
+    },
+    {
+      "sink": "logs/events.jsonl",
+      "path": "ouroboros-side events",
+      "writers_md": "see §2.1; critical sites: `agent.py:220` (worker_boot), `agent.py:459` (startup_memory_restore), `agent.py:502` (startup_verification), `loop.py:1277` (stuck_model_escalation), `loop.py:1337` (inner_critic_checkpoint), `loop.py:1761` (llm_round), `consciousness.py:733` (consciousness_thought), `consciousness.py:1058` (auto_reflection)"
+    },
+    {
+      "sink": "logs/supervisor.jsonl",
+      "path": "supervisor-side events",
+      "writers_md": "`colab_launcher.py:271-282` (launcher_start), `supervisor/workers.py` (worker_crash, worker_dead_detected, crash_storm_detected), `supervisor/queue.py:257` (queue_restored_from_snapshot), `supervisor/git_ops.py` (safe_restart, rescue_commit), `supervisor/telegram.py:496`"
+    },
+    {
+      "sink": "logs/tools.jsonl",
+      "path": "tool args + results",
+      "writers_md": "written implicitly by tool execution path (evidence: 04-20 investigation reconstructed THAI's `run_shell` argv from this file)"
+    },
+    {
+      "sink": "logs/progress.jsonl",
+      "path": "progress heartbeats",
+      "writers_md": "`supervisor/telegram.py:472-476` (when `is_progress=True`)"
+    },
+    {
+      "sink": "task_results/*.json",
+      "path": "one file per task",
+      "writers_md": "written on task completion from `loop.py`/`agent.py` (sha `loop.py:716,727` task_done emits contain the same data; exact write site in `agent.py` completion path)"
+    },
+    {
+      "sink": "state/state.json",
+      "path": "owner_id, budget, session, sha",
+      "writers_md": "`supervisor/state.py:319-410` (`update_budget_from_usage`), `supervisor/git_ops.py:310-313` (current_sha after reset)"
+    },
+    {
+      "sink": "state/queue_snapshot.json",
+      "path": "pending + running tasks",
+      "writers_md": "`supervisor/queue.py:177-215` (`persist_queue_snapshot`)"
+    },
+    {
+      "sink": "state/daily_budget.json",
+      "path": "daily autonomous spend",
+      "writers_md": "`ouroboros/budget.py:30-37` load, `:41-62` save via `DailyBudget.spend()`"
+    },
+    {
+      "sink": "state/directives.json",
+      "path": "stop/pause/forget directives",
+      "writers_md": "`ouroboros/memory.py:361-381` (`save_directive`) — keeps last 10, 24h expiry"
+    },
+    {
+      "sink": "state/commitments.json",
+      "path": "announced tasks with deadlines",
+      "writers_md": "`supervisor/queue.py:508-527` (`CommitmentTracker.add/mark_done`)"
+    },
+    {
+      "sink": "state/experiments.json",
+      "path": "experiment state",
+      "writers_md": "`ouroboros/experiment_engine.py:83-85` (`_save_json`)"
+    },
+    {
+      "sink": "state/reflected_tasks.json",
+      "path": "tasks already reflected",
+      "writers_md": "`ouroboros/consciousness.py:978`"
+    },
+    {
+      "sink": "state/consciousness_history.json",
+      "path": "daily metric snapshots",
+      "writers_md": "`scripts/consciousness_metrics.py` — cron at 23:55 local, NOT written by THAI runtime"
+    },
+    {
+      "sink": "state/pending_restart_verify.json",
+      "path": "one-shot post-restart marker",
+      "writers_md": "written by launcher on `/restart`, consumed by `agent.py:233-258` (`_verify_restart`)"
+    },
+    {
+      "sink": "state/self_mod_cooldown.json",
+      "path": "cooldown counter",
+      "writers_md": "`ouroboros/self_evolution.py:614`"
+    },
+    {
+      "sink": "memory/scratchpad.md",
+      "path": "current working state",
+      "writers_md": "**REPLACED** (not appended) after every task — `loop.py:817-896` → `loop.py:892` `scratchpad_path.write_text()`; also snapshotted on `/panic`/`/stop` via `colab_launcher.py:391-479` `_snapshot_scratchpad_before_shutdown`"
+    },
+    {
+      "sink": "memory/identity.md",
+      "path": "persistent self-ID",
+      "writers_md": "read in 5 places (listed §3.2); written ONLY via `tools/control.py:179-181` `_update_identity` and the R1 placeholder restore at `agent.py:448`"
+    },
+    {
+      "sink": "memory/wisdom.md",
+      "path": "distilled strategy",
+      "writers_md": "human-edited; appended by experiment_engine on confirmed experiment (search `wisdom` in experiment_engine.py)"
+    },
+    {
+      "sink": "memory/knowledge/*.md",
+      "path": "topic files",
+      "writers_md": "`tools/knowledge.py` `knowledge_write`"
+    },
+    {
+      "sink": "memory/episodic/YYYY-MM-DD.jsonl",
+      "path": "daily episodes + skills",
+      "writers_md": "`tools/episodic_memory.py` (`record_memory`, `save_skill`); also `skill_manager.py:195-208` via injected callback"
+    },
+    {
+      "sink": "memory/.restart_marker",
+      "path": "fresh-restart signal",
+      "writers_md": "`colab_launcher.py:473-479` (written on shutdown); read `context.py:118`"
+    },
+    {
+      "sink": "ChromaDB `thai_episodes",
+      "path": "137 items",
+      "writers_md": "`tools/episodic_memory.py` via `upsert_episode()` + `consciousness.py:1049`"
+    },
+    {
+      "sink": "ChromaDB `thai_skills",
+      "path": "25 items",
+      "writers_md": "two writers — `skill_manager.py:186-190` (UUID ids) AND `tools/episodic_memory.py` auto-reflection (`ep_<ts>_<slug>` ids). See PRE_RESTART_INVESTIGATION §4."
+    },
+    {
+      "sink": "ChromaDB `thai_history",
+      "path": "488 items",
+      "writers_md": "`scripts/index_history.py` (offline indexing of chat+events), reachable via `recall` tool"
+    }
+  ],
+  "dark_zones": [
+    {
+      "id": "D1",
+      "title": "Two parallel event logs, not one",
+      "body_md": "`logs/events.jsonl` and `logs/supervisor.jsonl` are separate files with\ndisjoint writer sets (§2.1). `scripts/consciousness_metrics.py` reads\nonly `events.jsonl`. No file cross-links them by task_id or timestamp.\nAny audit that assumes a single log will silently miss 40%+ of events.",
+      "files": [
+        "events.jsonl",
+        "logs/events.jsonl",
+        "logs/supervisor.jsonl",
+        "scripts/consciousness_metrics.py"
+      ],
+      "file_lines": []
+    },
+    {
+      "id": "D2",
+      "title": "SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl",
+      "body_md": "`skill_manager.py` has zero references to `events.jsonl` /\n`append_jsonl`; it writes to ChromaDB `thai_skills` (`:186-190`) and to\n`memory/episodic/YYYY-MM-DD.jsonl` via an injected callback (`:195-208`).\n`experiment_engine.py` writes only to `state/experiments.json`\n(`:83-85`). The `consciousness_metrics.py` aggregator populates\n`meta_cognition.skills_created_today` by counting `skill_extracted` events\nin `events.jsonl` — a type that is never emitted — so every day the score\nsits at 0.0 even if skills are being written.",
+      "files": [
+        "consciousness_metrics.py",
+        "events.jsonl",
+        "experiment_engine.py",
+        "memory/episodic/YYYY-MM-DD.jsonl",
+        "skill_manager.py",
+        "state/experiments.json"
+      ],
+      "file_lines": []
+    },
+    {
+      "id": "D3",
+      "title": "Outgoing chat messages truncated to 500 chars when reinjected",
+      "body_md": "`context.py:268` — `raw_text if is_incoming else raw_text[:500]`. Incoming\nmessages are preserved full-length; outgoing messages (THAI's own past\nreplies) are sliced. THAI therefore cannot reliably re-read long responses\nit sent earlier. Comment on lines `:266-267` states the intent.",
+      "files": [
+        "context.py"
+      ],
+      "file_lines": [
+        "context.py:268"
+      ]
+    },
+    {
+      "id": "D4",
+      "title": "`thai_skills` has two independent writers producing different metadata schemas",
+      "body_md": "- UUIDv4 ids from `skill_manager.py:186-190` — metadata has `name`,\n  `tools`, `rounds_at_creation`, `avg_rounds`, `times_used`, `times_helped`,\n  `times_matched`, `score`, `created`.\n- `ep_<ts>_<slug>` ids from `tools/episodic_memory.py` auto-reflection —\n  metadata has `ts`, `title`, `date`, `tags`, `importance`, `type=\"skill\"`.\n\nThese are queried by the same `find_skills` tool. Dedup\n(`skill_manager.py:63-93`) is semantic-similarity only — it does not\nde-conflict the two id formats. A \"skill\" returned by `find_skills` may\nhave fields the consumer expects or may not.",
+      "files": [
+        "skill_manager.py",
+        "tools/episodic_memory.py"
+      ],
+      "file_lines": [
+        "skill_manager.py:186-190",
+        "skill_manager.py:63-93"
+      ]
+    },
+    {
+      "id": "D5",
+      "title": "No skills written to ChromaDB after 04-07 despite active runtime through 04-12",
+      "body_md": "Creation-day histogram from the 04-20 investigation: 4 on 04-01, 6 on\n04-03, 6 on 04-04, 1 on 04-05, 4 on 04-07, 4 unknown — zero on 04-08..04-12.\nCode paths that would have caused silence: all 5 failing tasks on 04-12\nhad `success=False` (MAX_ROUNDS overflow → `success=not _hit_max_rounds`\n→ False at `loop.py`), so `should_extract` gate at `skill_manager.py:47-57`\nreturned None. Also the `current_rounds ≥ avg_rounds` branch at\n`:242-245` on dedup match returns None without writing. Both return None\nand both are indistinguishable from \"nothing happened\" because the wrapping\n`try/except` at `loop.py:1481-1482` silences all other failure modes into\n`log.debug(..., exc_info=True)`.",
+      "files": [
+        "loop.py",
+        "skill_manager.py"
+      ],
+      "file_lines": [
+        "loop.py:1481-1482",
+        "skill_manager.py:47-57"
+      ]
+    },
+    {
+      "id": "D6",
+      "title": "Auto-resume on every restart is structural, not opt-in",
+      "body_md": "`colab_launcher.py:287` calls `auto_resume_after_restart()` unconditionally\non every bootstrap. The function (`workers.py:196-292`) checks for\n`pending_restart_verify.json` or a recent `launcher_start`/`restart` event\nin `supervisor.jsonl` (`:210-231`), reads scratchpad for an ACTIVE section\n(`:234-250`), then spawns a thread that calls `handle_chat_direct()` with\na \"resume\" message (`:268-279`). The 04-20 chromadb mismatch incident\nstarted from one of these auto-resume tasks (`0587db33`, 5 rounds, $0.03),\nwhich means every single restart spends at least one LLM round on\nauto-resume even when the human didn't ask for it.",
+      "files": [
+        "colab_launcher.py",
+        "pending_restart_verify.json",
+        "supervisor.jsonl",
+        "workers.py"
+      ],
+      "file_lines": [
+        "colab_launcher.py:287",
+        "workers.py:196-292"
+      ]
+    },
+    {
+      "id": "D7",
+      "title": "`_log_worker_boot_once` uses a module-level global guard",
+      "body_md": "`agent.py:155-156, 212-228`: `_worker_boot_logged = False` at module\nlevel, protected by `threading.Lock`. Because the launcher uses `fork`\nmultiprocessing, each worker process inherits `_worker_boot_logged=False`\nat fork time and logs its own boot — correct for production. But in tests\nthat import `agent.py` multiple times in the same process, the flag\npersists between tests and suppresses expected `worker_boot` emissions.\nThis is the R1 investigation's \"structural quirk\".",
+      "files": [
+        "agent.py"
+      ],
+      "file_lines": [
+        "agent.py:155-156"
+      ]
+    },
+    {
+      "id": "D8",
+      "title": "Strategic planner kill switch defaults to OFF and stays OFF",
+      "body_md": "`consciousness.py:328` — `if os.environ.get(\"STRATEGIC_PLANNER_ENABLED\",\n\"false\").lower() != \"true\":` → emit `strategic_planner_disabled\nreason=\"env_guard\"`, return. `TRIAGE_APR10.md:24` confirms this was\nintroduced as a kill switch. The env var is not in `.env`; no tooling\nprompts to flip it. Between 10:54 and 13:40 on 04-12 the disabled event\nfired 34 times (every ~30 min). Planning has been effectively dead since\nthe triage merge on 04-11 19:22.",
+      "files": [
+        "TRIAGE_APR10.md",
+        "consciousness.py"
+      ],
+      "file_lines": [
+        "consciousness.py:328"
+      ]
+    },
+    {
+      "id": "D9",
+      "title": "Shared OpenRouter key between THAI and Prism",
+      "body_md": "`OPENROUTER_API_KEY` in `~/ouroboros/.env` matches byte-for-byte the key\nin `/opt/prism/backend/.env` (per Apr 20 diagnostic §K.3). There is no\napplication-level separation of budget on OpenRouter's side. The +$75.23\nlifetime OpenRouter delta between 04-12 and 04-20 — while THAI was off\n— proves Prism is burning credit against THAI's budget cap.\n`budget.py` daily cap operates on `ouroboros-data/state/daily_budget.json`\nonly, so THAI's local cap cannot protect against Prism drain.",
+      "files": [
+        "budget.py",
+        "ouroboros-data/state/daily_budget.json"
+      ],
+      "file_lines": []
+    },
+    {
+      "id": "D10",
+      "title": "Two orphan ChromaDB scaffolds on disk",
+      "body_md": "- `ouroboros-data/memory/chromadb/chroma.sqlite3` (188 KB, mtime 04-05,\n  0 collections) — from an old experiment, 16 days untouched.\n- `ouroboros-data/chromadb/chroma.sqlite3` (188 KB, mtime 04-20 19:46:14,\n  0 collections) — created by THAI's own `run_shell` on 04-20 when it\n  called `chromadb.PersistentClient(path='/home/deploy/ouroboros-data/chromadb')`\n  with a non-existent path, which silently created the empty store. Report\n  at CHROMADB_MISMATCH_2026-04-21.md §3-4.\n\nNeither is referenced by runtime code. `semantic_memory.py:22-23` hardcodes\n`CHROMADB_HOST=\"localhost\"`, `CHROMADB_PORT=8000` — there is no env-var\nindirection, so the only legitimate path is the docker HTTP endpoint.",
+      "files": [
+        "ouroboros-data/chromadb/chroma.sqlite3",
+        "ouroboros-data/memory/chromadb/chroma.sqlite3",
+        "semantic_memory.py"
+      ],
+      "file_lines": [
+        "semantic_memory.py:22-23"
+      ]
+    },
+    {
+      "id": "D11",
+      "title": "MAX_ROUNDS discrepancy: doc says 25, code default is 12",
+      "body_md": "`loop.py:1050` — `MAX_ROUNDS = int(os.environ.get(\"OUROBOROS_MAX_ROUNDS\", \"12\"))`.\n`.env` does NOT set `OUROBOROS_MAX_ROUNDS`. CLAUDE.md:108 says 25.\nShutdown chat on 04-12 shows \"Task exceeded MAX_ROUNDS (12)\" — matching\nthe code, contradicting the doc.",
+      "files": [
+        "loop.py"
+      ],
+      "file_lines": [
+        "loop.py:1050"
+      ]
+    },
+    {
+      "id": "D12",
+      "title": "Per-task cost cap discrepancy: doc says $5, code default is $3",
+      "body_md": "`loop.py:465` — `OUROBOROS_MAX_TASK_COST` env default `3.0`. CLAUDE.md:203\nsays $5.00. `.env` does not set this.",
+      "files": [
+        "loop.py"
+      ],
+      "file_lines": [
+        "loop.py:465"
+      ]
+    },
+    {
+      "id": "D13",
+      "title": "Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap",
+      "body_md": "`memory.py:340-358` `extract_directive` triggers on literal Russian\n(\"останови\", \"забудь\", \"пауза\") or English (\"stop\", \"forget\", \"pause\")\nsubstring — no context awareness. A task titled \"stop the old cron job\"\nwould register a global STOP directive. `save_directive` keeps only the\nlast 10 (`:376-380`) and expires after 24h (`:372`). Injection into\ncontext happens at `context.py:559-574` as a markdown block headlined\n\"⚠️ Active Shareholder Directives (OVERRIDE task plans)\".",
+      "files": [
+        "context.py",
+        "memory.py"
+      ],
+      "file_lines": [
+        "context.py:559-574",
+        "memory.py:340-358"
+      ]
+    },
+    {
+      "id": "D14",
+      "title": "`identity.md` is read in 5 places, each silently skips if absent",
+      "body_md": "All five call sites guard with `if identity_path.exists()` — PRE_RESTART\n§1 lists them. Before the R1 fix (commit `08047f7`, 04-14), a missing\n`identity.md` produced no warning anywhere in `events.jsonl` or in the\nstartup_verification event. The distress spiral on 04-12 happened inside\nLLM content, not code: the model re-asserted absence even after\n`_update_identity` succeeded because the model's conversation context\nstill contained the original framing. R1 (`agent.py:423-468`) now\nguarantees the file exists non-empty before any task runs, but does NOT\nre-verify in the LLM's context — the model could still believe a stale\npremise about identity.",
+      "files": [
+        "agent.py",
+        "events.jsonl",
+        "identity.md"
+      ],
+      "file_lines": [
+        "agent.py:423-468"
+      ]
+    },
+    {
+      "id": "D15",
+      "title": "R1 silently auto-restores; no loud telemetry on first use",
+      "body_md": "`agent.py:441-454`: if a file is missing, a placeholder is silently\nwritten and `startup_memory_restore` is emitted with the restored file\nlist. Emission only happens if `restored` is non-empty (`:457`), so the\ntypical case (both files present) is indistinguishable from the \"file was\njust restored seconds ago\" case by anyone reading only\nstartup_verification. A search for `startup_memory_restore` in\n`events.jsonl` gives the signal, but no dashboard surfaces it.",
+      "files": [
+        "agent.py",
+        "events.jsonl"
+      ],
+      "file_lines": [
+        "agent.py:441-454"
+      ]
+    },
+    {
+      "id": "D16",
+      "title": "`run_shell` is the escape-hatch bypass for every other guard",
+      "body_md": "`tools/shell.py:21` executes arbitrary Python/bash with cwd restricted\nto the repo but no command allowlist. The first-class ChromaDB guards in\n`semantic_memory.py` (hardcoded host, graceful fallback, heartbeat) protect\nthe legitimate `recall` / `semantic_search` paths but are irrelevant the\nmoment the LLM writes `import chromadb; chromadb.PersistentClient(...)`\ninside a `run_shell` call. D10 is one instance of this.",
+      "files": [
+        "semantic_memory.py",
+        "tools/shell.py"
+      ],
+      "file_lines": [
+        "tools/shell.py:21"
+      ]
+    },
+    {
+      "id": "D17",
+      "title": "Worker destructive-keyword guard can refuse tasks before the agent sees them",
+      "body_md": "`supervisor/workers.py:320-351`: the worker scans task text for\ndelete/refactor/cleanup/DROP/etc. keywords and refuses execution before\ncalling `agent.handle_task`. The refusal is emitted to `events.jsonl`\n(via the agent in downstream paths that are wired differently) but a\ntask that looks dangerous in its description — even if its actual action\nwould be safe — never gets to the LLM. This is invisible to the LLM and\nto the owner unless they inspect `supervisor.jsonl`.",
+      "files": [
+        "events.jsonl",
+        "supervisor.jsonl",
+        "supervisor/workers.py"
+      ],
+      "file_lines": [
+        "supervisor/workers.py:320-351"
+      ]
+    },
+    {
+      "id": "D18",
+      "title": "`pattern_detector` scans `task_results/` only — not events.jsonl",
+      "body_md": "Despite what the architecture description implies, `pattern_detector.py`\nreads `task_results/` JSON files (`:115-138`) and does NOT parse\n`events.jsonl`. So \"recurring_error\" patterns are grounded only in what\nthe task-result JSON captured, not in every `tool_error`/`tool_timeout`\nevent. Patterns missed here silently become patterns the experiment\nengine cannot see.",
+      "files": [
+        "events.jsonl",
+        "pattern_detector.py"
+      ],
+      "file_lines": []
+    },
+    {
+      "id": "D19",
+      "title": "CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness",
+      "body_md": "`supervisor/queue.py:502-567` writes it; `consciousness.py:773-788` reads\n`get_expired()` from it. Two processes (launcher main thread and\nconsciousness thread) in principle could write concurrently — in practice\nboth live in the same Python process so GIL protects them, but there is\nno explicit lock at the JSON level.",
+      "files": [
+        "consciousness.py",
+        "supervisor/queue.py"
+      ],
+      "file_lines": [
+        "consciousness.py:773-788",
+        "supervisor/queue.py:502-567"
+      ]
+    },
+    {
+      "id": "D20",
+      "title": "`current_sha` in state.json drifts — written only on `git reset`, not on self-commit",
+      "body_md": "`git_ops.py:310-313` updates `state.json.current_sha` after\n`checkout_and_reset`. THAI's own `repo_commit_push` / self-commits do\nNOT update this field. On 04-12, state.json said `e5ddd048…` but live\nHEAD was `fd687fb` — an auto-commit from 04-11 19:37 that never made it\nto state.json. Anything downstream reading `state.json.current_sha` as\nground truth (e.g. drift diagnostics) silently uses yesterday's SHA.",
+      "files": [
+        "git_ops.py"
+      ],
+      "file_lines": [
+        "git_ops.py:310-313"
+      ]
+    },
+    {
+      "id": "D21",
+      "title": "`daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter",
+      "body_md": "`budget.py:30-37` caps `OUROBOROS_DAILY_AUTO_CAP=$50` local. The\n`TOTAL_BUDGET=500` in `.env` is checked in `context.py:369` by reading\nlive OpenRouter credits. There is no `budget.json` file despite multiple\nreferences in scripts and prose; budget accounting is split across\n`state.json` (lifetime) and `daily_budget.json` (daily).",
+      "files": [
+        "budget.json",
+        "budget.py",
+        "context.py",
+        "daily_budget.json",
+        "state.json"
+      ],
+      "file_lines": [
+        "budget.py:30-37",
+        "context.py:369"
+      ]
+    },
+    {
+      "id": "D22",
+      "title": "`_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`",
+      "body_md": "`loop.py:817-896` builds the new scratchpad using `prev_task_id` and\n`prev_short` from state, not from the scratchpad itself. If state.json is\nstale (D20-style drift), the scratchpad will reference an incorrect\nprevious task. No verification between scratchpad content and state.json\nexists.",
+      "files": [
+        "loop.py"
+      ],
+      "file_lines": [
+        "loop.py:817-896"
+      ]
+    },
+    {
+      "id": "D23",
+      "title": "Post-restart banner detection is time-based with a 300s window",
+      "body_md": "`context.py:118-128`: the POST-RESTART DETECTED banner is shown only if\n`memory/.restart_marker` is less than 300s old. A restart that takes\nlonger than 5 minutes to boot the first task (rare, but e.g. after a long\n`git clone` on a clean `ouroboros-data`) would skip the banner entirely\nand leave the LLM with no cue that a restart happened.",
+      "files": [
+        "context.py"
+      ],
+      "file_lines": [
+        "context.py:118-128"
+      ]
+    },
+    {
+      "id": "D24",
+      "title": "`inner_critic` does not block — it injects advice as a system message",
+      "body_md": "`inner_critic.py:1,59`: the critic produces JSON with `on_track,\nconfidence, suggestion` and returns formatted text. That text is\ninserted into the conversation at `loop.py:1332` as a `role=\"system\"`\nmessage. The LLM may ignore it. `on_track=False` has no programmatic\neffect beyond the advisory — no task is aborted, no rounds are reclaimed.",
+      "files": [
+        "loop.py"
+      ],
+      "file_lines": [
+        "inner_critic.py:1",
+        "loop.py:1332"
+      ]
+    },
+    {
+      "id": "D25",
+      "title": "Consciousness thread has `update_identity` in its whitelist",
+      "body_md": "`consciousness.py:1281` — the light-model consciousness cycle can\nrewrite `identity.md` entirely. No approval gate, no diff review, no\nowner notification. This is the one writer besides the R1 placeholder\nand the regular `_update_identity` tool call during a task.\n\n---\n\nGenerated at 2026-04-21T12:45:00Z by Claude Code archaeological-map run.",
+      "files": [
+        "consciousness.py",
+        "identity.md"
+      ],
+      "file_lines": [
+        "consciousness.py:1281"
+      ]
+    }
+  ],
+  "topology": {
+    "nodes": [
+      {
+        "id": "telegram_api",
+        "label": "Telegram API",
+        "layer": "top",
+        "kind": "external",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "openrouter",
+        "label": "OpenRouter (LLM)",
+        "layer": "top",
+        "kind": "external",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "colab_launcher",
+        "label": "colab_launcher.py",
+        "layer": "top",
+        "kind": "process",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "worker_pool",
+        "label": "Worker Pool (5 fork)",
+        "layer": "top",
+        "kind": "process",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "consciousness_thread",
+        "label": "Consciousness Thread",
+        "layer": "top",
+        "kind": "process",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "docker_chromadb",
+        "label": "ChromaDB (Docker)",
+        "layer": "top",
+        "kind": "infra",
+        "dark_zone_ids": [
+          "D10",
+          "D16",
+          "D2",
+          "D5",
+          "D6"
+        ]
+      },
+      {
+        "id": "docker_postgres",
+        "label": "Postgres (idle)",
+        "layer": "top",
+        "kind": "infra",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "docker_redis",
+        "label": "Redis (idle)",
+        "layer": "top",
+        "kind": "infra",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "fs_data",
+        "label": "~/ouroboros-data/",
+        "layer": "top",
+        "kind": "infra",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "agent",
+        "label": "agent.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/agent.py",
+        "loc": 876,
+        "dark_zone_ids": [
+          "D14",
+          "D15",
+          "D7"
+        ]
+      },
+      {
+        "id": "loop",
+        "label": "loop.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/loop.py",
+        "loc": 1832,
+        "dark_zone_ids": [
+          "D11",
+          "D12",
+          "D22",
+          "D24",
+          "D5"
+        ]
+      },
+      {
+        "id": "context",
+        "label": "context.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/context.py",
+        "loc": 992,
+        "dark_zone_ids": [
+          "D13",
+          "D21",
+          "D23",
+          "D3"
+        ]
+      },
+      {
+        "id": "memory",
+        "label": "memory.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/memory.py",
+        "loc": 404,
+        "dark_zone_ids": [
+          "D10",
+          "D13",
+          "D16",
+          "D4"
+        ]
+      },
+      {
+        "id": "llm",
+        "label": "llm.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/llm.py",
+        "loc": 297,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "consciousness",
+        "label": "consciousness.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/consciousness.py",
+        "loc": 1630,
+        "dark_zone_ids": [
+          "D19",
+          "D25",
+          "D8"
+        ]
+      },
+      {
+        "id": "skill_manager",
+        "label": "skill_manager.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/skill_manager.py",
+        "loc": 311,
+        "dark_zone_ids": [
+          "D2",
+          "D4",
+          "D5"
+        ]
+      },
+      {
+        "id": "experiment_engine",
+        "label": "experiment_engine.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/experiment_engine.py",
+        "loc": 528,
+        "dark_zone_ids": [
+          "D2"
+        ]
+      },
+      {
+        "id": "pattern_detector",
+        "label": "pattern_detector.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/pattern_detector.py",
+        "loc": 192,
+        "dark_zone_ids": [
+          "D18"
+        ]
+      },
+      {
+        "id": "strategic_planner",
+        "label": "strategic_planner.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/strategic_planner.py",
+        "loc": 335,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "inner_critic",
+        "label": "inner_critic.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/inner_critic.py",
+        "loc": 360,
+        "dark_zone_ids": [
+          "D24"
+        ]
+      },
+      {
+        "id": "self_evolution",
+        "label": "self_evolution.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/self_evolution.py",
+        "loc": 659,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "budget",
+        "label": "budget.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/budget.py",
+        "loc": 110,
+        "dark_zone_ids": [
+          "D21",
+          "D9"
+        ]
+      },
+      {
+        "id": "owner_inject",
+        "label": "owner_inject.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/owner_inject.py",
+        "loc": 103,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "queue",
+        "label": "supervisor/queue.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/queue.py",
+        "loc": 567,
+        "dark_zone_ids": [
+          "D19"
+        ]
+      },
+      {
+        "id": "workers",
+        "label": "supervisor/workers.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/workers.py",
+        "loc": 647,
+        "dark_zone_ids": [
+          "D17",
+          "D6"
+        ]
+      },
+      {
+        "id": "events",
+        "label": "supervisor/events.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/events.py",
+        "loc": 492,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "telegram",
+        "label": "supervisor/telegram.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/telegram.py",
+        "loc": 532,
+        "dark_zone_ids": []
+      },
+      {
+        "id": "state",
+        "label": "supervisor/state.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/state.py",
+        "loc": 678,
+        "dark_zone_ids": [
+          "D20",
+          "D21",
+          "D22"
+        ]
+      },
+      {
+        "id": "git_ops",
+        "label": "supervisor/git_ops.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "supervisor/git_ops.py",
+        "loc": 434,
+        "dark_zone_ids": [
+          "D20"
+        ]
+      },
+      {
+        "id": "registry",
+        "label": "tools/registry.py",
+        "layer": "middle",
+        "kind": "module",
+        "path": "ouroboros/tools/registry.py",
+        "loc": 196,
+        "dark_zone_ids": [
+          "D10",
+          "D16"
+        ]
+      },
+      {
+        "id": "mem_scratchpad",
+        "label": "scratchpad.md",
+        "layer": "bottom",
+        "kind": "file_md",
+        "description": "Working state, REPLACED per task",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "mem_identity",
+        "label": "identity.md",
+        "layer": "bottom",
+        "kind": "file_md",
+        "description": "Persistent self-ID",
+        "dark_zone_ids": [
+          "D14",
+          "D25"
+        ]
+      },
+      {
+        "id": "mem_wisdom",
+        "label": "wisdom.md",
+        "layer": "bottom",
+        "kind": "file_md",
+        "description": "Distilled strategy (28KB)",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "mem_knowledge",
+        "label": "knowledge/*.md",
+        "layer": "bottom",
+        "kind": "file_dir",
+        "description": "Topic files + _index.md",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "mem_episodic",
+        "label": "episodic/*.jsonl",
+        "layer": "bottom",
+        "kind": "file_dir",
+        "description": "Daily episodes + skills",
+        "dark_zone_ids": [
+          "D2"
+        ]
+      },
+      {
+        "id": "log_chat",
+        "label": "logs/chat.jsonl",
+        "layer": "bottom",
+        "kind": "logfile",
+        "description": "Telegram transcript",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "log_events",
+        "label": "logs/events.jsonl",
+        "layer": "bottom",
+        "kind": "logfile",
+        "description": "ouroboros-side events (7 writers, 58 sites)",
+        "dark_zone_ids": [
+          "D1",
+          "D14",
+          "D15",
+          "D17",
+          "D18",
+          "D2"
+        ]
+      },
+      {
+        "id": "log_supervisor",
+        "label": "logs/supervisor.jsonl",
+        "layer": "bottom",
+        "kind": "logfile",
+        "description": "supervisor-side events",
+        "dark_zone_ids": [
+          "D1",
+          "D17",
+          "D6"
+        ]
+      },
+      {
+        "id": "log_tools",
+        "label": "logs/tools.jsonl",
+        "layer": "bottom",
+        "kind": "logfile",
+        "description": "tool args + results",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "log_progress",
+        "label": "logs/progress.jsonl",
+        "layer": "bottom",
+        "kind": "logfile",
+        "description": "progress heartbeats",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "file_task_results",
+        "label": "task_results/*.json",
+        "layer": "bottom",
+        "kind": "file_dir",
+        "description": "One JSON per task",
+        "dark_zone_ids": [
+          "D18"
+        ]
+      },
+      {
+        "id": "state_main",
+        "label": "state/state.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "budget, session, sha, owner",
+        "dark_zone_ids": [
+          "D20",
+          "D21",
+          "D22"
+        ]
+      },
+      {
+        "id": "state_queue",
+        "label": "state/queue_snapshot.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "PENDING + RUNNING",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "state_budget",
+        "label": "state/daily_budget.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "daily auto cap",
+        "dark_zone_ids": [
+          "D21",
+          "D9"
+        ]
+      },
+      {
+        "id": "state_directives",
+        "label": "state/directives.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "stop/pause/forget 24h",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "state_commitments",
+        "label": "state/commitments.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "announced deadlines",
+        "dark_zone_ids": [
+          "D19"
+        ]
+      },
+      {
+        "id": "state_experiments",
+        "label": "state/experiments.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "active + completed experiments",
+        "dark_zone_ids": [
+          "D2"
+        ]
+      },
+      {
+        "id": "state_reflected",
+        "label": "state/reflected_tasks.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "reflection dedup",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "state_consciousness",
+        "label": "state/consciousness_history.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "daily metric snapshots",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "state_cooldown",
+        "label": "state/self_mod_cooldown.json",
+        "layer": "bottom",
+        "kind": "state_json",
+        "description": "self-mod counter",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "chroma_episodes",
+        "label": "ChromaDB: thai_episodes",
+        "layer": "bottom",
+        "kind": "chromadb",
+        "description": "137 items — insights/errors/decisions",
+        "dark_zone_ids": []
+      },
+      {
+        "id": "chroma_skills",
+        "label": "ChromaDB: thai_skills",
+        "layer": "bottom",
+        "kind": "chromadb",
+        "description": "25 items — two writer formats (D4)",
+        "dark_zone_ids": [
+          "D2",
+          "D4"
+        ]
+      },
+      {
+        "id": "chroma_history",
+        "label": "ChromaDB: thai_history",
+        "layer": "bottom",
+        "kind": "chromadb",
+        "description": "488 items — chat+events chunks",
+        "dark_zone_ids": []
+      }
+    ],
+    "edges": [
+      {
+        "source": "telegram_api",
+        "target": "colab_launcher",
+        "kind": "flow",
+        "label": "poll updates"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "telegram_api",
+        "kind": "flow",
+        "label": "send messages",
+        "style": "dashed"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "worker_pool",
+        "kind": "flow",
+        "label": "enqueue → fork"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "consciousness_thread",
+        "kind": "flow",
+        "label": "spawn thread"
+      },
+      {
+        "source": "worker_pool",
+        "target": "agent",
+        "kind": "flow",
+        "label": "handle_task"
+      },
+      {
+        "source": "consciousness_thread",
+        "target": "consciousness",
+        "kind": "flow",
+        "label": "_loop"
+      },
+      {
+        "source": "agent",
+        "target": "loop",
+        "kind": "flow",
+        "label": "run_llm_loop"
+      },
+      {
+        "source": "agent",
+        "target": "context",
+        "kind": "flow",
+        "label": "_prepare_task_context"
+      },
+      {
+        "source": "agent",
+        "target": "memory",
+        "kind": "flow",
+        "label": "ensure_memory_core"
+      },
+      {
+        "source": "loop",
+        "target": "llm",
+        "kind": "flow",
+        "label": "completions"
+      },
+      {
+        "source": "loop",
+        "target": "registry",
+        "kind": "flow",
+        "label": "dispatch tool"
+      },
+      {
+        "source": "loop",
+        "target": "inner_critic",
+        "kind": "flow",
+        "label": "checkpoint (40%/75%)"
+      },
+      {
+        "source": "loop",
+        "target": "skill_manager",
+        "kind": "flow",
+        "label": "post-task extract"
+      },
+      {
+        "source": "loop",
+        "target": "experiment_engine",
+        "kind": "flow",
+        "label": "record_task"
+      },
+      {
+        "source": "consciousness",
+        "target": "llm",
+        "kind": "flow",
+        "label": "think cycle"
+      },
+      {
+        "source": "consciousness",
+        "target": "strategic_planner",
+        "kind": "flow",
+        "label": "maybe_plan (killed)",
+        "style": "dashed"
+      },
+      {
+        "source": "consciousness",
+        "target": "experiment_engine",
+        "kind": "flow",
+        "label": "run_full_cycle"
+      },
+      {
+        "source": "consciousness",
+        "target": "skill_manager",
+        "kind": "flow",
+        "label": "auto_reflection"
+      },
+      {
+        "source": "consciousness",
+        "target": "pattern_detector",
+        "kind": "flow",
+        "label": "scan task_results",
+        "style": "dashed"
+      },
+      {
+        "source": "llm",
+        "target": "openrouter",
+        "kind": "flow",
+        "label": "HTTP",
+        "style": "dashed"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "queue",
+        "kind": "flow",
+        "label": "PENDING + RUNNING"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "telegram",
+        "kind": "flow",
+        "label": "log_chat + send_with_budget"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "git_ops",
+        "kind": "flow",
+        "label": "checkout_and_reset"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "workers",
+        "kind": "flow",
+        "label": "worker_main pool"
+      },
+      {
+        "source": "workers",
+        "target": "agent",
+        "kind": "flow",
+        "label": "worker_main → handle_task"
+      },
+      {
+        "source": "telegram",
+        "target": "memory",
+        "kind": "flow",
+        "label": "extract_directive"
+      },
+      {
+        "source": "registry",
+        "target": "docker_chromadb",
+        "kind": "flow",
+        "label": "semantic/episodic writes"
+      },
+      {
+        "source": "consciousness",
+        "target": "docker_chromadb",
+        "kind": "flow",
+        "label": "auto_reflection writes"
+      },
+      {
+        "source": "loop",
+        "target": "mem_scratchpad",
+        "kind": "flow",
+        "label": "REPLACE post-task",
+        "style": "unsafe"
+      },
+      {
+        "source": "agent",
+        "target": "mem_scratchpad",
+        "kind": "flow",
+        "label": "placeholder if missing (R1)"
+      },
+      {
+        "source": "agent",
+        "target": "mem_identity",
+        "kind": "flow",
+        "label": "placeholder if missing (R1)"
+      },
+      {
+        "source": "registry",
+        "target": "mem_identity",
+        "kind": "flow",
+        "label": "update_identity tool"
+      },
+      {
+        "source": "experiment_engine",
+        "target": "mem_wisdom",
+        "kind": "flow",
+        "label": "append confirmed exp"
+      },
+      {
+        "source": "registry",
+        "target": "mem_knowledge",
+        "kind": "flow",
+        "label": "knowledge_write"
+      },
+      {
+        "source": "registry",
+        "target": "mem_episodic",
+        "kind": "flow",
+        "label": "record_memory / save_skill"
+      },
+      {
+        "source": "skill_manager",
+        "target": "mem_episodic",
+        "kind": "flow",
+        "label": "via callback"
+      },
+      {
+        "source": "telegram",
+        "target": "log_chat",
+        "kind": "flow",
+        "label": "log_chat append"
+      },
+      {
+        "source": "agent",
+        "target": "log_events",
+        "kind": "flow",
+        "label": "worker_boot, task_received, task_done"
+      },
+      {
+        "source": "loop",
+        "target": "log_events",
+        "kind": "flow",
+        "label": "llm_round, stuck_model_escalation"
+      },
+      {
+        "source": "consciousness",
+        "target": "log_events",
+        "kind": "flow",
+        "label": "thought, stuck, reflection"
+      },
+      {
+        "source": "workers",
+        "target": "log_supervisor",
+        "kind": "flow",
+        "label": "crash events"
+      },
+      {
+        "source": "queue",
+        "target": "log_supervisor",
+        "kind": "flow",
+        "label": "queue_restored"
+      },
+      {
+        "source": "git_ops",
+        "target": "log_supervisor",
+        "kind": "flow",
+        "label": "safe_restart, rescue"
+      },
+      {
+        "source": "telegram",
+        "target": "log_supervisor",
+        "kind": "flow",
+        "label": "outbound notes"
+      },
+      {
+        "source": "colab_launcher",
+        "target": "log_supervisor",
+        "kind": "flow",
+        "label": "launcher_start"
+      },
+      {
+        "source": "registry",
+        "target": "log_tools",
+        "kind": "flow",
+        "label": "tool args + results"
+      },
+      {
+        "source": "telegram",
+        "target": "log_progress",
+        "kind": "flow",
+        "label": "is_progress heartbeats"
+      },
+      {
+        "source": "loop",
+        "target": "file_task_results",
+        "kind": "flow",
+        "label": "per-task JSON write"
+      },
+      {
+        "source": "state",
+        "target": "state_main",
+        "kind": "flow",
+        "label": "budget/session/sha/owner"
+      },
+      {
+        "source": "git_ops",
+        "target": "state_main",
+        "kind": "flow",
+        "label": "current_sha on reset",
+        "style": "conditional"
+      },
+      {
+        "source": "queue",
+        "target": "state_queue",
+        "kind": "flow",
+        "label": "persist_queue_snapshot"
+      },
+      {
+        "source": "budget",
+        "target": "state_budget",
+        "kind": "flow",
+        "label": "load/save daily spend"
+      },
+      {
+        "source": "memory",
+        "target": "state_directives",
+        "kind": "flow",
+        "label": "save_directive"
+      },
+      {
+        "source": "queue",
+        "target": "state_commitments",
+        "kind": "flow",
+        "label": "CommitmentTracker"
+      },
+      {
+        "source": "experiment_engine",
+        "target": "state_experiments",
+        "kind": "flow",
+        "label": "_save_json"
+      },
+      {
+        "source": "consciousness",
+        "target": "state_reflected",
+        "kind": "flow",
+        "label": "dedup"
+      },
+      {
+        "source": "self_evolution",
+        "target": "state_cooldown",
+        "kind": "flow",
+        "label": "3-task cooldown"
+      },
+      {
+        "source": "skill_manager",
+        "target": "chroma_skills",
+        "kind": "flow",
+        "label": "UUID ids (writer #1)"
+      },
+      {
+        "source": "registry",
+        "target": "chroma_skills",
+        "kind": "flow",
+        "label": "ep_<ts>_<slug> (writer #2) — D4",
+        "style": "unsafe"
+      },
+      {
+        "source": "consciousness",
+        "target": "chroma_episodes",
+        "kind": "flow",
+        "label": "auto_reflection upsert"
+      },
+      {
+        "source": "registry",
+        "target": "chroma_episodes",
+        "kind": "flow",
+        "label": "record_memory upsert"
+      },
+      {
+        "source": "registry",
+        "target": "chroma_history",
+        "kind": "flow",
+        "label": "recall tool read",
+        "style": "dashed"
+      },
+      {
+        "source": "worker_pool",
+        "target": "fs_data",
+        "kind": "flow",
+        "label": "tools / memory writes"
+      },
+      {
+        "source": "consciousness_thread",
+        "target": "fs_data",
+        "kind": "flow",
+        "label": "state / memory / logs"
+      }
+    ]
+  }
+}

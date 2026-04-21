@@ -288,11 +288,23 @@ export class OverviewView {
         isPaused ? 'paused' : '',
       ].filter(Boolean).join(' ');
 
+      const semantic = n.semantic_label || n.label;
+      const tech = n.label || '';
+      const showBoth = semantic !== tech && h >= 34;
+      // Position semantic text at 38% and tech at 74% of node height when
+      // both lines fit; otherwise center the semantic label.
+      const semY = showBoth ? h * 0.38 : h / 2;
+      const techY = h * 0.74;
+
       parts.push(`
         <g class="${cls}" data-node-id="${n.id}" transform="translate(${x}, ${y})">
           <rect class="node-rect" x="0" y="0" width="${w}" height="${h}" rx="6" ry="6"/>
-          <text class="node-label" x="${w/2}" y="${h/2}"
-                text-anchor="middle" dominant-baseline="central">${this._esc(n.label)}</text>
+          <text class="node-semantic" x="${w/2}" y="${semY}"
+                text-anchor="middle" dominant-baseline="central">${this._esc(semantic)}</text>
+          ${showBoth ? `
+            <text class="node-tech" x="${w/2}" y="${techY}"
+                  text-anchor="middle" dominant-baseline="central">${this._esc(tech)}</text>` : ''}
+          <title>${this._esc(semantic)}${showBoth ? ' — ' + this._esc(tech) : ''}</title>
           ${hasDZ ? `
             <g class="dz-marker" transform="translate(${w - 10}, 10)">
               <circle class="dz-dot" cx="0" cy="0" r="7" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
@@ -514,6 +526,7 @@ export class OverviewView {
       dark_zones: node.dark_zone_ids || [],
       functional_role: node.functional_role,
       organ: node.organ,
+      semantic_label: node.semantic_label,
     };
     this.onSelectLeaf && this.onSelectLeaf({ kind: 'node', data });
   }

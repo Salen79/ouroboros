@@ -1,12 +1,12 @@
 // Архитектура THAI — главный оркестратор (Phase 1.7).
 
-import { OverviewView } from './views/overview.js?v=phase1.7';
-import { MemoryView } from './views/memory.js?v=phase1.7';
-import { DarkZonesView } from './views/darkzones.js?v=phase1.7';
-import { ToolsView } from './views/tools.js?v=phase1.7';
-import { renderNode, renderTool } from './lib/panel.js?v=phase1.7';
+import { OverviewView } from './views/overview.js?v=phase1.8';
+import { MemoryView } from './views/memory.js?v=phase1.8';
+import { DarkZonesView } from './views/darkzones.js?v=phase1.8';
+import { ToolsView } from './views/tools.js?v=phase1.8';
+import { renderNode, renderTool } from './lib/panel.js?v=phase1.8';
 
-const SNAPSHOT_URL = 'architecture.json?v=phase1.7';
+const SNAPSHOT_URL = 'architecture.json?v=phase1.8';
 
 async function loadSnapshot() {
   const res = await fetch(SNAPSHOT_URL, { cache: 'no-cache' });

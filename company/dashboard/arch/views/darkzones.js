@@ -1,6 +1,6 @@
 // Тёмные зоны — Phase 1.7: список с таксономией 6 групп + детальная панель.
 
-import { renderDarkZone } from '../lib/panel.js?v=phase1.7';
+import { renderDarkZone } from '../lib/panel.js?v=phase1.8';
 
 // Must match SAFETY_DZ_GROUPS in build_architecture_snapshot.py
 const TAXONOMY = [

@@ -47,13 +47,17 @@ export function renderNode(node, snapshot) {
     }
   }
 
+  const semantic = node.semantic_label || node.label;
+  const tech = node.label || '';
+  const showTech = semantic !== tech;
   return `
-    <h2>${esc(node.label)}</h2>
+    <h2>${esc(semantic)}</h2>
     <div class="subline">
+      ${showTech ? `<code>${esc(tech)}</code> ` : ''}
       ${node.path ? `<code>${esc(node.path)}</code> ` : ''}
       ${node.loc ? `· ${node.loc} строк ` : ''}
-      · слой: <code>${esc(node.layer)}</code>
-      · тип: <code>${esc(node.kind)}</code>
+      ${node.layer ? `· слой: <code>${esc(node.layer)}</code>` : ''}
+      ${node.kind ? `· тип: <code>${esc(node.kind)}</code>` : ''}
     </div>
     ${dzChips(node.dark_zones)}
     ${node.description ? `<h3>Описание</h3><p>${esc(node.description)}</p>` : ''}

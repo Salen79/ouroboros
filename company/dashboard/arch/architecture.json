@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-21T19:25:58.375800+00:00",
+    "generated_at": "2026-04-21T19:51:36.678406+00:00",
     "git": {
-      "sha": "23ba51bf4a808d96e78409a9c1979ddb81fac4e1",
+      "sha": "8fcc71a573934c474dd6045a17aa287831637e62",
       "branch": "feat/architecture-dashboard-phase1",
-      "subject": "feat(phase1.6): ecosystem Overview + lifetime-based Memory view"
+      "subject": "feat(phase1.7): functional block classification + RU translation"
     },
     "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
     "repo": "/home/deploy/ouroboros",
@@ -2760,7 +2760,8 @@
         "kind": "external",
         "dark_zone_ids": [],
         "organ": "external",
-        "block_id": "external"
+        "block_id": "external",
+        "semantic_label": "Мессенджер"
       },
       {
         "id": "openrouter",
@@ -2769,7 +2770,8 @@
         "kind": "external",
         "dark_zone_ids": [],
         "organ": "external",
-        "block_id": "external"
+        "block_id": "external",
+        "semantic_label": "Облако моделей"
       },
       {
         "id": "colab_launcher",
@@ -2778,7 +2780,8 @@
         "kind": "process",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_comm"
+        "block_id": "iface_comm",
+        "semantic_label": "Главный процесс"
       },
       {
         "id": "worker_pool",
@@ -2787,7 +2790,8 @@
         "kind": "process",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_dispatch"
+        "block_id": "iface_dispatch",
+        "semantic_label": "Пул работников"
       },
       {
         "id": "consciousness_thread",
@@ -2796,7 +2800,8 @@
         "kind": "process",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_dispatch"
+        "block_id": "iface_dispatch",
+        "semantic_label": "Фоновый поток"
       },
       {
         "id": "docker_chromadb",
@@ -2811,7 +2816,8 @@
           "D6"
         ],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Семантическая БД"
       },
       {
         "id": "docker_postgres",
@@ -2820,7 +2826,8 @@
         "kind": "infra",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Реляционная БД"
       },
       {
         "id": "docker_redis",
@@ -2829,7 +2836,8 @@
         "kind": "infra",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Кеш"
       },
       {
         "id": "fs_data",
@@ -2838,7 +2846,8 @@
         "kind": "infra",
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Файловое хранилище"
       },
       {
         "id": "agent",
@@ -2853,7 +2862,8 @@
           "D7"
         ],
         "organ": "brain",
-        "block_id": "brain_perception"
+        "block_id": "brain_perception",
+        "semantic_label": "Диспетчер задачи"
       },
       {
         "id": "loop",
@@ -2870,7 +2880,8 @@
           "D5"
         ],
         "organ": "brain",
-        "block_id": "brain_thinking"
+        "block_id": "brain_thinking",
+        "semantic_label": "Цикл мышления"
       },
       {
         "id": "context",
@@ -2886,7 +2897,8 @@
           "D3"
         ],
         "organ": "brain",
-        "block_id": "brain_perception"
+        "block_id": "brain_perception",
+        "semantic_label": "Сборщик контекста"
       },
       {
         "id": "memory",
@@ -2902,7 +2914,8 @@
           "D4"
         ],
         "organ": "brain",
-        "block_id": "brain_perception"
+        "block_id": "brain_perception",
+        "semantic_label": "Работа с памятью"
       },
       {
         "id": "llm",
@@ -2913,7 +2926,8 @@
         "loc": 297,
         "dark_zone_ids": [],
         "organ": "brain",
-        "block_id": "brain_thinking"
+        "block_id": "brain_thinking",
+        "semantic_label": "Клиент модели"
       },
       {
         "id": "consciousness",
@@ -2928,7 +2942,8 @@
           "D8"
         ],
         "organ": "brain",
-        "block_id": "brain_continuous"
+        "block_id": "brain_continuous",
+        "semantic_label": "Сознание"
       },
       {
         "id": "skill_manager",
@@ -2943,7 +2958,8 @@
           "D5"
         ],
         "organ": "brain",
-        "block_id": "brain_reflection"
+        "block_id": "brain_reflection",
+        "semantic_label": "Жизненный цикл навыков"
       },
       {
         "id": "experiment_engine",
@@ -2956,7 +2972,8 @@
           "D2"
         ],
         "organ": "brain",
-        "block_id": "brain_reflection"
+        "block_id": "brain_reflection",
+        "semantic_label": "Движок экспериментов"
       },
       {
         "id": "pattern_detector",
@@ -2969,7 +2986,8 @@
           "D18"
         ],
         "organ": "brain",
-        "block_id": "brain_reflection"
+        "block_id": "brain_reflection",
+        "semantic_label": "Детектор паттернов"
       },
       {
         "id": "strategic_planner",
@@ -2981,7 +2999,8 @@
         "dark_zone_ids": [],
         "organ": "brain",
         "block_id": "brain_continuous",
-        "paused": true
+        "paused": true,
+        "semantic_label": "Стратег"
       },
       {
         "id": "inner_critic",
@@ -2994,7 +3013,8 @@
           "D24"
         ],
         "organ": "brain",
-        "block_id": "brain_selfcontrol"
+        "block_id": "brain_selfcontrol",
+        "semantic_label": "Внутренний критик"
       },
       {
         "id": "self_evolution",
@@ -3005,7 +3025,8 @@
         "loc": 659,
         "dark_zone_ids": [],
         "organ": "brain",
-        "block_id": "brain_selfcontrol"
+        "block_id": "brain_selfcontrol",
+        "semantic_label": "Самоэволюция"
       },
       {
         "id": "budget",
@@ -3019,7 +3040,8 @@
           "D9"
         ],
         "organ": "brain",
-        "block_id": "brain_selfcontrol"
+        "block_id": "brain_selfcontrol",
+        "semantic_label": "Учёт бюджета"
       },
       {
         "id": "owner_inject",
@@ -3030,7 +3052,8 @@
         "loc": 103,
         "dark_zone_ids": [],
         "organ": "brain",
-        "block_id": "brain_perception"
+        "block_id": "brain_perception",
+        "semantic_label": "Почтовый ящик задачи"
       },
       {
         "id": "queue",
@@ -3043,7 +3066,8 @@
           "D19"
         ],
         "organ": "interface",
-        "block_id": "iface_dispatch"
+        "block_id": "iface_dispatch",
+        "semantic_label": "Очередь задач"
       },
       {
         "id": "workers",
@@ -3057,7 +3081,8 @@
           "D6"
         ],
         "organ": "interface",
-        "block_id": "iface_dispatch"
+        "block_id": "iface_dispatch",
+        "semantic_label": "Работники"
       },
       {
         "id": "events",
@@ -3068,7 +3093,8 @@
         "loc": 492,
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_dispatch"
+        "block_id": "iface_dispatch",
+        "semantic_label": "Шина событий"
       },
       {
         "id": "telegram",
@@ -3079,7 +3105,8 @@
         "loc": 532,
         "dark_zone_ids": [],
         "organ": "interface",
-        "block_id": "iface_comm"
+        "block_id": "iface_comm",
+        "semantic_label": "Канал сообщений"
       },
       {
         "id": "state",
@@ -3094,7 +3121,8 @@
           "D22"
         ],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Хранитель состояния"
       },
       {
         "id": "git_ops",
@@ -3107,7 +3135,8 @@
           "D20"
         ],
         "organ": "interface",
-        "block_id": "iface_infra"
+        "block_id": "iface_infra",
+        "semantic_label": "Git-операции"
       },
       {
         "id": "registry",
@@ -3121,7 +3150,8 @@
           "D16"
         ],
         "organ": "tools",
-        "block_id": "tools_meta"
+        "block_id": "tools_meta",
+        "semantic_label": "Реестр инструментов"
       },
       {
         "id": "mem_scratchpad",
@@ -3131,7 +3161,8 @@
         "description": "Working state, REPLACED per task",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_working"
+        "block_id": "mem_working",
+        "semantic_label": "Блокнот задачи"
       },
       {
         "id": "mem_identity",
@@ -3144,7 +3175,8 @@
           "D25"
         ],
         "organ": "memory",
-        "block_id": "mem_identity"
+        "block_id": "mem_identity",
+        "semantic_label": "Идентичность"
       },
       {
         "id": "mem_wisdom",
@@ -3154,7 +3186,8 @@
         "description": "Distilled strategy (28KB)",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_identity"
+        "block_id": "mem_identity",
+        "semantic_label": "Мудрость"
       },
       {
         "id": "mem_knowledge",
@@ -3164,7 +3197,8 @@
         "description": "Topic files + _index.md",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_knowledge"
+        "block_id": "mem_knowledge",
+        "semantic_label": "База знаний"
       },
       {
         "id": "mem_episodic",
@@ -3176,7 +3210,8 @@
           "D2"
         ],
         "organ": "memory",
-        "block_id": "mem_experience"
+        "block_id": "mem_experience",
+        "semantic_label": "Эпизоды дня"
       },
       {
         "id": "log_chat",
@@ -3186,7 +3221,8 @@
         "description": "Telegram transcript",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "История чатов"
       },
       {
         "id": "log_events",
@@ -3203,7 +3239,8 @@
           "D2"
         ],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Лента событий"
       },
       {
         "id": "log_supervisor",
@@ -3217,7 +3254,8 @@
           "D6"
         ],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Лог супервизора"
       },
       {
         "id": "log_tools",
@@ -3227,7 +3265,8 @@
         "description": "tool args + results",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Журнал вызовов"
       },
       {
         "id": "log_progress",
@@ -3237,7 +3276,8 @@
         "description": "progress heartbeats",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Прогресс задач"
       },
       {
         "id": "file_task_results",
@@ -3249,7 +3289,8 @@
           "D18"
         ],
         "organ": "memory",
-        "block_id": "mem_archive"
+        "block_id": "mem_archive",
+        "semantic_label": "Архив задач"
       },
       {
         "id": "state_main",
@@ -3263,7 +3304,8 @@
           "D22"
         ],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Общее состояние"
       },
       {
         "id": "state_queue",
@@ -3273,7 +3315,8 @@
         "description": "PENDING + RUNNING",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Снимок очереди"
       },
       {
         "id": "state_budget",
@@ -3286,7 +3329,8 @@
           "D9"
         ],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Дневной бюджет"
       },
       {
         "id": "state_directives",
@@ -3296,7 +3340,8 @@
         "description": "stop/pause/forget 24h",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_operational"
+        "block_id": "mem_operational",
+        "semantic_label": "Директивы"
       },
       {
         "id": "state_commitments",
@@ -3308,7 +3353,8 @@
           "D19"
         ],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Обязательства"
       },
       {
         "id": "state_experiments",
@@ -3320,7 +3366,8 @@
           "D2"
         ],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Эксперименты"
       },
       {
         "id": "state_reflected",
@@ -3330,7 +3377,8 @@
         "description": "reflection dedup",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Отрефлексированные задачи"
       },
       {
         "id": "state_consciousness",
@@ -3340,7 +3388,8 @@
         "description": "daily metric snapshots",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Метрики сознания"
       },
       {
         "id": "state_cooldown",
@@ -3350,7 +3399,8 @@
         "description": "self-mod counter",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_service"
+        "block_id": "mem_service",
+        "semantic_label": "Кулдаун самомодификаций"
       },
       {
         "id": "chroma_episodes",
@@ -3360,7 +3410,8 @@
         "description": "137 items — insights/errors/decisions",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_experience"
+        "block_id": "mem_experience",
+        "semantic_label": "Семантические эпизоды"
       },
       {
         "id": "chroma_skills",
@@ -3373,7 +3424,8 @@
           "D4"
         ],
         "organ": "memory",
-        "block_id": "mem_experience"
+        "block_id": "mem_experience",
+        "semantic_label": "Навыки (RAG)"
       },
       {
         "id": "chroma_history",
@@ -3383,7 +3435,8 @@
         "description": "488 items — chat+events chunks",
         "dark_zone_ids": [],
         "organ": "memory",
-        "block_id": "mem_experience"
+        "block_id": "mem_experience",
+        "semantic_label": "Архив диалогов (RAG)"
       }
     ],
     "edges": [

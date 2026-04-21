@@ -135,10 +135,14 @@ export class MemoryView {
 
   _renderNode(n, accent) {
     const dzs = n.dark_zone_ids || [];
+    const semantic = n.semantic_label || n.label;
+    const tech = n.label || '';
+    const showTech = semantic !== tech;
     return `
       <div class="mem-node" data-mem-node="${this._esc(n.id)}" style="--card-accent: ${accent}">
         <div class="mem-node-kind">${this._kindLabel(n.kind)}</div>
-        <div class="mem-node-label">${this._esc(n.label)}</div>
+        <div class="mem-node-label">${this._esc(semantic)}</div>
+        ${showTech ? `<div class="mem-node-path"><code>${this._esc(tech)}</code></div>` : ''}
         ${n.description ? `<div class="mem-node-sub">${this._esc(n.description)}</div>` : ''}
         ${dzs.length ? `
           <div class="mem-node-chips">

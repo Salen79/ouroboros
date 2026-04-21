@@ -950,6 +950,88 @@ SAFETY_BLOCKS = [
     },
 ]
 
+# --- Phase 1.8: semantic (role-based) labels for every topology node ---
+# Principle: short Russian name (1-3 words) that conveys the node's role in
+# the system, not its technology. The original `label` (file path) remains
+# available as a secondary caption.
+SEMANTIC_LABELS = {
+    # ВНЕШНЕЕ
+    "telegram_api":          "Мессенджер",
+    "openrouter":            "Облако моделей",
+
+    # ИНТЕРФЕЙС — Связь с внешним миром
+    "colab_launcher":        "Главный процесс",
+    "telegram":              "Канал сообщений",
+    # ИНТЕРФЕЙС — Диспетчеризация
+    "queue":                 "Очередь задач",
+    "workers":               "Работники",
+    "events":                "Шина событий",
+    "worker_pool":           "Пул работников",
+    "consciousness_thread":  "Фоновый поток",
+    # ИНТЕРФЕЙС — Жизнеобеспечение
+    "state":                 "Хранитель состояния",
+    "git_ops":               "Git-операции",
+    "fs_data":               "Файловое хранилище",
+    "docker_chromadb":       "Семантическая БД",
+    "docker_postgres":       "Реляционная БД",
+    "docker_redis":          "Кеш",
+
+    # МОЗГ — Восприятие
+    "agent":                 "Диспетчер задачи",
+    "context":               "Сборщик контекста",
+    "memory":                "Работа с памятью",
+    "owner_inject":          "Почтовый ящик задачи",
+    # МОЗГ — Мышление
+    "loop":                  "Цикл мышления",
+    "llm":                   "Клиент модели",
+    # МОЗГ — Самоконтроль
+    "inner_critic":          "Внутренний критик",
+    "self_evolution":        "Самоэволюция",
+    "budget":                "Учёт бюджета",
+    # МОЗГ — Рефлексия
+    "skill_manager":         "Жизненный цикл навыков",
+    "experiment_engine":     "Движок экспериментов",
+    "pattern_detector":      "Детектор паттернов",
+    # МОЗГ — Фоновое сознание
+    "consciousness":         "Сознание",
+    "strategic_planner":     "Стратег",
+
+    # ИНСТРУМЕНТЫ
+    "registry":              "Реестр инструментов",
+
+    # ПАМЯТЬ — Рабочая
+    "mem_scratchpad":        "Блокнот задачи",
+    # ПАМЯТЬ — Оперативная
+    "log_chat":              "История чатов",
+    "log_events":            "Лента событий",
+    "log_supervisor":        "Лог супервизора",
+    "log_tools":             "Журнал вызовов",
+    "log_progress":          "Прогресс задач",
+    "state_directives":      "Директивы",
+    "state_budget":          "Дневной бюджет",
+    "state_queue":           "Снимок очереди",
+    # ПАМЯТЬ — Идентичность
+    "mem_identity":          "Идентичность",
+    "mem_wisdom":            "Мудрость",
+    # ПАМЯТЬ — Знания
+    "mem_knowledge":         "База знаний",
+    # ПАМЯТЬ — Опыт
+    "mem_episodic":          "Эпизоды дня",
+    "chroma_episodes":       "Семантические эпизоды",
+    "chroma_skills":         "Навыки (RAG)",
+    "chroma_history":        "Архив диалогов (RAG)",
+    # ПАМЯТЬ — Служебная
+    "state_main":            "Общее состояние",
+    "state_experiments":     "Эксперименты",
+    "state_commitments":     "Обязательства",
+    "state_reflected":       "Отрефлексированные задачи",
+    "state_cooldown":        "Кулдаун самомодификаций",
+    "state_consciousness":   "Метрики сознания",
+    # ПАМЯТЬ — Архив
+    "file_task_results":     "Архив задач",
+}
+
+
 # Dark-Zone taxonomy (from Phase 1.5, relabeled to Russian).
 SAFETY_DZ_GROUPS = [
     ("Наблюдаемость",      ["D1", "D2", "D5", "D15", "D18"]),
@@ -1246,6 +1328,14 @@ def _annotate_functional_roles(topology_nodes: List[Dict], tools: List[Dict]) ->
         # Keep a legacy functional_role for Phase 1.6 consumers
         if nid in {"strategic_planner"}:
             n["paused"] = True
+
+        # Phase 1.8: semantic label (role-based, Russian)
+        sem = SEMANTIC_LABELS.get(nid)
+        if sem:
+            n["semantic_label"] = sem
+        else:
+            # Fall back to existing label so the frontend never blanks out
+            n["semantic_label"] = n.get("label", nid)
 
     tool_block = {}
     for tb in TOOLS_BLOCKS:

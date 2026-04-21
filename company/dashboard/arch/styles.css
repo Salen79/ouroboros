@@ -847,12 +847,35 @@ svg.ecosystem .node:hover .node-rect {
   stroke: #fdcb6e;
 }
 svg.ecosystem .node-label {
+  /* Legacy single-line label — kept for any future single-line nodes */
   fill: var(--text);
   font-size: 13px;
   font-weight: 500;
   pointer-events: none;
   font-family: 'SF Mono', 'Cascadia Code', 'Menlo', monospace;
 }
+svg.ecosystem .node-semantic {
+  /* Phase 1.8: primary (role-based) node name */
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  pointer-events: none;
+}
+svg.ecosystem .node-tech {
+  /* Phase 1.8: secondary (file path / tech) caption */
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  font-family: 'SF Mono', 'Cascadia Code', 'Menlo', monospace;
+  pointer-events: none;
+  opacity: 0.72;
+}
+svg.ecosystem .node.hl-dim .node-tech { opacity: 0.2; }
+
+/* A few node geometries are too short for two lines — the render path
+   already skips .node-tech when h < 34, but make sure node-semantic
+   centers in that case. */
 
 /* --- Organ-specific node palettes --- */
 svg.ecosystem .node.organ-external .node-rect { fill: #242834; stroke: #636e72; }
@@ -872,7 +895,9 @@ svg.ecosystem .node.paused .node-rect {
   stroke-dasharray: 3 5;
   stroke: #636e72;
 }
-svg.ecosystem .node.paused .node-label { fill: #636e72; font-style: italic; }
+svg.ecosystem .node.paused .node-label,
+svg.ecosystem .node.paused .node-semantic,
+svg.ecosystem .node.paused .node-tech { fill: #636e72; font-style: italic; }
 
 /* --- Dark-Zone pulse indicator --- */
 svg.ecosystem .dz-pulse {
@@ -1011,10 +1036,23 @@ svg.ecosystem .search-miss { opacity: 0.2; }
   font-family: monospace;
 }
 .mem-node-label {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   margin-bottom: 2px;
-  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  letter-spacing: 0.1px;
+}
+.mem-node-path {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.mem-node-path code {
+  background: transparent;
+  padding: 0;
+  font-family: 'SF Mono', 'Cascadia Code', 'Menlo', monospace;
+  font-size: 10.5px;
+  color: var(--blue);
+  opacity: 0.85;
 }
 .mem-node-sub {
   color: var(--muted);

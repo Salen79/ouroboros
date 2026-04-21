@@ -1,6 +1,6 @@
 // Инструменты — Phase 1.7: 6 функциональных блоков с раскрывающимися картами.
 
-import { renderTool } from '../lib/panel.js?v=phase1.7';
+import { renderTool } from '../lib/panel.js?v=phase1.8';
 
 const BLOCK_ACCENT = {
   tools_read:        '#74b9ff',

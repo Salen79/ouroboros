@@ -1,390 +1,489 @@
-// Overview view — progressive drill-down (Phase 1.5).
+// Overview view — Phase 1.6 ecosystem composition with semantic zoom.
+//
+// One SVG holds every organ, node and typed edge at fixed coordinates.
+// Zoom is achieved by tweening the SVG's viewBox to a target window
+// (defined in snapshot.layout.zoom_states). Detail elements fade in/out
+// via CSS selectors keyed on data-zoom on the <svg> root.
 //
 // Levels:
-//   L0 — 5 aggregate cards (INTERFACE, BRAIN, MEMORY, TOOLS, SAFETY) + inter-aggregate flow
-//   L1 — click on an aggregate → show its 3-7 L1 groups (e.g. Memory → Working, Logs, State JSON, ChromaDB…)
-//   L2 — click on an L1 group → show its leaf items (nodes/tools/DZs)
-//   L3 — click on a leaf → open the existing side panel (phase 1 detail view)
+//   L0             → full composition, shows all 5 organs + L0 typed edges
+//   L1 <organ>     → viewBox zoomed to one organ, internal edges appear
+//   L2 / L3        → opens the side panel for a specific node or tool
 //
-// URL hash routing: #/L0 | #/L1/<aggId> | #/L2/<aggId>/<l1Id> | #/L3/<kind>/<id>
-// Browser back button Just Works via hashchange.
+// Back button + breadcrumb reuse URL hash routing from Phase 1.5.
 
-import { renderNode, renderTool, renderDarkZone } from '../lib/panel.js?v=phase1.5';
+const EDGE_COLORS = {
+  invokes:    '#74b9ff',
+  writes_to:  '#fdcb6e',
+  reads_from: '#55efc4',
+  observes:   '#a29bfe',
+  governs:    '#e17055',
+};
 
 export class OverviewView {
   constructor({ snapshot, containerId, onSelectLeaf, navigateExternalView }) {
-    this.snapshot = snapshot;
+    this.snap = snapshot;
     this.containerId = containerId;
-    this.onSelectLeaf = onSelectLeaf;           // opens side panel
+    this.onSelectLeaf = onSelectLeaf;
     this.navigateExternalView = navigateExternalView || (() => {});
-
     this.container = document.getElementById(containerId);
-    this.state = { level: 0, aggId: null, l1Id: null };
-    this._suppressHashEvent = false;
+    this.zoom = 'l0';
+    this.animating = false;
+    this._suppressHash = false;
   }
 
   mount() {
-    // Build static scaffold (breadcrumb + stage)
     this.container.innerHTML = `
       <div class="ov-root">
         <nav class="ov-crumbs" id="ov-crumbs"></nav>
-        <div class="ov-stage" id="ov-stage"></div>
+        <div class="ov-stage">
+          ${this._renderSVG()}
+        </div>
       </div>
     `;
-    this.stageEl = document.getElementById('ov-stage');
     this.crumbsEl = document.getElementById('ov-crumbs');
-
+    this.svg = this.container.querySelector('svg.ecosystem');
+    this.vbGroup = this.svg.querySelector('.zoom-group');
+    this._installInteractions();
     window.addEventListener('hashchange', () => {
-      if (this._suppressHashEvent) return;
+      if (this._suppressHash) return;
       this._restoreFromHash();
     });
-
     this._restoreFromHash();
   }
 
-  // ---------------------------------------------------------------
-  // Routing
-  // ---------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // SVG composition
+  // ------------------------------------------------------------------
 
-  _restoreFromHash() {
-    const raw = (window.location.hash || '').replace(/^#\/?/, '');
-    const parts = raw.split('/').filter(Boolean);
-    if (parts[0] !== 'ov' && parts[0] !== 'l0' && parts[0] !== 'l1' && parts[0] !== 'l2') {
-      this._renderLevel0({ push: false });
+  _renderSVG() {
+    const L = this.snap.layout;
+    const vb = L.viewbox;
+    return `
+      <svg class="ecosystem" data-zoom="l0"
+           viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}"
+           preserveAspectRatio="xMidYMid meet"
+           overflow="hidden">
+        <defs>
+          ${this._defs()}
+          <clipPath id="viewBoxClip" clipPathUnits="userSpaceOnUse">
+            <rect class="vbclip-rect"
+                  x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}"/>
+          </clipPath>
+        </defs>
+        <g class="zoom-group" clip-path="url(#viewBoxClip)">
+          ${this._renderOrganBodies()}
+          ${this._renderMemoryBands()}
+          ${this._renderEdges()}
+          ${this._renderNodes()}
+          ${this._renderOrganLabels()}
+        </g>
+      </svg>
+    `;
+  }
+
+  _defs() {
+    // Per-edge-kind arrowhead markers, pulse keyframe, organ gradient
+    const kinds = Object.entries(EDGE_COLORS);
+    const markers = kinds.map(([k, c]) => `
+      <marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="${c}"/>
+      </marker>
+    `).join('');
+
+    const organGradients = `
+      <linearGradient id="g-external" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#636e72" stop-opacity="0.12"/>
+        <stop offset="1" stop-color="#636e72" stop-opacity="0.02"/>
+      </linearGradient>
+      <linearGradient id="g-interface" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#74b9ff" stop-opacity="0.13"/>
+        <stop offset="1" stop-color="#74b9ff" stop-opacity="0.03"/>
+      </linearGradient>
+      <radialGradient id="g-brain" cx="0.5" cy="0.5" r="0.7">
+        <stop offset="0" stop-color="#6c5ce7" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#6c5ce7" stop-opacity="0.02"/>
+      </radialGradient>
+      <linearGradient id="g-tools" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#00b894" stop-opacity="0.16"/>
+        <stop offset="1" stop-color="#00b894" stop-opacity="0.04"/>
+      </linearGradient>
+      <linearGradient id="g-memory" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fdcb6e" stop-opacity="0.04"/>
+        <stop offset="1" stop-color="#fdcb6e" stop-opacity="0.18"/>
+      </linearGradient>
+    `;
+    return markers + organGradients;
+  }
+
+  _renderOrganBodies() {
+    const L = this.snap.layout;
+    const parts = [];
+    for (const [id, r] of Object.entries(L.organs)) {
+      const cls = `organ organ-${id}`;
+      parts.push(`
+        <g class="${cls}" data-organ="${id}">
+          <rect class="organ-bg"
+                x="${r.x + 6}" y="${r.y + 6}"
+                width="${r.w - 12}" height="${r.h - 12}"
+                rx="28" ry="28"
+                fill="url(#g-${id})"
+                stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _renderOrganLabels() {
+    const L = this.snap.layout;
+    const parts = [];
+    for (const [id, r] of Object.entries(L.organs)) {
+      parts.push(`
+        <text class="organ-label l0-label"
+              x="${r.label_x}" y="${r.label_y}"
+              text-anchor="middle"
+              dominant-baseline="hanging">${this._esc(r.label)}</text>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _renderMemoryBands() {
+    const bands = this.snap.layout.memory_bands;
+    const parts = [];
+    for (const [id, b] of Object.entries(bands)) {
+      parts.push(`
+        <g class="mem-band mem-band-${id} detail-only">
+          <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"
+                rx="16" ry="16"
+                fill="rgba(253,203,110,0.04)"
+                stroke="rgba(253,203,110,0.25)" stroke-dasharray="6 6" stroke-width="1"/>
+          <text x="${b.label_x}" y="${b.label_y}"
+                text-anchor="middle"
+                class="mem-band-label">${this._esc(b.label)}</text>
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  _renderEdges() {
+    const placements = this.snap.layout.nodes;
+    const edges = this.snap.typed_edges || [];
+    const parts = [];
+    for (const e of edges) {
+      const s = placements[e.source];
+      const t = placements[e.target];
+      if (!s || !t) continue;
+      const color = EDGE_COLORS[e.kind] || '#8b8fa3';
+      const dash = (e.kind === 'reads_from' || e.kind === 'observes') ? '6 5' :
+                   (e.kind === 'governs') ? '2 6' : '';
+      const path = this._routePath(s, t);
+      const cls = `edge edge-${e.kind} vis-${e.visibility}`;
+      parts.push(`
+        <g class="${cls}" data-edge="${e.source}->${e.target}">
+          <path d="${path}"
+                stroke="${color}"
+                stroke-width="${e.kind === 'governs' ? 2.2 : 1.8}"
+                stroke-dasharray="${dash}"
+                fill="none"
+                marker-end="url(#arrow-${e.kind})"
+                opacity="0.82"/>
+          <title>${this._esc(e.source + ' → ' + e.target + ': ' + (e.label || e.kind))}</title>
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  // Simple orthogonal-ish curve — bezier between endpoints, auto-offset
+  // for readability so same-direction edges don't stack.
+  _routePath(s, t) {
+    const sx = s.cx, sy = s.cy;
+    const tx = t.cx, ty = t.cy;
+    const dx = tx - sx, dy = ty - sy;
+    const dist = Math.hypot(dx, dy);
+    // Short edges: straight line; long edges: gentle bezier with midpoint lift
+    if (dist < 200) {
+      return `M ${sx} ${sy} L ${tx} ${ty}`;
+    }
+    const mx = (sx + tx) / 2;
+    const my = (sy + ty) / 2;
+    // Perpendicular offset scaled to distance (small for aesthetic curve)
+    const perpX = -dy / dist;
+    const perpY = dx / dist;
+    const lift = Math.min(80, dist * 0.12);
+    const cx = mx + perpX * lift;
+    const cy = my + perpY * lift;
+    return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
+  }
+
+  _renderNodes() {
+    const placements = this.snap.layout.nodes;
+    const parts = [];
+    for (const n of this.snap.topology.nodes) {
+      const p = placements[n.id];
+      if (!p) continue;
+      const w = p.w || 130, h = p.h || 46;
+      const x = p.cx - w / 2, y = p.cy - h / 2;
+      const hasDZ = (n.dark_zone_ids || []).length > 0;
+      const organ = n.organ || 'memory';
+      const role = n.functional_role || '';
+      const kind = n.kind || '';
+      const isPaused = (n.id === 'strategic_planner');
+
+      const cls = [
+        'node',
+        `node-${n.id}`,
+        `organ-${organ}`,
+        role ? `role-${role}` : '',
+        hasDZ ? 'has-dz' : '',
+        isPaused ? 'paused' : '',
+        `kind-${kind}`,
+      ].filter(Boolean).join(' ');
+
+      parts.push(`
+        <g class="${cls}" data-node-id="${n.id}" transform="translate(${x}, ${y})">
+          <rect class="node-rect" x="0" y="0" width="${w}" height="${h}"
+                rx="8" ry="8"/>
+          <text class="node-label" x="${w/2}" y="${h/2}"
+                text-anchor="middle" dominant-baseline="central">${this._esc(n.label)}</text>
+          ${hasDZ ? `
+            <circle class="dz-pulse" cx="${w - 6}" cy="6" r="5" fill="#e17055"/>
+            <title>${this._esc(n.label + ' — Dark Zones: ' + (n.dark_zone_ids || []).join(', '))}</title>
+          ` : ''}
+        </g>
+      `);
+    }
+    return parts.join('');
+  }
+
+  // ------------------------------------------------------------------
+  // Interactions
+  // ------------------------------------------------------------------
+
+  _installInteractions() {
+    // Click on a node → open the detail panel (L2)
+    this.svg.addEventListener('click', e => {
+      const nodeG = e.target.closest('[data-node-id]');
+      if (nodeG) {
+        this._selectNode(nodeG.dataset.nodeId);
+        return;
+      }
+      // Click on an organ body or label → zoom into (or out of) that organ
+      const organG = e.target.closest('[data-organ]');
+      if (organG) {
+        const target = `l1-${organG.dataset.organ}`;
+        if (this.zoom === target) {
+          // second click on an already-zoomed organ → zoom out
+          this.zoomTo('l0', { push: true });
+        } else {
+          this.zoomTo(target, { push: true });
+        }
+        return;
+      }
+      // Click on empty svg → zoom out
+      if (this.zoom !== 'l0') this.zoomTo('l0', { push: true });
+    });
+
+    // Hover: highlight neighborhood
+    this.svg.addEventListener('mouseover', e => {
+      const nodeG = e.target.closest('[data-node-id]');
+      if (nodeG) this._highlightNeighborhood(nodeG.dataset.nodeId);
+    });
+    this.svg.addEventListener('mouseout', e => {
+      const nodeG = e.target.closest('[data-node-id]');
+      if (nodeG) this._clearHighlight();
+    });
+  }
+
+  _highlightNeighborhood(nodeId) {
+    this.svg.classList.add('hovering');
+    // Tag connected edges and peer nodes
+    const edges = this.snap.typed_edges || [];
+    const neighbors = new Set([nodeId]);
+    for (const e of edges) {
+      if (e.source === nodeId) neighbors.add(e.target);
+      if (e.target === nodeId) neighbors.add(e.source);
+    }
+    this.svg.querySelectorAll('[data-node-id]').forEach(el => {
+      el.classList.toggle('hl-neighbor', neighbors.has(el.dataset.nodeId));
+      el.classList.toggle('hl-dim', !neighbors.has(el.dataset.nodeId));
+    });
+    this.svg.querySelectorAll('[data-edge]').forEach(el => {
+      const [s, t] = el.dataset.edge.split('->');
+      const active = (s === nodeId || t === nodeId);
+      el.classList.toggle('hl-active', active);
+      el.classList.toggle('hl-dim', !active);
+    });
+  }
+
+  _clearHighlight() {
+    this.svg.classList.remove('hovering');
+    this.svg.querySelectorAll('.hl-neighbor,.hl-dim,.hl-active').forEach(el => {
+      el.classList.remove('hl-neighbor', 'hl-dim', 'hl-active');
+    });
+  }
+
+  _selectNode(id) {
+    const node = this.snap.topology.nodes.find(n => n.id === id);
+    if (!node) return;
+    // Tools registry: if clicked node is registry, open the Tools view instead
+    if (id === 'registry') {
+      this.navigateExternalView('tools');
       return;
     }
-    if (parts[0] === 'l1' && parts[1]) {
-      this._renderLevel1(parts[1], { push: false });
-    } else if (parts[0] === 'l2' && parts[1] && parts[2]) {
-      this._renderLevel2(parts[1], parts[2], { push: false });
-    } else {
-      this._renderLevel0({ push: false });
+    const data = {
+      id: node.id, label: node.label, kind: node.kind, layer: node.layer,
+      path: node.path || '', loc: node.loc || 0,
+      description: node.description || '',
+      dark_zones: node.dark_zone_ids || [],
+      functional_role: node.functional_role,
+      organ: node.organ,
+    };
+    this.onSelectLeaf && this.onSelectLeaf({ kind: 'node', data });
+  }
+
+  // ------------------------------------------------------------------
+  // Zoom
+  // ------------------------------------------------------------------
+
+  zoomTo(state, { push = true } = {}) {
+    if (this.animating) return;
+    const layout = this.snap.layout;
+    const states = layout.zoom_states;
+    const target = states[state] || states.l0;
+    const current = this._parseViewBox(this.svg.getAttribute('viewBox'));
+    this.zoom = state;
+    this.svg.setAttribute('data-zoom', state);
+    if (push) this._setHash(this._stateToHash(state));
+    this._renderBreadcrumb();
+    this._animateViewBox(current, target);
+  }
+
+  _parseViewBox(v) {
+    const [x, y, w, h] = v.split(/\s+/).map(Number);
+    return { x, y, w, h };
+  }
+
+  _animateViewBox(from, to) {
+    this.animating = true;
+    const start = performance.now();
+    const dur = 520; // ms
+    const tween = (a, b, t) => a + (b - a) * t;
+    const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const clipRect = this.svg.querySelector('.vbclip-rect');
+
+    const step = now => {
+      const t = Math.min(1, (now - start) / dur);
+      const k = easeInOut(t);
+      const x = tween(from.x, to.x, k);
+      const y = tween(from.y, to.y, k);
+      const w = tween(from.w, to.w, k);
+      const h = tween(from.h, to.h, k);
+      this.svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+      if (clipRect) {
+        clipRect.setAttribute('x', x);
+        clipRect.setAttribute('y', y);
+        clipRect.setAttribute('width', w);
+        clipRect.setAttribute('height', h);
+      }
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        this.animating = false;
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ------------------------------------------------------------------
+  // Breadcrumb + URL hash
+  // ------------------------------------------------------------------
+
+  _renderBreadcrumb() {
+    const L = this.snap.layout;
+    const crumbs = [
+      { label: 'Overview', state: 'l0' },
+    ];
+    if (this.zoom && this.zoom !== 'l0') {
+      const organId = this.zoom.replace(/^l1-/, '');
+      const organ = L.organs[organId];
+      if (organ) {
+        crumbs.push({ label: organ.label, state: this.zoom });
+      }
     }
+    this.crumbsEl.innerHTML = crumbs.map((c, i) => {
+      const last = i === crumbs.length - 1;
+      return `<span class="crumb ${last ? 'current' : ''}" data-state="${c.state}">${this._esc(c.label)}</span>` +
+             (last ? '' : '<span class="crumb-sep">›</span>');
+    }).join('') + `
+      <span class="crumb-spacer"></span>
+      <button class="safety-pill" data-safety="open"
+              title="${this.snap.summary.dark_zones} Dark Zones — open taxonomy">
+        ⚠ ${this.snap.summary.dark_zones} zones
+      </button>
+      <span class="zoom-hint">${this.zoom === 'l0' ? 'click an organ to zoom' : 'click background or breadcrumb to zoom out'}</span>
+    `;
+
+    this.crumbsEl.querySelectorAll('.crumb').forEach(el => {
+      if (!el.classList.contains('current')) {
+        el.addEventListener('click', () => this.zoomTo(el.dataset.state, { push: true }));
+      }
+    });
+    const safety = this.crumbsEl.querySelector('[data-safety="open"]');
+    safety && safety.addEventListener('click', () => {
+      this.navigateExternalView('darkzones');
+    });
   }
 
   _setHash(h) {
-    this._suppressHashEvent = true;
-    // Use replaceState for same-level repaint, pushState for descents
+    this._suppressHash = true;
     history.pushState(null, '', h);
-    setTimeout(() => { this._suppressHashEvent = false; }, 0);
+    setTimeout(() => { this._suppressHash = false; }, 0);
   }
 
-  _replaceHash(h) {
-    this._suppressHashEvent = true;
-    history.replaceState(null, '', h);
-    setTimeout(() => { this._suppressHashEvent = false; }, 0);
+  _stateToHash(state) {
+    return state === 'l0' ? '#/l0' : `#/${state}`;
   }
 
-  // ---------------------------------------------------------------
-  // Public helpers
-  // ---------------------------------------------------------------
-
-  showL0() { this._renderLevel0({ push: true }); }
-
-  // ---------------------------------------------------------------
-  // Renderers
-  // ---------------------------------------------------------------
-
-  _fade(next) {
-    // Fade transition between levels
-    const stage = this.stageEl;
-    stage.classList.add('fade-out');
-    setTimeout(() => {
-      next();
-      stage.classList.remove('fade-out');
-      stage.classList.add('fade-in');
-      setTimeout(() => stage.classList.remove('fade-in'), 220);
-    }, 140);
-  }
-
-  _renderLevel0({ push = true } = {}) {
-    this.state = { level: 0, aggId: null, l1Id: null };
-    this._renderBreadcrumb();
-    if (push) this._setHash('#/l0');
-
-    this._fade(() => {
-      const aggs = this.snapshot.hierarchy.aggregates;
-      const edges = this.snapshot.hierarchy.l0_edges || [];
-
-      // SVG overlay for connector lines between cards
-      const cards = aggs.map(a => this._renderAggregateCard(a)).join('');
-      this.stageEl.innerHTML = `
-        <div class="l0-wrap">
-          <div class="l0-title">Choose a layer to drill into</div>
-          <div class="l0-grid">
-            ${cards}
-          </div>
-          <div class="l0-caption">
-            Hover a card for counts; click to open. <kbd>Esc</kbd> closes the side panel.
-          </div>
-        </div>
-      `;
-
-      this.stageEl.querySelectorAll('[data-agg-id]').forEach(el => {
-        el.addEventListener('click', () => {
-          this._renderLevel1(el.dataset.aggId, { push: true });
-        });
-      });
-    });
-  }
-
-  _renderAggregateCard(agg) {
-    const leafCount = agg.l1.reduce((acc, g) => acc + g.leaves.length, 0);
-    const groupCount = agg.l1.length;
-    const dzCount = (agg.dark_zone_ids || []).length;
-    const tagline = this._esc(agg.tagline || '');
-    const cls = `l0-card kind-${agg.id} ${agg.kind === 'overlay' ? 'overlay' : ''}`;
-    return `
-      <div class="${cls}" data-agg-id="${agg.id}" style="--card-accent: ${agg.color || '#6c5ce7'}">
-        <div class="l0-card-head">
-          <span class="l0-card-badge" style="background:${agg.color}22;color:${agg.color}">${agg.label}</span>
-          ${dzCount ? `<span class="l0-dz-pill" title="${dzCount} Dark Zones overlap here">⚠ ${dzCount}</span>` : ''}
-        </div>
-        <div class="l0-card-title">${this._esc(agg.label)}</div>
-        <div class="l0-card-tagline">${tagline}</div>
-        <div class="l0-card-stats">
-          <div><span class="num">${groupCount}</span><span class="unit">groups</span></div>
-          <div><span class="num">${leafCount}</span><span class="unit">${agg.id === 'tools' ? 'tools' : agg.id === 'safety' ? 'zones' : 'items'}</span></div>
-        </div>
-      </div>
-    `;
-  }
-
-  _renderLevel1(aggId, { push = true } = {}) {
-    const agg = this.snapshot.hierarchy.aggregates.find(a => a.id === aggId);
-    if (!agg) { this._renderLevel0({ push: false }); return; }
-    this.state = { level: 1, aggId, l1Id: null };
-    this._renderBreadcrumb();
-    if (push) this._setHash(`#/l1/${aggId}`);
-
-    this._fade(() => {
-      const cards = agg.l1.map(g => this._renderGroupCard(agg, g)).join('');
-      this.stageEl.innerHTML = `
-        <div class="l1-wrap">
-          <div class="l1-head">
-            <div class="l1-title" style="color:${agg.color}">${this._esc(agg.label)}</div>
-            <div class="l1-sub">${this._esc(agg.tagline || '')}</div>
-          </div>
-          <div class="l1-grid">${cards}</div>
-        </div>
-      `;
-
-      this.stageEl.querySelectorAll('[data-group-id]').forEach(el => {
-        el.addEventListener('click', () => {
-          this._renderLevel2(aggId, el.dataset.groupId, { push: true });
-        });
-      });
-    });
-  }
-
-  _renderGroupCard(agg, g) {
-    const dzCount = (g.dark_zone_ids || []).length;
-    return `
-      <div class="l1-card" data-group-id="${g.id}" style="--card-accent: ${agg.color}">
-        <div class="l1-card-title">${this._esc(g.label)}</div>
-        <div class="l1-card-stats">
-          <span class="count"><strong>${g.leaves.length}</strong> ${g.leaf_kind === 'tool' ? 'tools' : g.leaf_kind === 'darkzone' ? 'zones' : 'items'}</span>
-          ${dzCount ? `<span class="l1-dz-pill">⚠ ${dzCount}</span>` : ''}
-        </div>
-        <div class="l1-card-preview">
-          ${g.leaves.slice(0, 6).map(l => `<span class="leaf-tag">${this._esc(this._leafLabel(l, g.leaf_kind))}</span>`).join('')}
-          ${g.leaves.length > 6 ? `<span class="leaf-more">+${g.leaves.length - 6}</span>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  _renderLevel2(aggId, l1Id, { push = true } = {}) {
-    const agg = this.snapshot.hierarchy.aggregates.find(a => a.id === aggId);
-    if (!agg) { this._renderLevel0({ push: false }); return; }
-    const g = agg.l1.find(x => x.id === l1Id);
-    if (!g) { this._renderLevel1(aggId, { push: false }); return; }
-    this.state = { level: 2, aggId, l1Id };
-    this._renderBreadcrumb();
-    if (push) this._setHash(`#/l2/${aggId}/${l1Id}`);
-
-    this._fade(() => {
-      const leaves = g.leaves.map(id => this._renderLeafCard(id, g.leaf_kind, agg)).join('');
-      this.stageEl.innerHTML = `
-        <div class="l2-wrap">
-          <div class="l2-head">
-            <div class="l2-title" style="color:${agg.color}">${this._esc(g.label)}</div>
-            <div class="l2-sub"><span style="color:${agg.color}">${this._esc(agg.label)}</span> / ${g.leaves.length} ${g.leaf_kind === 'tool' ? 'tools' : g.leaf_kind === 'darkzone' ? 'Dark Zones' : 'items'}</div>
-          </div>
-          <div class="l2-grid">${leaves}</div>
-        </div>
-      `;
-
-      this.stageEl.querySelectorAll('[data-leaf-id]').forEach(el => {
-        el.addEventListener('click', () => {
-          const id = el.dataset.leafId;
-          const kind = el.dataset.leafKind;
-          this._openLeaf(id, kind);
-        });
-      });
-    });
-  }
-
-  _renderLeafCard(id, leafKind, agg) {
-    if (leafKind === 'node') {
-      const node = this.snapshot.topology.nodes.find(n => n.id === id);
-      if (!node) return '';
-      const dzs = node.dark_zone_ids || [];
-      return `
-        <div class="leaf-card" data-leaf-id="${id}" data-leaf-kind="node" style="--card-accent: ${agg.color}">
-          <div class="leaf-title">${this._esc(node.label)}</div>
-          ${node.path ? `<div class="leaf-sub"><code>${this._esc(node.path)}</code>${node.loc ? ` · ${node.loc} LoC` : ''}</div>` : ''}
-          ${node.description ? `<div class="leaf-desc">${this._esc(node.description)}</div>` : ''}
-          ${dzs.length ? `<div class="leaf-chips">${dzs.map(d => `<span class="chip darkzone" data-goto-dz="${d}">${d}</span>`).join('')}</div>` : ''}
-        </div>
-      `;
-    }
-    if (leafKind === 'tool') {
-      const tool = this.snapshot.tools.find(t => t.name === id);
-      if (!tool) return '';
-      const chips = [];
-      if (tool.is_core) chips.push('<span class="chip core">CORE</span>');
-      if (tool.is_write) chips.push('<span class="chip write">WRITE</span>');
-      if (tool.is_destructive) chips.push('<span class="chip dangerous">DESTRUCTIVE</span>');
-      if (tool.is_consciousness) chips.push('<span class="chip consciousness">CONS</span>');
-      (tool.dark_zone_ids || []).forEach(d => chips.push(`<span class="chip darkzone" data-goto-dz="${d}">${d}</span>`));
-      return `
-        <div class="leaf-card" data-leaf-id="${tool.name}" data-leaf-kind="tool" style="--card-accent: ${agg.color}">
-          <div class="leaf-title" style="font-family: 'SF Mono', 'Cascadia Code', monospace">${this._esc(tool.name)}</div>
-          <div class="leaf-sub"><code>${this._esc(tool.module)}:${tool.line}</code></div>
-          ${tool.description ? `<div class="leaf-desc">${this._esc(tool.description)}</div>` : ''}
-          ${chips.length ? `<div class="leaf-chips">${chips.join('')}</div>` : ''}
-        </div>
-      `;
-    }
-    if (leafKind === 'darkzone') {
-      const dz = this.snapshot.dark_zones.find(d => d.id === id);
-      if (!dz) return '';
-      return `
-        <div class="leaf-card" data-leaf-id="${dz.id}" data-leaf-kind="darkzone" style="--card-accent: ${agg.color}">
-          <div class="leaf-title"><span class="dz-id">${dz.id}</span> ${this._esc(dz.title)}</div>
-          <div class="leaf-desc">${this._esc(dz.body_md.slice(0, 180))}${dz.body_md.length > 180 ? '…' : ''}</div>
-        </div>
-      `;
-    }
-    return '';
-  }
-
-  _openLeaf(id, kind) {
-    // L3 = existing detail panel
-    if (kind === 'node') {
-      const node = this.snapshot.topology.nodes.find(n => n.id === id);
-      if (node) {
-        // Normalize shape for renderNode (which expects cy-like data)
-        const data = {
-          id: node.id,
-          label: node.label,
-          kind: node.kind,
-          layer: node.layer,
-          path: node.path || '',
-          loc: node.loc || 0,
-          description: node.description || '',
-          dark_zones: node.dark_zone_ids || [],
-        };
-        this.onSelectLeaf && this.onSelectLeaf({ kind: 'node', data });
-      }
-    } else if (kind === 'tool') {
-      const tool = this.snapshot.tools.find(t => t.name === id);
-      if (tool) this.onSelectLeaf && this.onSelectLeaf({ kind: 'tool', data: tool });
-    } else if (kind === 'darkzone') {
-      // Jump to the Dark Zones view directly — more useful than a mini panel
-      this.navigateExternalView('darkzones', id);
+  _restoreFromHash() {
+    const raw = (window.location.hash || '').replace(/^#\/?/, '');
+    if (raw.startsWith('l1-')) {
+      this.zoomTo(raw, { push: false });
+    } else {
+      this.zoomTo('l0', { push: false });
     }
   }
 
-  // ---------------------------------------------------------------
-  // Breadcrumb
-  // ---------------------------------------------------------------
-
-  _renderBreadcrumb() {
-    const crumbs = [{ label: 'Overview', action: () => this.showL0() }];
-    if (this.state.level >= 1 && this.state.aggId) {
-      const agg = this.snapshot.hierarchy.aggregates.find(a => a.id === this.state.aggId);
-      if (agg) crumbs.push({
-        label: agg.label,
-        color: agg.color,
-        action: () => this._renderLevel1(this.state.aggId, { push: true }),
-      });
-    }
-    if (this.state.level >= 2 && this.state.l1Id) {
-      const agg = this.snapshot.hierarchy.aggregates.find(a => a.id === this.state.aggId);
-      const g = agg && agg.l1.find(x => x.id === this.state.l1Id);
-      if (g) crumbs.push({
-        label: g.label,
-        action: () => this._renderLevel2(this.state.aggId, this.state.l1Id, { push: true }),
-      });
-    }
-
-    this.crumbsEl.innerHTML = crumbs.map((c, i) => {
-      const isLast = i === crumbs.length - 1;
-      const style = c.color ? `style="color:${c.color}"` : '';
-      return `<span class="crumb ${isLast ? 'current' : ''}" data-crumb="${i}" ${style}>${this._esc(c.label)}</span>` +
-             (isLast ? '' : '<span class="crumb-sep">›</span>');
-    }).join('');
-
-    this.crumbsEl.querySelectorAll('.crumb').forEach((el, i) => {
-      if (i < crumbs.length - 1) {
-        el.addEventListener('click', () => crumbs[i].action());
-      }
-    });
-  }
-
-  // ---------------------------------------------------------------
-  // Interface required by main.js
-  // ---------------------------------------------------------------
+  // Public API called by main.js
+  showL0() { this.zoomTo('l0', { push: true }); }
 
   search(query) {
-    // Filter the current level's cards by substring match. Empty → show all.
     const q = (query || '').trim().toLowerCase();
-    const nodes = this.stageEl.querySelectorAll('[data-agg-id], [data-group-id], [data-leaf-id]');
     let hits = 0;
-    nodes.forEach(el => {
-      const hay = el.innerText.toLowerCase();
+    this.svg.querySelectorAll('[data-node-id]').forEach(el => {
+      const id = el.dataset.nodeId;
+      const node = this.snap.topology.nodes.find(n => n.id === id);
+      if (!node) return;
+      const hay = (id + ' ' + (node.label || '') + ' ' + (node.path || '')).toLowerCase();
       const match = !q || hay.includes(q);
-      el.classList.toggle('dim-card', !match);
+      el.classList.toggle('search-hit', match && !!q);
+      el.classList.toggle('search-miss', !match && !!q);
       if (match) hits++;
     });
     return hits;
   }
 
   applyFilter(mode) {
-    // On the progressive overview, "filter" maps to a quick-jump shortcut.
-    // all   → L0
-    // write → TOOLS/write-capable leaves
-    // memory → MEMORY/L1
-    // dark  → SAFETY/L1
-    // tools → TOOLS/L1
-    if (mode === 'memory') this._renderLevel1('memory');
-    else if (mode === 'dark') this._renderLevel1('safety');
-    else if (mode === 'tools') this._renderLevel1('tools');
-    else if (mode === 'write') {
-      // Drill to tools, then stop — user can further pick a group
-      this._renderLevel1('tools');
-    } else {
-      this._renderLevel0();
-    }
-  }
-
-  // ---------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------
-
-  _leafLabel(id, kind) {
-    if (kind === 'node') {
-      const n = this.snapshot.topology.nodes.find(x => x.id === id);
-      return n ? n.label : id;
-    }
-    if (kind === 'tool') return id;
-    if (kind === 'darkzone') {
-      const d = this.snapshot.dark_zones.find(x => x.id === id);
-      return d ? `${d.id} ${d.title}` : id;
-    }
-    return id;
+    // "filter" maps to zoom shortcuts.
+    if (mode === 'memory') this.zoomTo('l1-memory');
+    else if (mode === 'tools') this.zoomTo('l1-tools');
+    else if (mode === 'dark') this.navigateExternalView('darkzones');
+    else if (mode === 'write') this.zoomTo('l1-brain');
+    else this.zoomTo('l0');
   }
 
   _esc(s) {

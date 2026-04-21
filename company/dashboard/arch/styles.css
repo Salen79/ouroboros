@@ -740,3 +740,298 @@ html, body {
   gap: 4px;
 }
 .dim-card { opacity: 0.25; pointer-events: none; }
+
+/* ============================================================ */
+/* Phase 1.6 — ecosystem composition + semantic zoom            */
+/* ============================================================ */
+
+.overview-host .ov-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.overview-host .ov-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 24px 24px;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(108, 92, 231, 0.07), transparent 50%),
+    radial-gradient(circle at 82% 78%, rgba(253, 203, 110, 0.05), transparent 55%),
+    var(--bg);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+.overview-host .ov-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(22, 25, 35, 0.72);
+  backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+.crumb-spacer { flex: 1; }
+.safety-pill {
+  background: rgba(225, 112, 85, 0.12);
+  color: var(--red);
+  border: 1px solid rgba(225, 112, 85, 0.35);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.safety-pill:hover { background: rgba(225, 112, 85, 0.2); }
+.zoom-hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  margin-left: 10px;
+}
+
+svg.ecosystem {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;           /* clip to viewBox even during zoom animation */
+  transition: none;           /* viewBox animation is JS-driven */
+}
+svg.ecosystem .zoom-group {
+  transition: opacity .18s ease;
+}
+
+/* --- Organ backgrounds --- */
+svg.ecosystem .organ-bg { cursor: zoom-in; }
+svg.ecosystem[data-zoom^="l1"] .organ-bg { cursor: zoom-out; }
+svg.ecosystem .organ:hover .organ-bg { stroke: rgba(255,255,255,0.18); }
+
+/* --- Organ labels --- */
+svg.ecosystem .organ-label {
+  fill: rgba(255,255,255,0.22);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  pointer-events: none;  /* organ-bg rect handles clicks; labels are decorative */
+  transition: opacity .25s;
+}
+svg.ecosystem[data-zoom="l0"] .l0-label { opacity: 0.82; }
+svg.ecosystem:not([data-zoom="l0"]) .l0-label { opacity: 0; }
+
+/* --- Memory lifetime bands: visible only inside l1-memory zoom --- */
+svg.ecosystem .mem-band { opacity: 0; transition: opacity .3s; pointer-events: none; }
+svg.ecosystem[data-zoom="l1-memory"] .mem-band { opacity: 1; }
+svg.ecosystem .mem-band-label {
+  fill: #fdcb6e;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* --- Nodes --- */
+svg.ecosystem .node { cursor: pointer; }
+svg.ecosystem .node-rect {
+  fill: #1a1d27;
+  stroke: rgba(255,255,255,0.14);
+  stroke-width: 1;
+  transition: fill .12s, stroke .12s;
+}
+svg.ecosystem .node:hover .node-rect {
+  fill: #20243155;
+  stroke: #fdcb6e;
+}
+svg.ecosystem .node-label {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  font-family: 'SF Mono', 'Cascadia Code', 'Menlo', monospace;
+}
+
+/* --- Organ-specific node palettes --- */
+svg.ecosystem .node.organ-external .node-rect { fill: #242834; stroke: #636e72; }
+svg.ecosystem .node.organ-interface .node-rect { fill: #1a2130; stroke: rgba(116, 185, 255, 0.35); }
+svg.ecosystem .node.organ-brain     .node-rect { fill: #1a1832; stroke: rgba(108, 92, 231, 0.40); }
+svg.ecosystem .node.organ-tools     .node-rect { fill: #0e2420; stroke: rgba(0, 184, 148, 0.45); }
+svg.ecosystem .node.organ-memory    .node-rect { fill: #241e13; stroke: rgba(253, 203, 110, 0.40); }
+
+/* Functional-role subtle tints within BRAIN */
+svg.ecosystem .node.role-reactive   .node-rect { stroke: rgba(116,185,255,0.6); }
+svg.ecosystem .node.role-reflective .node-rect { stroke: rgba(162,155,254,0.6); }
+svg.ecosystem .node.role-continuous .node-rect { stroke: rgba(85,239,196,0.6); }
+svg.ecosystem .node.role-governance .node-rect { stroke: rgba(225,112,85,0.5); stroke-dasharray: 4 3; }
+
+svg.ecosystem .node.paused .node-rect {
+  fill: #181923;
+  stroke-dasharray: 3 5;
+  stroke: #636e72;
+}
+svg.ecosystem .node.paused .node-label { fill: #636e72; font-style: italic; }
+
+/* --- Dark-Zone pulse indicator --- */
+svg.ecosystem .dz-pulse {
+  animation: dz-pulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(225,112,85,0.7));
+  pointer-events: none;
+}
+@keyframes dz-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.35); opacity: 0.4; }
+}
+
+/* --- Edges: visibility rules per zoom state --- */
+svg.ecosystem .edge { transition: opacity .25s; }
+svg.ecosystem .edge.vis-l0       { opacity: 0.7; }
+svg.ecosystem .edge.vis-detail   { opacity: 0; }
+svg.ecosystem .edge.vis-l1-brain { opacity: 0; }
+svg.ecosystem .edge.vis-l1-iface { opacity: 0; }
+
+/* when any l1 is active → detail edges appear, l0 edges fade a bit */
+svg.ecosystem[data-zoom^="l1"] .edge.vis-l0     { opacity: 0.2; }
+svg.ecosystem[data-zoom^="l1"] .edge.vis-detail { opacity: 0.6; }
+svg.ecosystem[data-zoom="l1-brain"] .edge.vis-l1-brain { opacity: 0.82; }
+svg.ecosystem[data-zoom="l1-interface"] .edge.vis-l1-iface { opacity: 0.82; }
+
+/* --- Hover highlight --- */
+svg.ecosystem .hl-dim { opacity: 0.15; transition: opacity .15s; }
+svg.ecosystem .hl-neighbor .node-rect { stroke-width: 2; stroke: #fdcb6e; }
+svg.ecosystem .edge.hl-active { opacity: 1 !important; }
+svg.ecosystem .edge.hl-active path { stroke-width: 2.6; }
+
+/* --- Search --- */
+svg.ecosystem .search-hit .node-rect { stroke: #fdcb6e; stroke-width: 3; }
+svg.ecosystem .search-miss { opacity: 0.2; }
+
+/* ============================================================ */
+/* Memory view — lifetime bands (Phase 1.6)                     */
+/* ============================================================ */
+
+#view-memory .cy-container { display: none; }  /* legacy container, unused now */
+
+.mem-root {
+  padding: 24px 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: 100%;
+}
+.mem-head { margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.mem-head-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.mem-head-sub { color: var(--muted); font-size: 13px; }
+
+.mem-bands {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mem-band {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--band-accent, var(--accent));
+  border-radius: 12px;
+  padding: 16px 20px 20px;
+}
+.mem-band-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.mem-band-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--band-accent);
+  box-shadow: 0 0 12px var(--band-accent);
+}
+.mem-band-title { font-size: 16px; font-weight: 700; color: var(--band-accent); }
+.mem-band-tagline { color: var(--muted); font-size: 12px; }
+.mem-band-count {
+  margin-left: auto;
+  background: rgba(255,255,255,0.04);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.mem-band-body {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.mem-band-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.mem-bucket { margin-bottom: 14px; }
+.mem-bucket-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.mem-bucket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.mem-node {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--card-accent, var(--accent));
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .13s;
+}
+.mem-node:hover {
+  border-color: var(--card-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.mem-node-kind {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-family: monospace;
+}
+.mem-node-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+.mem-node-sub {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 34px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.mem-node-chips {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Hide ov-stage padding when the Memory tab is active (different layout) */
+#view-memory { overflow-y: auto; height: 100%; }

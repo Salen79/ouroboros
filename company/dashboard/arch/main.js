@@ -1,12 +1,12 @@
 // Main orchestrator — wires the 4 views to the topbar and side panel.
 
-import { OverviewView } from './views/overview.js?v=phase1.5';
-import { MemoryView } from './views/memory.js?v=phase1.5';
-import { DarkZonesView } from './views/darkzones.js?v=phase1.5';
-import { ToolsView } from './views/tools.js?v=phase1.5';
-import { renderNode, renderTool } from './lib/panel.js?v=phase1.5';
+import { OverviewView } from './views/overview.js?v=phase1.6';
+import { MemoryView } from './views/memory.js?v=phase1.6';
+import { DarkZonesView } from './views/darkzones.js?v=phase1.6';
+import { ToolsView } from './views/tools.js?v=phase1.6';
+import { renderNode, renderTool } from './lib/panel.js?v=phase1.6';
 
-const SNAPSHOT_URL = 'architecture.json?v=phase1.5';
+const SNAPSHOT_URL = 'architecture.json?v=phase1.6';
 
 async function loadSnapshot() {
   const res = await fetch(SNAPSHOT_URL, { cache: 'no-cache' });

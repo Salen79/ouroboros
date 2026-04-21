@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-21T16:55:42.371079+00:00",
+    "generated_at": "2026-04-21T17:17:22.497957+00:00",
     "git": {
-      "sha": "46416a74949292c5bc4c3562f03f184eeae0c2e1",
+      "sha": "e2fd3538d9169f73956021a8f48a69f060e438bc",
       "branch": "feat/architecture-dashboard-phase1",
-      "subject": "feat(phase1): architecture dashboard — static interactive snapshot"
+      "subject": "feat(phase1.5): redesign Overview as progressive drill-down (4 levels)"
     },
     "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
     "repo": "/home/deploy/ouroboros",
@@ -49,7 +49,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "apply_change",
@@ -111,7 +112,8 @@
       "is_write": true,
       "is_destructive": true,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "execute"
     },
     {
       "name": "browse_page",
@@ -154,7 +156,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "browser_action",
@@ -199,7 +202,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "cancel_task",
@@ -223,7 +227,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "chat_history",
@@ -257,7 +262,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "check_evolution_status",
@@ -275,7 +281,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "chromadb_stats",
@@ -295,7 +302,8 @@
       "dark_zone_ids": [
         "D10",
         "D16"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "claude_code_edit",
@@ -325,7 +333,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D16"
-      ]
+      ],
+      "tools_category": "execute"
     },
     {
       "name": "close_github_issue",
@@ -355,7 +364,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "codebase_digest",
@@ -373,7 +383,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "codebase_health",
@@ -391,7 +402,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "comment_on_issue",
@@ -421,7 +433,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "compact_context",
@@ -445,7 +458,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "create_github_issue",
@@ -480,7 +494,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "deep_reflection",
@@ -503,7 +518,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "drive_list",
@@ -530,7 +546,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "drive_read",
@@ -554,7 +571,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "drive_write",
@@ -590,7 +608,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "enable_tools",
@@ -615,7 +634,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "meta"
     },
     {
       "name": "find_skills",
@@ -647,7 +667,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D4"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "forward_to_worker",
@@ -677,7 +698,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "generate_evolution_stats",
@@ -695,7 +717,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "get_github_issue",
@@ -720,7 +743,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "get_task_result",
@@ -745,7 +769,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "git_diff",
@@ -769,7 +794,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "git_status",
@@ -787,7 +813,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "knowledge_list",
@@ -805,7 +832,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "knowledge_read",
@@ -830,7 +858,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "knowledge_write",
@@ -868,7 +897,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "list_available_tools",
@@ -886,7 +916,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "meta"
     },
     {
       "name": "list_github_issues",
@@ -925,7 +956,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "memory_search",
@@ -962,7 +994,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D4"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "multi_model_review",
@@ -1000,7 +1033,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "promote_to_stable",
@@ -1024,7 +1058,8 @@
       "is_write": true,
       "is_destructive": true,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "execute"
     },
     {
       "name": "propose_change",
@@ -1062,7 +1097,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "read_service_logs",
@@ -1094,7 +1130,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D20"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "recall",
@@ -1137,7 +1174,8 @@
       "dark_zone_ids": [
         "D10",
         "D16"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "recent_session",
@@ -1163,7 +1201,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D4"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "record_memory",
@@ -1220,7 +1259,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D4"
-      ]
+      ],
+      "tools_category": "write"
     },
     {
       "name": "repo_commit_push",
@@ -1253,7 +1293,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D20"
-      ]
+      ],
+      "tools_category": "execute"
     },
     {
       "name": "repo_list",
@@ -1280,7 +1321,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "repo_read",
@@ -1304,7 +1346,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "repo_write_commit",
@@ -1336,7 +1379,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "execute"
     },
     {
       "name": "request_restart",
@@ -1360,7 +1404,8 @@
       "is_write": true,
       "is_destructive": true,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "execute"
     },
     {
       "name": "request_review",
@@ -1385,7 +1430,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "restart_service",
@@ -1412,7 +1458,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D20"
-      ]
+      ],
+      "tools_category": "execute"
     },
     {
       "name": "run_ops_check",
@@ -1447,7 +1494,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D20"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "run_shell",
@@ -1481,7 +1529,8 @@
       "dark_zone_ids": [
         "D10",
         "D16"
-      ]
+      ],
+      "tools_category": "execute"
     },
     {
       "name": "save_skill",
@@ -1534,7 +1583,8 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D4"
-      ]
+      ],
+      "tools_category": "write"
     },
     {
       "name": "schedule_task",
@@ -1567,7 +1617,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "semantic_find_skills",
@@ -1600,7 +1651,8 @@
       "dark_zone_ids": [
         "D10",
         "D16"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "semantic_search",
@@ -1644,7 +1696,8 @@
       "dark_zone_ids": [
         "D10",
         "D16"
-      ]
+      ],
+      "tools_category": "read"
     },
     {
       "name": "send_owner_message",
@@ -1673,7 +1726,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "send_photo",
@@ -1702,7 +1756,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "summarize_dialogue",
@@ -1725,7 +1780,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "switch_model",
@@ -1758,7 +1814,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "meta"
     },
     {
       "name": "toggle_consciousness",
@@ -1788,7 +1845,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "toggle_evolution",
@@ -1813,7 +1871,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "update_identity",
@@ -1838,7 +1897,8 @@
       "is_write": true,
       "is_destructive": true,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "update_scratchpad",
@@ -1863,7 +1923,8 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "write"
     },
     {
       "name": "vlm_query",
@@ -1904,7 +1965,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "wait_for_task",
@@ -1929,7 +1991,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     },
     {
       "name": "web_search",
@@ -1953,7 +2016,8 @@
       "is_write": false,
       "is_destructive": false,
       "is_consciousness": true,
-      "dark_zone_ids": []
+      "dark_zone_ids": [],
+      "tools_category": "read"
     }
   ],
   "core_tool_names": [
@@ -2694,35 +2758,45 @@
         "label": "Telegram API",
         "layer": "top",
         "kind": "external",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "inbound",
+        "organ": "interface"
       },
       {
         "id": "openrouter",
         "label": "OpenRouter (LLM)",
         "layer": "top",
         "kind": "external",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "external",
+        "organ": "external"
       },
       {
         "id": "colab_launcher",
         "label": "colab_launcher.py",
         "layer": "top",
         "kind": "process",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "inbound",
+        "organ": "interface"
       },
       {
         "id": "worker_pool",
         "label": "Worker Pool (5 fork)",
         "layer": "top",
         "kind": "process",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "process",
+        "organ": "interface"
       },
       {
         "id": "consciousness_thread",
         "label": "Consciousness Thread",
         "layer": "top",
         "kind": "process",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "process",
+        "organ": "interface"
       },
       {
         "id": "docker_chromadb",
@@ -2735,28 +2809,36 @@
           "D2",
           "D5",
           "D6"
-        ]
+        ],
+        "functional_role": "infra",
+        "organ": "interface"
       },
       {
         "id": "docker_postgres",
         "label": "Postgres (idle)",
         "layer": "top",
         "kind": "infra",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "infra",
+        "organ": "interface"
       },
       {
         "id": "docker_redis",
         "label": "Redis (idle)",
         "layer": "top",
         "kind": "infra",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "infra",
+        "organ": "interface"
       },
       {
         "id": "fs_data",
         "label": "~/ouroboros-data/",
         "layer": "top",
         "kind": "infra",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "process",
+        "organ": "interface"
       },
       {
         "id": "agent",
@@ -2769,7 +2851,9 @@
           "D14",
           "D15",
           "D7"
-        ]
+        ],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "loop",
@@ -2784,7 +2868,9 @@
           "D22",
           "D24",
           "D5"
-        ]
+        ],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "context",
@@ -2798,7 +2884,9 @@
           "D21",
           "D23",
           "D3"
-        ]
+        ],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "memory",
@@ -2812,7 +2900,9 @@
           "D13",
           "D16",
           "D4"
-        ]
+        ],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "llm",
@@ -2821,7 +2911,9 @@
         "kind": "module",
         "path": "ouroboros/llm.py",
         "loc": 297,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "consciousness",
@@ -2834,7 +2926,9 @@
           "D19",
           "D25",
           "D8"
-        ]
+        ],
+        "functional_role": "continuous",
+        "organ": "brain"
       },
       {
         "id": "skill_manager",
@@ -2847,7 +2941,9 @@
           "D2",
           "D4",
           "D5"
-        ]
+        ],
+        "functional_role": "reflective",
+        "organ": "brain"
       },
       {
         "id": "experiment_engine",
@@ -2858,7 +2954,9 @@
         "loc": 528,
         "dark_zone_ids": [
           "D2"
-        ]
+        ],
+        "functional_role": "reflective",
+        "organ": "brain"
       },
       {
         "id": "pattern_detector",
@@ -2869,7 +2967,9 @@
         "loc": 192,
         "dark_zone_ids": [
           "D18"
-        ]
+        ],
+        "functional_role": "reflective",
+        "organ": "brain"
       },
       {
         "id": "strategic_planner",
@@ -2878,7 +2978,9 @@
         "kind": "module",
         "path": "ouroboros/strategic_planner.py",
         "loc": 335,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "continuous",
+        "organ": "brain"
       },
       {
         "id": "inner_critic",
@@ -2889,7 +2991,9 @@
         "loc": 360,
         "dark_zone_ids": [
           "D24"
-        ]
+        ],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "self_evolution",
@@ -2898,7 +3002,9 @@
         "kind": "module",
         "path": "ouroboros/self_evolution.py",
         "loc": 659,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "governance",
+        "organ": "brain"
       },
       {
         "id": "budget",
@@ -2910,7 +3016,9 @@
         "dark_zone_ids": [
           "D21",
           "D9"
-        ]
+        ],
+        "functional_role": "governance",
+        "organ": "brain"
       },
       {
         "id": "owner_inject",
@@ -2919,7 +3027,9 @@
         "kind": "module",
         "path": "ouroboros/owner_inject.py",
         "loc": 103,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "reactive",
+        "organ": "brain"
       },
       {
         "id": "queue",
@@ -2930,7 +3040,9 @@
         "loc": 567,
         "dark_zone_ids": [
           "D19"
-        ]
+        ],
+        "functional_role": "orchestration",
+        "organ": "interface"
       },
       {
         "id": "workers",
@@ -2942,7 +3054,9 @@
         "dark_zone_ids": [
           "D17",
           "D6"
-        ]
+        ],
+        "functional_role": "orchestration",
+        "organ": "interface"
       },
       {
         "id": "events",
@@ -2951,7 +3065,9 @@
         "kind": "module",
         "path": "supervisor/events.py",
         "loc": 492,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "orchestration",
+        "organ": "interface"
       },
       {
         "id": "telegram",
@@ -2960,7 +3076,9 @@
         "kind": "module",
         "path": "supervisor/telegram.py",
         "loc": 532,
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "outbound",
+        "organ": "interface"
       },
       {
         "id": "state",
@@ -2973,7 +3091,9 @@
           "D20",
           "D21",
           "D22"
-        ]
+        ],
+        "functional_role": "governance",
+        "organ": "brain"
       },
       {
         "id": "git_ops",
@@ -2984,7 +3104,9 @@
         "loc": 434,
         "dark_zone_ids": [
           "D20"
-        ]
+        ],
+        "functional_role": "orchestration",
+        "organ": "interface"
       },
       {
         "id": "registry",
@@ -2996,7 +3118,9 @@
         "dark_zone_ids": [
           "D10",
           "D16"
-        ]
+        ],
+        "functional_role": "registry",
+        "organ": "tools"
       },
       {
         "id": "mem_scratchpad",
@@ -3004,7 +3128,10 @@
         "layer": "bottom",
         "kind": "file_md",
         "description": "Working state, REPLACED per task",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "working",
+        "memory_lifetime": "working",
+        "organ": "memory"
       },
       {
         "id": "mem_identity",
@@ -3015,7 +3142,10 @@
         "dark_zone_ids": [
           "D14",
           "D25"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "mem_wisdom",
@@ -3023,7 +3153,10 @@
         "layer": "bottom",
         "kind": "file_md",
         "description": "Distilled strategy (28KB)",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "mem_knowledge",
@@ -3031,7 +3164,10 @@
         "layer": "bottom",
         "kind": "file_dir",
         "description": "Topic files + _index.md",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "mem_episodic",
@@ -3041,7 +3177,10 @@
         "description": "Daily episodes + skills",
         "dark_zone_ids": [
           "D2"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "log_chat",
@@ -3049,7 +3188,10 @@
         "layer": "bottom",
         "kind": "logfile",
         "description": "Telegram transcript",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "log_events",
@@ -3064,7 +3206,10 @@
           "D17",
           "D18",
           "D2"
-        ]
+        ],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "log_supervisor",
@@ -3076,7 +3221,10 @@
           "D1",
           "D17",
           "D6"
-        ]
+        ],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "log_tools",
@@ -3084,7 +3232,10 @@
         "layer": "bottom",
         "kind": "logfile",
         "description": "tool args + results",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "log_progress",
@@ -3092,7 +3243,10 @@
         "layer": "bottom",
         "kind": "logfile",
         "description": "progress heartbeats",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "file_task_results",
@@ -3102,7 +3256,10 @@
         "description": "One JSON per task",
         "dark_zone_ids": [
           "D18"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_main",
@@ -3114,7 +3271,10 @@
           "D20",
           "D21",
           "D22"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_queue",
@@ -3122,7 +3282,10 @@
         "layer": "bottom",
         "kind": "state_json",
         "description": "PENDING + RUNNING",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "state_budget",
@@ -3133,7 +3296,10 @@
         "dark_zone_ids": [
           "D21",
           "D9"
-        ]
+        ],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "state_directives",
@@ -3141,7 +3307,10 @@
         "layer": "bottom",
         "kind": "state_json",
         "description": "stop/pause/forget 24h",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "short_term",
+        "memory_lifetime": "short_term",
+        "organ": "memory"
       },
       {
         "id": "state_commitments",
@@ -3151,7 +3320,10 @@
         "description": "announced deadlines",
         "dark_zone_ids": [
           "D19"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_experiments",
@@ -3161,7 +3333,10 @@
         "description": "active + completed experiments",
         "dark_zone_ids": [
           "D2"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_reflected",
@@ -3169,7 +3344,10 @@
         "layer": "bottom",
         "kind": "state_json",
         "description": "reflection dedup",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_consciousness",
@@ -3177,7 +3355,10 @@
         "layer": "bottom",
         "kind": "state_json",
         "description": "daily metric snapshots",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "state_cooldown",
@@ -3185,7 +3366,10 @@
         "layer": "bottom",
         "kind": "state_json",
         "description": "self-mod counter",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "chroma_episodes",
@@ -3193,7 +3377,10 @@
         "layer": "bottom",
         "kind": "chromadb",
         "description": "137 items — insights/errors/decisions",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "chroma_skills",
@@ -3204,7 +3391,10 @@
         "dark_zone_ids": [
           "D2",
           "D4"
-        ]
+        ],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       },
       {
         "id": "chroma_history",
@@ -3212,7 +3402,10 @@
         "layer": "bottom",
         "kind": "chromadb",
         "description": "488 items — chat+events chunks",
-        "dark_zone_ids": []
+        "dark_zone_ids": [],
+        "functional_role": "long_term",
+        "memory_lifetime": "long_term",
+        "organ": "memory"
       }
     ],
     "edges": [
@@ -4225,5 +4418,807 @@
         "style": "dashed"
       }
     ]
+  },
+  "typed_edges": [
+    {
+      "source": "telegram_api",
+      "target": "colab_launcher",
+      "kind": "invokes",
+      "label": "poll_updates",
+      "visibility": "l0"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "telegram_api",
+      "kind": "invokes",
+      "label": "send_messages",
+      "visibility": "l0"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "agent",
+      "kind": "invokes",
+      "label": "dispatch_task (via queue+workers)",
+      "visibility": "l0"
+    },
+    {
+      "source": "llm",
+      "target": "openrouter",
+      "kind": "invokes",
+      "label": "HTTP completions",
+      "visibility": "l0"
+    },
+    {
+      "source": "loop",
+      "target": "llm",
+      "kind": "invokes",
+      "label": "every round",
+      "visibility": "l0"
+    },
+    {
+      "source": "loop",
+      "target": "registry",
+      "kind": "invokes",
+      "label": "dispatch tool",
+      "visibility": "l0"
+    },
+    {
+      "source": "loop",
+      "target": "mem_scratchpad",
+      "kind": "writes_to",
+      "label": "REPLACE post-task",
+      "visibility": "l0"
+    },
+    {
+      "source": "loop",
+      "target": "log_events",
+      "kind": "writes_to",
+      "label": "llm_round + stuck",
+      "visibility": "l0"
+    },
+    {
+      "source": "context",
+      "target": "mem_identity",
+      "kind": "reads_from",
+      "label": "identity",
+      "visibility": "l0"
+    },
+    {
+      "source": "context",
+      "target": "log_chat",
+      "kind": "reads_from",
+      "label": "last 40 msgs",
+      "visibility": "l0"
+    },
+    {
+      "source": "registry",
+      "target": "chroma_episodes",
+      "kind": "writes_to",
+      "label": "semantic episodes",
+      "visibility": "l0"
+    },
+    {
+      "source": "consciousness",
+      "target": "log_events",
+      "kind": "observes",
+      "label": "reflection cycle",
+      "visibility": "l0"
+    },
+    {
+      "source": "inner_critic",
+      "target": "loop",
+      "kind": "governs",
+      "label": "advisory at 40%/75%",
+      "visibility": "l0"
+    },
+    {
+      "source": "self_evolution",
+      "target": "loop",
+      "kind": "governs",
+      "label": "file zones",
+      "visibility": "l0"
+    },
+    {
+      "source": "budget",
+      "target": "loop",
+      "kind": "governs",
+      "label": "cost caps",
+      "visibility": "l0"
+    },
+    {
+      "source": "agent",
+      "target": "loop",
+      "kind": "invokes",
+      "label": "run_llm_loop",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "agent",
+      "target": "context",
+      "kind": "invokes",
+      "label": "_prepare_task_context",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "agent",
+      "target": "memory",
+      "kind": "invokes",
+      "label": "ensure memory core (R1)",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "loop",
+      "target": "inner_critic",
+      "kind": "invokes",
+      "label": "checkpoint 40%/75%",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "loop",
+      "target": "skill_manager",
+      "kind": "invokes",
+      "label": "post-task extract",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "loop",
+      "target": "experiment_engine",
+      "kind": "invokes",
+      "label": "record_task",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "consciousness",
+      "target": "llm",
+      "kind": "invokes",
+      "label": "think cycle",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "consciousness",
+      "target": "strategic_planner",
+      "kind": "invokes",
+      "label": "gated (kill-switch)",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "consciousness",
+      "target": "experiment_engine",
+      "kind": "invokes",
+      "label": "run_full_cycle",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "consciousness",
+      "target": "skill_manager",
+      "kind": "invokes",
+      "label": "auto_reflection",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "consciousness",
+      "target": "pattern_detector",
+      "kind": "invokes",
+      "label": "scan task_results",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "context",
+      "target": "memory",
+      "kind": "invokes",
+      "label": "load identity/scratchpad",
+      "visibility": "l1-brain"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "queue",
+      "kind": "invokes",
+      "label": "enqueue_task",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "queue",
+      "target": "workers",
+      "kind": "invokes",
+      "label": "in_q.put",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "workers",
+      "target": "agent",
+      "kind": "invokes",
+      "label": "worker_main → handle_task",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "consciousness_thread",
+      "kind": "invokes",
+      "label": "spawn bg thread",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "telegram",
+      "kind": "invokes",
+      "label": "send_with_budget",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "git_ops",
+      "target": "colab_launcher",
+      "kind": "governs",
+      "label": "safe_restart",
+      "visibility": "l1-iface"
+    },
+    {
+      "source": "telegram",
+      "target": "log_chat",
+      "kind": "writes_to",
+      "label": "log_chat()",
+      "visibility": "detail"
+    },
+    {
+      "source": "telegram",
+      "target": "log_supervisor",
+      "kind": "writes_to",
+      "label": "outbound notes",
+      "visibility": "detail"
+    },
+    {
+      "source": "colab_launcher",
+      "target": "log_supervisor",
+      "kind": "writes_to",
+      "label": "launcher_start",
+      "visibility": "detail"
+    },
+    {
+      "source": "queue",
+      "target": "state_queue",
+      "kind": "writes_to",
+      "label": "persist_queue_snapshot",
+      "visibility": "detail"
+    },
+    {
+      "source": "git_ops",
+      "target": "state_main",
+      "kind": "writes_to",
+      "label": "current_sha on reset",
+      "visibility": "detail"
+    },
+    {
+      "source": "experiment_engine",
+      "target": "state_experiments",
+      "kind": "writes_to",
+      "label": "_save_json",
+      "visibility": "detail"
+    },
+    {
+      "source": "experiment_engine",
+      "target": "mem_wisdom",
+      "kind": "writes_to",
+      "label": "on confirm",
+      "visibility": "detail"
+    },
+    {
+      "source": "skill_manager",
+      "target": "chroma_skills",
+      "kind": "writes_to",
+      "label": "UUID writer",
+      "visibility": "detail"
+    },
+    {
+      "source": "skill_manager",
+      "target": "mem_episodic",
+      "kind": "writes_to",
+      "label": "via callback",
+      "visibility": "detail"
+    },
+    {
+      "source": "pattern_detector",
+      "target": "file_task_results",
+      "kind": "reads_from",
+      "label": "scan JSONs",
+      "visibility": "detail"
+    },
+    {
+      "source": "consciousness",
+      "target": "chroma_episodes",
+      "kind": "writes_to",
+      "label": "auto_reflection upsert",
+      "visibility": "detail"
+    },
+    {
+      "source": "consciousness",
+      "target": "state_reflected",
+      "kind": "writes_to",
+      "label": "reflection dedup",
+      "visibility": "detail"
+    },
+    {
+      "source": "memory",
+      "target": "state_directives",
+      "kind": "writes_to",
+      "label": "save_directive",
+      "visibility": "detail"
+    },
+    {
+      "source": "budget",
+      "target": "state_budget",
+      "kind": "writes_to",
+      "label": "spend()",
+      "visibility": "detail"
+    },
+    {
+      "source": "loop",
+      "target": "file_task_results",
+      "kind": "writes_to",
+      "label": "per-task JSON",
+      "visibility": "detail"
+    },
+    {
+      "source": "agent",
+      "target": "mem_scratchpad",
+      "kind": "reads_from",
+      "label": "context load",
+      "visibility": "detail"
+    },
+    {
+      "source": "context",
+      "target": "mem_scratchpad",
+      "kind": "reads_from",
+      "label": "restart banner check",
+      "visibility": "detail"
+    },
+    {
+      "source": "context",
+      "target": "mem_wisdom",
+      "kind": "reads_from",
+      "label": "load wisdom",
+      "visibility": "detail"
+    },
+    {
+      "source": "context",
+      "target": "mem_knowledge",
+      "kind": "reads_from",
+      "label": "knowledge index",
+      "visibility": "detail"
+    }
+  ],
+  "layout": {
+    "viewbox": {
+      "x": 0,
+      "y": 0,
+      "w": 2000,
+      "h": 1400
+    },
+    "organs": {
+      "external": {
+        "x": 0,
+        "y": 0,
+        "w": 2000,
+        "h": 160,
+        "label_x": 1000,
+        "label_y": 28,
+        "label": "EXTERNAL"
+      },
+      "interface": {
+        "x": 0,
+        "y": 200,
+        "w": 2000,
+        "h": 220,
+        "label_x": 1000,
+        "label_y": 226,
+        "label": "INTERFACE"
+      },
+      "brain": {
+        "x": 460,
+        "y": 460,
+        "w": 1080,
+        "h": 540,
+        "label_x": 1000,
+        "label_y": 488,
+        "label": "BRAIN"
+      },
+      "tools": {
+        "x": 1580,
+        "y": 460,
+        "w": 380,
+        "h": 540,
+        "label_x": 1770,
+        "label_y": 488,
+        "label": "TOOLS"
+      },
+      "memory": {
+        "x": 40,
+        "y": 1040,
+        "w": 1920,
+        "h": 340,
+        "label_x": 1000,
+        "label_y": 1068,
+        "label": "MEMORY"
+      }
+    },
+    "nodes": {
+      "telegram_api": {
+        "cx": 240,
+        "cy": 84,
+        "w": 180,
+        "h": 56
+      },
+      "openrouter": {
+        "cx": 1760,
+        "cy": 84,
+        "w": 180,
+        "h": 56
+      },
+      "colab_launcher": {
+        "cx": 260,
+        "cy": 310,
+        "w": 220,
+        "h": 56
+      },
+      "queue": {
+        "cx": 660,
+        "cy": 280,
+        "w": 150,
+        "h": 46
+      },
+      "workers": {
+        "cx": 830,
+        "cy": 280,
+        "w": 150,
+        "h": 46
+      },
+      "worker_pool": {
+        "cx": 1000,
+        "cy": 280,
+        "w": 150,
+        "h": 46
+      },
+      "events": {
+        "cx": 660,
+        "cy": 355,
+        "w": 150,
+        "h": 46
+      },
+      "git_ops": {
+        "cx": 830,
+        "cy": 355,
+        "w": 150,
+        "h": 46
+      },
+      "consciousness_thread": {
+        "cx": 1000,
+        "cy": 355,
+        "w": 170,
+        "h": 46
+      },
+      "telegram": {
+        "cx": 1760,
+        "cy": 310,
+        "w": 200,
+        "h": 56
+      },
+      "docker_chromadb": {
+        "cx": 1310,
+        "cy": 310,
+        "w": 150,
+        "h": 42
+      },
+      "docker_postgres": {
+        "cx": 1310,
+        "cy": 360,
+        "w": 150,
+        "h": 32
+      },
+      "docker_redis": {
+        "cx": 1470,
+        "cy": 360,
+        "w": 130,
+        "h": 32
+      },
+      "fs_data": {
+        "cx": 1470,
+        "cy": 310,
+        "w": 130,
+        "h": 42
+      },
+      "agent": {
+        "cx": 600,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "context": {
+        "cx": 760,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "memory": {
+        "cx": 920,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "loop": {
+        "cx": 1080,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "llm": {
+        "cx": 1240,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "inner_critic": {
+        "cx": 1400,
+        "cy": 580,
+        "w": 130,
+        "h": 48
+      },
+      "skill_manager": {
+        "cx": 680,
+        "cy": 720,
+        "w": 150,
+        "h": 46
+      },
+      "experiment_engine": {
+        "cx": 870,
+        "cy": 720,
+        "w": 170,
+        "h": 46
+      },
+      "pattern_detector": {
+        "cx": 1060,
+        "cy": 720,
+        "w": 170,
+        "h": 46
+      },
+      "owner_inject": {
+        "cx": 1240,
+        "cy": 720,
+        "w": 150,
+        "h": 46
+      },
+      "consciousness": {
+        "cx": 700,
+        "cy": 870,
+        "w": 180,
+        "h": 52
+      },
+      "strategic_planner": {
+        "cx": 920,
+        "cy": 870,
+        "w": 180,
+        "h": 52
+      },
+      "self_evolution": {
+        "cx": 1160,
+        "cy": 870,
+        "w": 170,
+        "h": 46
+      },
+      "budget": {
+        "cx": 1330,
+        "cy": 870,
+        "w": 140,
+        "h": 46
+      },
+      "state": {
+        "cx": 1460,
+        "cy": 870,
+        "w": 130,
+        "h": 46
+      },
+      "registry": {
+        "cx": 1770,
+        "cy": 720,
+        "w": 280,
+        "h": 60
+      },
+      "mem_scratchpad": {
+        "cx": 180,
+        "cy": 1170,
+        "w": 200,
+        "h": 52
+      },
+      "log_chat": {
+        "cx": 540,
+        "cy": 1120,
+        "w": 150,
+        "h": 40
+      },
+      "log_events": {
+        "cx": 700,
+        "cy": 1120,
+        "w": 170,
+        "h": 40
+      },
+      "log_supervisor": {
+        "cx": 880,
+        "cy": 1120,
+        "w": 180,
+        "h": 40
+      },
+      "log_tools": {
+        "cx": 1060,
+        "cy": 1120,
+        "w": 150,
+        "h": 40
+      },
+      "log_progress": {
+        "cx": 1060,
+        "cy": 1170,
+        "w": 150,
+        "h": 40
+      },
+      "state_directives": {
+        "cx": 540,
+        "cy": 1170,
+        "w": 150,
+        "h": 40
+      },
+      "state_budget": {
+        "cx": 700,
+        "cy": 1170,
+        "w": 160,
+        "h": 40
+      },
+      "state_queue": {
+        "cx": 880,
+        "cy": 1170,
+        "w": 170,
+        "h": 40
+      },
+      "mem_identity": {
+        "cx": 180,
+        "cy": 1230,
+        "w": 190,
+        "h": 40
+      },
+      "mem_wisdom": {
+        "cx": 180,
+        "cy": 1280,
+        "w": 190,
+        "h": 40
+      },
+      "mem_knowledge": {
+        "cx": 180,
+        "cy": 1330,
+        "w": 190,
+        "h": 40
+      },
+      "mem_episodic": {
+        "cx": 380,
+        "cy": 1330,
+        "w": 170,
+        "h": 40
+      },
+      "chroma_episodes": {
+        "cx": 1260,
+        "cy": 1230,
+        "w": 170,
+        "h": 40
+      },
+      "chroma_skills": {
+        "cx": 1440,
+        "cy": 1230,
+        "w": 170,
+        "h": 40
+      },
+      "chroma_history": {
+        "cx": 1620,
+        "cy": 1230,
+        "w": 170,
+        "h": 40
+      },
+      "state_main": {
+        "cx": 1260,
+        "cy": 1280,
+        "w": 170,
+        "h": 40
+      },
+      "state_experiments": {
+        "cx": 1440,
+        "cy": 1280,
+        "w": 170,
+        "h": 40
+      },
+      "state_commitments": {
+        "cx": 1620,
+        "cy": 1280,
+        "w": 170,
+        "h": 40
+      },
+      "state_reflected": {
+        "cx": 1260,
+        "cy": 1330,
+        "w": 170,
+        "h": 40
+      },
+      "state_consciousness": {
+        "cx": 1440,
+        "cy": 1330,
+        "w": 170,
+        "h": 40
+      },
+      "state_cooldown": {
+        "cx": 1620,
+        "cy": 1330,
+        "w": 170,
+        "h": 40
+      },
+      "file_task_results": {
+        "cx": 1800,
+        "cy": 1280,
+        "w": 150,
+        "h": 40
+      }
+    },
+    "zoom_states": {
+      "l0": {
+        "x": 0,
+        "y": 0,
+        "w": 2000,
+        "h": 1400
+      },
+      "l1-interface": {
+        "x": 100,
+        "y": 200,
+        "w": 1800,
+        "h": 320
+      },
+      "l1-brain": {
+        "x": 460,
+        "y": 460,
+        "w": 1080,
+        "h": 540
+      },
+      "l1-tools": {
+        "x": 1570,
+        "y": 460,
+        "w": 400,
+        "h": 540
+      },
+      "l1-memory": {
+        "x": 40,
+        "y": 1040,
+        "w": 1920,
+        "h": 340
+      }
+    },
+    "memory_bands": {
+      "working": {
+        "x": 40,
+        "y": 1090,
+        "w": 340,
+        "h": 270,
+        "label": "Working — per task",
+        "label_x": 210,
+        "label_y": 1108
+      },
+      "short_term": {
+        "x": 400,
+        "y": 1090,
+        "w": 740,
+        "h": 120,
+        "label": "Short-term — session/day",
+        "label_x": 770,
+        "label_y": 1108
+      },
+      "long_term": {
+        "x": 1160,
+        "y": 1090,
+        "w": 800,
+        "h": 270,
+        "label": "Long-term — persistent",
+        "label_x": 1560,
+        "label_y": 1108
+      }
+    }
   }
 }

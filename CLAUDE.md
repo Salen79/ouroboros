@@ -165,7 +165,7 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 ### Safety Mechanisms
 | Mechanism | Parameter | Action |
 |-----------|-----------|--------|
-| Per-task cost cap | $3.00 (code default; `.env` may override) | Hard stop, decompose |
+| Per-task cost cap | $5.00 (set via `OUROBOROS_MAX_TASK_COST` in `.env`; code default if unset: $3.00) | Hard stop, decompose |
 | Consciousness cost cap | $0.10 | Skip cycle |
 | MAX_ROUNDS | 12 (code default; `.env` may override) | Hard stop, decompose |
 | Circuit breaker | 3 empty responses | Hard stop |
@@ -349,6 +349,18 @@ Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine 
 | "WAKE UP SHEEPLE" (conspiracy) | 0.9 | 0.9 | 0.0 | Yes |
 
 V1 works for extreme cases. Weak spot: subtle manipulation via framing, cherry-picking, omission. This is V2 territory.
+
+## Paused Systems
+
+Subsystems that exist in code but are intentionally disabled. Do not re-enable without a Shareholder decision.
+
+**Strategic Planner: paused pending redesign**
+- Mechanism: kill switch via `STRATEGIC_PLANNER_ENABLED` env var (`consciousness.py:328`)
+- Active since: 2026-04-11 (triage merge `e5ddd04` on ouroboros)
+- Status: not to be re-enabled until redesigned
+- Reason: current implementation fires every ~30min generating autonomous PlannedTasks, misaligned with current Shareholder-driven workflow
+- Next step: redesign criteria TBD after baseline eval run
+- Env var intentionally absent from `.env` — do not add it without Shareholder decision
 
 ## Persistent Data (~/ouroboros-data/)
 

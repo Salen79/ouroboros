@@ -1275,10 +1275,16 @@ class BackgroundConsciousness:
     # Tool registry (separate instance for consciousness, not shared with agent)
     # -------------------------------------------------------------------
 
+    # D25 (2026-04-21): update_identity intentionally removed. The background
+    # thread is a light-model cycle without Shareholder review — letting it
+    # rewrite identity.md was the attack surface that corrupted identity on
+    # 2026-04-12. The main task loop retains update_identity via normal
+    # tool dispatch; identity stays readable here via direct file read in
+    # _build_context (read_text of memory/identity.md), not via a tool call.
     _BG_TOOL_WHITELIST = frozenset({
-        # Memory & identity
+        # Memory (write) — scratchpad only; identity writes require the main loop
         "send_owner_message", "schedule_task", "update_scratchpad",
-        "update_identity", "set_next_wakeup",
+        "set_next_wakeup",
         # Knowledge base
         "knowledge_read", "knowledge_write", "knowledge_list",
         # Read-only tools for awareness

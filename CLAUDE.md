@@ -49,7 +49,7 @@ ouroboros/
   ├── agent.py          — thin orchestrator + model routing classifier ✅
   ├── consciousness.py  — background cycle: reflection, stuck detection, commitment nudges, experiment engine
   ├── context.py        — prompt assembly + chat history injection + directive injection + restart banner
-  ├── loop.py           — tool loop (MAX_ROUNDS=25) + memory protocol + stuck model escalation + skill lifecycle ✅
+  ├── loop.py           — tool loop (MAX_ROUNDS=12) + memory protocol + stuck model escalation + skill lifecycle ✅
   ├── llm.py            — OpenRouter client
   ├── memory.py         — scratchpad, identity, chat, directive extraction
   ├── skill_manager.py  — skill lifecycle: auto-extraction (>3 rounds), dedup, Gemini Flash extraction, score validation, auto-retire ✅
@@ -57,7 +57,7 @@ ouroboros/
   ├── experiment_engine.py — hypothesis generation + experiment runner + measurement + auto-revert ✅
   ├── self_evolution.py — file zone enforcement + merge pipeline
   ├── strategic_planner.py — autonomous goal-setting for consciousness.py
-  ├── tools/            — auto-discovered plugins (62 total, 39 core)
+  ├── tools/            — auto-discovered plugins (64 total, 39 core)
   │   ├── core.py       — file operations
   │   ├── git.py        — git (self-modification)
   │   ├── shell.py      — shell + Claude Code CLI
@@ -133,10 +133,10 @@ ssh -p 2222 deploy@38.180.135.77
 ```
 OPENROUTER_API_KEY=      # Multi-model API
 TELEGRAM_BOT_TOKEN=      # THAI Telegram bot
-TOTAL_BUDGET=400         # OpenRouter budget cap (USD)
+TOTAL_BUDGET=500         # OpenRouter budget cap (USD)
 GITHUB_TOKEN=            # GitHub with repo rights
-OUROBOROS_MAX_ROUNDS=25  # Hard limit per task
-OUROBOROS_MAX_TASK_COST=5.00   # USD per task cap
+OUROBOROS_MAX_ROUNDS=12  # Hard limit per task (code default also 12)
+OUROBOROS_MAX_TASK_COST=5.00   # USD per task cap (code default is $3.00)
 OUROBOROS_CONSCIOUSNESS_COST_CAP=0.10  # USD per consciousness cycle
 OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 ```
@@ -165,9 +165,9 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 ### Safety Mechanisms
 | Mechanism | Parameter | Action |
 |-----------|-----------|--------|
-| Per-task cost cap | $5.00 | Hard stop, decompose |
+| Per-task cost cap | $3.00 (code default; `.env` may override) | Hard stop, decompose |
 | Consciousness cost cap | $0.10 | Skip cycle |
-| MAX_ROUNDS | 25 | Hard stop, decompose |
+| MAX_ROUNDS | 12 (code default; `.env` may override) | Hard stop, decompose |
 | Circuit breaker | 3 empty responses | Hard stop |
 | Task dedup | >50% keyword overlap | Skip |
 | Budget checkpoints | 25/50/75/90% | Report to shareholder |
@@ -211,7 +211,7 @@ OUROBOROS_DAILY_AUTO_CAP=50.00  # Daily autonomous spending cap
 | Knowledge base | knowledge_read/write | Files in knowledge/ (index only loaded, ~1.5K tokens) |
 | Episodic memory | record_memory, memory_search | JSONL files + ChromaDB |
 | Skills | save_skill, find_skills | JSONL + ChromaDB (semantic search) + SkillManager lifecycle |
-| History RAG | recall | ChromaDB (483+ chat/event chunks) |
+| History RAG | recall | ChromaDB (488+ chat/event chunks) |
 | Semantic search | semantic_search, semantic_find_skills | ChromaDB |
 | Recent chat | _load_recent_chat(40) | chat.jsonl → context injection |
 
@@ -231,9 +231,9 @@ Auto-reflection runs in consciousness.py after task completion.
 ### ChromaDB Collections
 | Collection | Entries | Purpose |
 |-----------|---------|---------|
-| thai_episodes | 55+ | Insights, decisions, errors |
-| thai_skills | 3+ | Proven procedures (growing via skill lifecycle) |
-| thai_history | 483+ | Chat and event chunks |
+| thai_episodes | 137+ | Insights, decisions, errors |
+| thai_skills | 25+ | Proven procedures (growing via skill lifecycle) — two writer formats, see ARCHITECTURE_MAP D4 |
+| thai_history | 488+ | Chat and event chunks |
 
 ## Experiment Engine
 
@@ -301,7 +301,7 @@ THAI can autonomously modify its own code through a safety pipeline.
 ### Relationship to Experiment Engine
 Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine handles BEHAVIORAL changes through skills/knowledge. Clear boundary — they don't overlap.
 
-## Behavioral Systems (added April 2-3, 2026)
+## Behavioral Systems (added April 2-21, 2026)
 
 ### Amnesia Fix (Session 1)
 - **Pre-panic snapshot:** `_snapshot_scratchpad_before_shutdown()` writes current state to scratchpad.md before /panic or /stop
@@ -328,6 +328,11 @@ Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine 
 - **Model routing fix** (`agent.py`): Short Shareholder messages (<60→<20 threshold, `?` check, new keywords) now route to full model. "что думаешь как CEO?" → Sonnet, not flash-lite.
 - **Scratchpad REPLACE** (`loop.py`): Post-task scratchpad write now REPLACES entire content (not append). Clears stale /panic "Вернулся..." banners after first task completes.
 - **Stuck model escalation** (`loop.py`): After round 5, if 3 consecutive rounds have <50 completion tokens and 0 successful tool calls → escalate from flash-lite to full model. Once per task. Logs `stuck_model_escalation` event.
+
+### Memory Core Guarantee + Observability + Whitelist Hardening (April 14-21) ✅
+- **R1 — memory core guarantee** (`agent.py:423-468`, commit `08047f7`): `_ensure_memory_core()` runs before every task. If `identity.md` or `scratchpad.md` is missing or 0 bytes, writes placeholder and emits `startup_memory_restore`. Closes the 04-12 distress loop where a vanished `identity.md` was silently tolerated by every read site.
+- **R5 — `chromadb_stats` tool** (`tools/semantic_memory.py:205`, commit `d6baeb8`): Read-only tool surfaces per-collection item counts + last-write timestamps so THAI can self-inspect memory state instead of inferring from retrieval failures. Brings tool total to 64.
+- **D25 — consciousness whitelist hardened** (`consciousness.py:1278-1295`, commit `c9af2d1`): `update_identity` removed from the background-thread tool whitelist. The light-model cycle can no longer rewrite `identity.md`; identity-write path is now main task loop only. Closes the attack surface that corrupted identity on 04-12.
 
 ### Results (Caddy check control task)
 | Stage | Rounds | Cost |

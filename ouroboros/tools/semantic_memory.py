@@ -5,6 +5,7 @@ Tools:
 1. semantic_search — search across all ChromaDB collections
 2. semantic_find_skills — search thai_skills collection
 3. recall — search thai_history (chat + events)
+4. chromadb_stats — raw per-collection counts + last-write timestamps (R5)
 
 Requires ChromaDB server on localhost:8000.
 Graceful fallback if unavailable.
@@ -172,6 +173,90 @@ def _tool_semantic_find_skills(
     max_results = min(max(1, int(max_results)), 10)
     items = _query_collection(client, "thai_skills", query, max_results)
     return _format_results(items, query)
+
+
+def _latest_ts_from_metadatas(metadatas: list) -> str:
+    """Pick the most recent timestamp across a collection's metadata list.
+
+    Handles the three shapes observed in the live store:
+      - thai_episodes / thai_skills: metadata has `ts` (ISO 8601).
+      - thai_history: metadata has `ts_end` (ISO 8601), no single `ts`.
+      - fallback: `date` (YYYY-MM-DD).
+
+    Returns the lexicographically-largest ISO string (which sorts correctly
+    for ISO 8601), or "" if none of the records carry a usable timestamp.
+    """
+    best = ""
+    for m in metadatas or []:
+        if not m:
+            continue
+        candidate = m.get("ts") or m.get("ts_end") or m.get("date") or ""
+        if candidate and candidate > best:
+            best = candidate
+    return best
+
+
+# R5: scanning every metadata per collection is a single HTTP round-trip
+# and cheap for the current sizes (~650 rows). Cap to avoid pathological
+# growth later.
+_STATS_METADATA_SCAN_LIMIT = 2000
+
+
+def _tool_chromadb_stats(ctx: ToolContext, **kwargs) -> str:
+    """R5: raw per-collection ChromaDB stats (count + last-write timestamp).
+
+    Read-only. Uses the same hardcoded HttpClient as every other memory tool,
+    via ``_get_client()``. If the client is unreachable, returns an explicit
+    error message. Never calls ``get_or_create_collection``, never constructs
+    a ``PersistentClient``, never writes — a missing collection is reported
+    as missing, not silently (re)created.
+
+    Purpose: let the agent self-check ChromaDB state without falling back to
+    ad-hoc ``run_shell`` diagnostics (see
+    ``~/ouroboros-data/CHROMADB_MISMATCH_2026-04-21.md``).
+    """
+    client = _get_client()
+    if client is None:
+        return (
+            f"ERROR: ChromaDB unreachable at {CHROMADB_HOST}:{CHROMADB_PORT} "
+            "(HttpClient heartbeat failed). Do NOT run "
+            "`chromadb.PersistentClient(path=...)` via run_shell as a "
+            "workaround — it silently creates an empty local store and "
+            "will falsely report zero collections. Check the docker "
+            "ai-company-chromadb container instead."
+        )
+
+    lines = [f"ChromaDB stats ({CHROMADB_HOST}:{CHROMADB_PORT}):", ""]
+    total_items = 0
+    present_collections = 0
+    for name in COLLECTIONS:
+        try:
+            col = client.get_collection(name=name)
+        except Exception as e:
+            lines.append(f"  {name:14s}: MISSING ({type(e).__name__}: {str(e)[:80]})")
+            continue
+        present_collections += 1
+        try:
+            count = col.count()
+        except Exception as e:
+            lines.append(f"  {name:14s}: count failed ({type(e).__name__}: {str(e)[:80]})")
+            continue
+        total_items += count
+        last_ts = ""
+        if count > 0:
+            try:
+                res = col.get(limit=_STATS_METADATA_SCAN_LIMIT, include=["metadatas"])
+                last_ts = _latest_ts_from_metadatas(res.get("metadatas") or [])
+            except Exception as e:
+                last_ts = f"(scan error: {type(e).__name__})"
+        ts_str = f"last write {last_ts}" if last_ts else "no timestamped records"
+        lines.append(f"  {name:14s}: {count:5d} items, {ts_str}")
+
+    lines.append("")
+    lines.append(
+        f"  TOTAL: {total_items} items across {present_collections}/{len(COLLECTIONS)} expected collections."
+    )
+    return "\n".join(lines)
 
 
 def _tool_recall(
@@ -366,5 +451,23 @@ def get_tools() -> List[ToolEntry]:
                 },
             },
             handler=_tool_recall,
+        ),
+        ToolEntry(
+            name="chromadb_stats",
+            schema={
+                "name": "chromadb_stats",
+                "description": (
+                    "Read-only health check for ChromaDB memory. Returns per-collection "
+                    "item counts and the timestamp of the most recent write, for "
+                    "thai_episodes, thai_skills, thai_history. Use this to verify "
+                    "memory store state instead of ad-hoc python via run_shell. "
+                    "Takes no arguments."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                },
+            },
+            handler=_tool_chromadb_stats,
         ),
     ]

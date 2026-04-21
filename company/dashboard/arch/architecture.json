@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-21T16:11:22.394870+00:00",
+    "generated_at": "2026-04-21T16:55:42.371079+00:00",
     "git": {
-      "sha": "f3c50d31ed8df4c65897b55c8f800a5ccccb1975",
+      "sha": "46416a74949292c5bc4c3562f03f184eeae0c2e1",
       "branch": "feat/architecture-dashboard-phase1",
-      "subject": "docs: clarify MAX_TASK_COST runtime source + log Strategic Planner pause"
+      "subject": "feat(phase1): architecture dashboard — static interactive snapshot"
     },
     "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
     "repo": "/home/deploy/ouroboros",
@@ -3607,6 +3607,622 @@
         "target": "fs_data",
         "kind": "flow",
         "label": "state / memory / logs"
+      }
+    ]
+  },
+  "hierarchy": {
+    "aggregates": [
+      {
+        "id": "interface",
+        "label": "INTERFACE",
+        "tagline": "I/O surface — Telegram, launcher, worker supervision",
+        "kind": "structural",
+        "color": "#74b9ff",
+        "l1": [
+          {
+            "id": "iface_external",
+            "label": "External systems",
+            "leaf_kind": "node",
+            "leaves": [
+              "telegram_api",
+              "openrouter"
+            ],
+            "dark_zone_ids": []
+          },
+          {
+            "id": "iface_launcher",
+            "label": "Process supervision",
+            "leaf_kind": "node",
+            "leaves": [
+              "colab_launcher",
+              "worker_pool",
+              "consciousness_thread",
+              "fs_data"
+            ],
+            "dark_zone_ids": []
+          },
+          {
+            "id": "iface_supervisor",
+            "label": "Supervisor modules",
+            "leaf_kind": "node",
+            "leaves": [
+              "queue",
+              "workers",
+              "events",
+              "telegram",
+              "git_ops"
+            ],
+            "dark_zone_ids": [
+              "D17",
+              "D19",
+              "D20",
+              "D6"
+            ]
+          },
+          {
+            "id": "iface_docker",
+            "label": "Docker infra",
+            "leaf_kind": "node",
+            "leaves": [
+              "docker_chromadb",
+              "docker_postgres",
+              "docker_redis"
+            ],
+            "dark_zone_ids": [
+              "D10",
+              "D16",
+              "D2",
+              "D5",
+              "D6"
+            ]
+          }
+        ],
+        "dark_zone_ids": [
+          "D10",
+          "D16",
+          "D17",
+          "D19",
+          "D2",
+          "D20",
+          "D5",
+          "D6"
+        ]
+      },
+      {
+        "id": "brain",
+        "label": "BRAIN",
+        "tagline": "Cognitive loop — task dispatch, reasoning, self-reflection",
+        "kind": "structural",
+        "color": "#6c5ce7",
+        "l1": [
+          {
+            "id": "brain_taskloop",
+            "label": "Task loop",
+            "leaf_kind": "node",
+            "leaves": [
+              "agent",
+              "loop",
+              "context",
+              "memory"
+            ],
+            "dark_zone_ids": [
+              "D10",
+              "D11",
+              "D12",
+              "D13",
+              "D14",
+              "D15",
+              "D16",
+              "D21",
+              "D22",
+              "D23",
+              "D24",
+              "D3",
+              "D4",
+              "D5",
+              "D7"
+            ]
+          },
+          {
+            "id": "brain_consciousness",
+            "label": "Consciousness & planning",
+            "leaf_kind": "node",
+            "leaves": [
+              "consciousness",
+              "strategic_planner",
+              "inner_critic"
+            ],
+            "dark_zone_ids": [
+              "D19",
+              "D24",
+              "D25",
+              "D8"
+            ]
+          },
+          {
+            "id": "brain_learning",
+            "label": "Learning",
+            "leaf_kind": "node",
+            "leaves": [
+              "skill_manager",
+              "experiment_engine",
+              "pattern_detector"
+            ],
+            "dark_zone_ids": [
+              "D18",
+              "D2",
+              "D4",
+              "D5"
+            ]
+          },
+          {
+            "id": "brain_governance",
+            "label": "Governance",
+            "leaf_kind": "node",
+            "leaves": [
+              "self_evolution",
+              "budget",
+              "owner_inject",
+              "state"
+            ],
+            "dark_zone_ids": [
+              "D20",
+              "D21",
+              "D22",
+              "D9"
+            ]
+          },
+          {
+            "id": "brain_llm",
+            "label": "LLM client",
+            "leaf_kind": "node",
+            "leaves": [
+              "llm"
+            ],
+            "dark_zone_ids": []
+          }
+        ],
+        "dark_zone_ids": [
+          "D10",
+          "D11",
+          "D12",
+          "D13",
+          "D14",
+          "D15",
+          "D16",
+          "D18",
+          "D19",
+          "D2",
+          "D20",
+          "D21",
+          "D22",
+          "D23",
+          "D24",
+          "D25",
+          "D3",
+          "D4",
+          "D5",
+          "D7",
+          "D8",
+          "D9"
+        ]
+      },
+      {
+        "id": "memory",
+        "label": "MEMORY",
+        "tagline": "7 storage backends — files, logs, state, ChromaDB",
+        "kind": "structural",
+        "color": "#fdcb6e",
+        "l1": [
+          {
+            "id": "mem_working",
+            "label": "Working memory",
+            "leaf_kind": "node",
+            "leaves": [
+              "mem_scratchpad",
+              "mem_identity"
+            ],
+            "dark_zone_ids": [
+              "D14",
+              "D25"
+            ]
+          },
+          {
+            "id": "mem_longterm",
+            "label": "Long-term files",
+            "leaf_kind": "node",
+            "leaves": [
+              "mem_wisdom",
+              "mem_knowledge",
+              "mem_episodic"
+            ],
+            "dark_zone_ids": [
+              "D2"
+            ]
+          },
+          {
+            "id": "mem_logs",
+            "label": "Append-only logs",
+            "leaf_kind": "node",
+            "leaves": [
+              "log_chat",
+              "log_events",
+              "log_supervisor",
+              "log_tools",
+              "log_progress"
+            ],
+            "dark_zone_ids": [
+              "D1",
+              "D14",
+              "D15",
+              "D17",
+              "D18",
+              "D2",
+              "D6"
+            ]
+          },
+          {
+            "id": "mem_state",
+            "label": "State JSON",
+            "leaf_kind": "node",
+            "leaves": [
+              "state_main",
+              "state_queue",
+              "state_budget",
+              "state_directives",
+              "state_commitments",
+              "state_experiments",
+              "state_reflected",
+              "state_consciousness",
+              "state_cooldown"
+            ],
+            "dark_zone_ids": [
+              "D19",
+              "D2",
+              "D20",
+              "D21",
+              "D22",
+              "D9"
+            ]
+          },
+          {
+            "id": "mem_chromadb",
+            "label": "ChromaDB",
+            "leaf_kind": "node",
+            "leaves": [
+              "chroma_episodes",
+              "chroma_skills",
+              "chroma_history"
+            ],
+            "dark_zone_ids": [
+              "D2",
+              "D4"
+            ]
+          },
+          {
+            "id": "mem_taskhistory",
+            "label": "Task results",
+            "leaf_kind": "node",
+            "leaves": [
+              "file_task_results"
+            ],
+            "dark_zone_ids": [
+              "D18"
+            ]
+          }
+        ],
+        "dark_zone_ids": [
+          "D1",
+          "D14",
+          "D15",
+          "D17",
+          "D18",
+          "D19",
+          "D2",
+          "D20",
+          "D21",
+          "D22",
+          "D25",
+          "D4",
+          "D6",
+          "D9"
+        ]
+      },
+      {
+        "id": "tools",
+        "label": "TOOLS",
+        "tagline": "64 capabilities — LLM-accessible actions",
+        "kind": "structural",
+        "color": "#00b894",
+        "l1": [
+          {
+            "id": "tools_files",
+            "label": "Files & Repo",
+            "leaf_kind": "tool",
+            "leaves": [
+              "drive_list",
+              "drive_read",
+              "drive_write",
+              "git_diff",
+              "git_status",
+              "repo_commit_push",
+              "repo_list",
+              "repo_read",
+              "repo_write_commit"
+            ],
+            "dark_zone_ids": [
+              "D20"
+            ]
+          },
+          {
+            "id": "tools_shell",
+            "label": "Shell & Code editing",
+            "leaf_kind": "tool",
+            "leaves": [
+              "claude_code_edit",
+              "run_shell"
+            ],
+            "dark_zone_ids": [
+              "D10",
+              "D16"
+            ]
+          },
+          {
+            "id": "tools_memory",
+            "label": "Memory & Reflection",
+            "leaf_kind": "tool",
+            "leaves": [
+              "chromadb_stats",
+              "compact_context",
+              "deep_reflection",
+              "find_skills",
+              "knowledge_list",
+              "knowledge_read",
+              "knowledge_write",
+              "memory_search",
+              "recall",
+              "record_memory",
+              "save_skill",
+              "semantic_find_skills",
+              "semantic_search",
+              "summarize_dialogue",
+              "update_identity",
+              "update_scratchpad"
+            ],
+            "dark_zone_ids": [
+              "D10",
+              "D16",
+              "D4"
+            ]
+          },
+          {
+            "id": "tools_taskctl",
+            "label": "Task & runtime control",
+            "leaf_kind": "tool",
+            "leaves": [
+              "apply_change",
+              "cancel_task",
+              "check_evolution_status",
+              "enable_tools",
+              "forward_to_worker",
+              "generate_evolution_stats",
+              "get_task_result",
+              "list_available_tools",
+              "promote_to_stable",
+              "propose_change",
+              "request_restart",
+              "request_review",
+              "schedule_task",
+              "switch_model",
+              "toggle_consciousness",
+              "toggle_evolution",
+              "wait_for_task"
+            ],
+            "dark_zone_ids": []
+          },
+          {
+            "id": "tools_comm",
+            "label": "Communication",
+            "leaf_kind": "tool",
+            "leaves": [
+              "chat_history",
+              "recent_session",
+              "send_owner_message",
+              "send_photo"
+            ],
+            "dark_zone_ids": [
+              "D4"
+            ]
+          },
+          {
+            "id": "tools_ops",
+            "label": "Ops & Analysis",
+            "leaf_kind": "tool",
+            "leaves": [
+              "codebase_digest",
+              "codebase_health",
+              "multi_model_review",
+              "read_service_logs",
+              "restart_service",
+              "run_ops_check"
+            ],
+            "dark_zone_ids": [
+              "D20"
+            ]
+          },
+          {
+            "id": "tools_web",
+            "label": "Web, Browser & GitHub",
+            "leaf_kind": "tool",
+            "leaves": [
+              "analyze_screenshot",
+              "browse_page",
+              "browser_action",
+              "close_github_issue",
+              "comment_on_issue",
+              "create_github_issue",
+              "get_github_issue",
+              "list_github_issues",
+              "vlm_query",
+              "web_search"
+            ],
+            "dark_zone_ids": []
+          }
+        ],
+        "dark_zone_ids": [
+          "D10",
+          "D16",
+          "D20",
+          "D4"
+        ]
+      },
+      {
+        "id": "safety",
+        "label": "SAFETY",
+        "tagline": "25 Dark Zones — cross-cutting risk map",
+        "kind": "overlay",
+        "color": "#e17055",
+        "l1": [
+          {
+            "id": "safety_observability",
+            "label": "Observability gaps",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D1",
+              "D2",
+              "D5",
+              "D15",
+              "D18"
+            ]
+          },
+          {
+            "id": "safety_consistency",
+            "label": "Data consistency",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D4",
+              "D19",
+              "D20",
+              "D22",
+              "D23"
+            ]
+          },
+          {
+            "id": "safety_configdrift",
+            "label": "Configuration drift",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D8",
+              "D11",
+              "D12",
+              "D13"
+            ]
+          },
+          {
+            "id": "safety_attack",
+            "label": "Attack surface",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D14",
+              "D16",
+              "D17",
+              "D25"
+            ]
+          },
+          {
+            "id": "safety_orphan",
+            "label": "Orphan / restart state",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D3",
+              "D6",
+              "D7",
+              "D10"
+            ]
+          },
+          {
+            "id": "safety_budget",
+            "label": "Budget & external",
+            "leaf_kind": "darkzone",
+            "leaves": [
+              "D9",
+              "D21",
+              "D24"
+            ]
+          }
+        ],
+        "dark_zone_ids": [
+          "D1",
+          "D10",
+          "D11",
+          "D12",
+          "D13",
+          "D14",
+          "D15",
+          "D16",
+          "D17",
+          "D18",
+          "D19",
+          "D2",
+          "D20",
+          "D21",
+          "D22",
+          "D23",
+          "D24",
+          "D25",
+          "D3",
+          "D4",
+          "D5",
+          "D6",
+          "D7",
+          "D8",
+          "D9"
+        ]
+      }
+    ],
+    "l0_edges": [
+      {
+        "source": "interface",
+        "target": "brain",
+        "label": "dispatch tasks"
+      },
+      {
+        "source": "brain",
+        "target": "memory",
+        "label": "read / write"
+      },
+      {
+        "source": "brain",
+        "target": "tools",
+        "label": "invoke"
+      },
+      {
+        "source": "tools",
+        "target": "memory",
+        "label": "mutate"
+      },
+      {
+        "source": "tools",
+        "target": "interface",
+        "label": "git / telegram / restart"
+      },
+      {
+        "source": "safety",
+        "target": "brain",
+        "label": "guards",
+        "style": "dashed"
+      },
+      {
+        "source": "safety",
+        "target": "memory",
+        "label": "guards",
+        "style": "dashed"
+      },
+      {
+        "source": "safety",
+        "target": "tools",
+        "label": "guards",
+        "style": "dashed"
       }
     ]
   }

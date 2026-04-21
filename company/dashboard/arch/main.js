@@ -1,12 +1,12 @@
 // Main orchestrator — wires the 4 views to the topbar and side panel.
 
-import { OverviewView } from './views/overview.js?v=phase1';
-import { MemoryView } from './views/memory.js?v=phase1';
-import { DarkZonesView } from './views/darkzones.js?v=phase1';
-import { ToolsView } from './views/tools.js?v=phase1';
-import { renderNode, renderTool } from './lib/panel.js?v=phase1';
+import { OverviewView } from './views/overview.js?v=phase1.5';
+import { MemoryView } from './views/memory.js?v=phase1.5';
+import { DarkZonesView } from './views/darkzones.js?v=phase1.5';
+import { ToolsView } from './views/tools.js?v=phase1.5';
+import { renderNode, renderTool } from './lib/panel.js?v=phase1.5';
 
-const SNAPSHOT_URL = 'architecture.json';
+const SNAPSHOT_URL = 'architecture.json?v=phase1.5';
 
 async function loadSnapshot() {
   const res = await fetch(SNAPSHOT_URL, { cache: 'no-cache' });
@@ -64,6 +64,7 @@ class App {
       const chip = e.target.closest('[data-goto-dz]');
       if (chip) {
         e.preventDefault();
+        e.stopPropagation();
         this.gotoDarkZone(chip.dataset.gotoDz);
       }
     });
@@ -73,8 +74,16 @@ class App {
     this.overview = new OverviewView({
       snapshot: this.snap,
       containerId: 'cy',
-      onSelectNode: d => this.showNodePanel(d),
-      onSelectEdge: d => this.showEdgePanel(d),
+      onSelectLeaf: ({ kind, data }) => {
+        if (kind === 'tool') this.showToolPanel(data);
+        else this.showNodePanel(data);
+      },
+      navigateExternalView: (viewName, payload) => {
+        if (viewName === 'darkzones') {
+          this.switchView('darkzones');
+          if (payload) this.dz.select(payload);
+        }
+      },
     });
     this.overview.mount();
 
@@ -83,7 +92,6 @@ class App {
       containerId: 'cy-memory',
       onSelectNode: d => this.showNodePanel(d),
     });
-    // lazy-mount memory view when first switched to
     this._memoryMounted = false;
 
     this.dz = new DarkZonesView({
@@ -112,13 +120,10 @@ class App {
       this._memoryMounted = true;
     }
     if (name === 'memory') {
-      // Allow layout to settle
       setTimeout(() => this.memory && this.memory.resize(), 50);
     }
 
-    // Reset search / filter when switching views
     const filterSel = document.getElementById('filter');
-    const toolFilterBar = document.querySelector('.tool-filterbar');
     filterSel.style.display = (name === 'overview') ? '' : 'none';
   }
 
@@ -129,21 +134,6 @@ class App {
 
   showToolPanel(tool) {
     this.panelBody.innerHTML = renderTool(tool, this.snap);
-    this.panel.classList.add('open');
-  }
-
-  showEdgePanel(data) {
-    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    this.panelBody.innerHTML = `
-      <h2>Flow</h2>
-      <div class="subline">
-        <code>${esc(data.source)}</code> → <code>${esc(data.target)}</code>
-      </div>
-      <h3>Label</h3>
-      <p>${esc(data.label) || '<span class="muted">no label</span>'}</p>
-      <h3>Style</h3>
-      <p><code>${esc(data.style || 'solid')}</code></p>
-    `;
     this.panel.classList.add('open');
   }
 
@@ -158,8 +148,7 @@ class App {
 
   _onSearch(q) {
     if (this.activeView === 'overview') {
-      const hits = this.overview.search(q);
-      // could surface hit count in the future
+      this.overview.search(q);
     } else if (this.activeView === 'darkzones') {
       this.dz.filter(q);
     } else if (this.activeView === 'tools') {
@@ -178,7 +167,7 @@ loadSnapshot()
   .then(snap => {
     const app = new App(snap);
     app.mount();
-    window.__arch_app = app; // handy for debugging in devtools
+    window.__arch_app = app;
   })
   .catch(err => {
     document.body.innerHTML = `<div style="padding:40px;color:#e17055;font-family:monospace;">

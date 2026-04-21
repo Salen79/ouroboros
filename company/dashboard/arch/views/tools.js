@@ -1,6 +1,6 @@
 // Tools view — grid of 64 tool cards with filter chips.
 
-import { renderTool } from '../lib/panel.js?v=phase1';
+import { renderTool } from '../lib/panel.js?v=phase1.5';
 
 export class ToolsView {
   constructor({ snapshot, gridId, onSelectTool }) {

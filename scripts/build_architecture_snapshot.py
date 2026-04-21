@@ -661,6 +661,323 @@ def _associate_nodes_with_zones(nodes: List[Dict], dark_zones: List[Dict]) -> No
 
 
 # ---------------------------------------------------------------------------
+# Hierarchy — 4-level progressive disclosure (L0 aggregate → L1 group →
+# L2 leaf → L3 detail). The leaf IDs reference existing topology node IDs,
+# tool names, or Dark Zone IDs depending on the aggregate.
+# ---------------------------------------------------------------------------
+
+def _build_hierarchy(topology_nodes: List[Dict], tools: List[Dict],
+                     dark_zones: List[Dict]) -> Dict[str, Any]:
+    """Produce the 5 L0 aggregates × their L1 groups × L2 leaf ids."""
+
+    # Maps for reference resolution by consumer
+    node_ids = {n["id"] for n in topology_nodes}
+    tool_names = {t["name"] for t in tools}
+    dz_ids = {d["id"] for d in dark_zones}
+
+    def _filter(ids, valid):
+        return [x for x in ids if x in valid]
+
+    # -------- INTERFACE --------
+    interface = {
+        "id": "interface",
+        "label": "INTERFACE",
+        "tagline": "I/O surface — Telegram, launcher, worker supervision",
+        "kind": "structural",
+        "color": "#74b9ff",
+        "l1": [
+            {
+                "id": "iface_external",
+                "label": "External systems",
+                "leaf_kind": "node",
+                "leaves": _filter(["telegram_api", "openrouter"], node_ids),
+            },
+            {
+                "id": "iface_launcher",
+                "label": "Process supervision",
+                "leaf_kind": "node",
+                "leaves": _filter(["colab_launcher", "worker_pool", "consciousness_thread", "fs_data"], node_ids),
+            },
+            {
+                "id": "iface_supervisor",
+                "label": "Supervisor modules",
+                "leaf_kind": "node",
+                "leaves": _filter(["queue", "workers", "events", "telegram", "git_ops"], node_ids),
+            },
+            {
+                "id": "iface_docker",
+                "label": "Docker infra",
+                "leaf_kind": "node",
+                "leaves": _filter(["docker_chromadb", "docker_postgres", "docker_redis"], node_ids),
+            },
+        ],
+    }
+
+    # -------- BRAIN --------
+    brain = {
+        "id": "brain",
+        "label": "BRAIN",
+        "tagline": "Cognitive loop — task dispatch, reasoning, self-reflection",
+        "kind": "structural",
+        "color": "#6c5ce7",
+        "l1": [
+            {
+                "id": "brain_taskloop",
+                "label": "Task loop",
+                "leaf_kind": "node",
+                "leaves": _filter(["agent", "loop", "context", "memory"], node_ids),
+            },
+            {
+                "id": "brain_consciousness",
+                "label": "Consciousness & planning",
+                "leaf_kind": "node",
+                "leaves": _filter(["consciousness", "strategic_planner", "inner_critic"], node_ids),
+            },
+            {
+                "id": "brain_learning",
+                "label": "Learning",
+                "leaf_kind": "node",
+                "leaves": _filter(["skill_manager", "experiment_engine", "pattern_detector"], node_ids),
+            },
+            {
+                "id": "brain_governance",
+                "label": "Governance",
+                "leaf_kind": "node",
+                "leaves": _filter(["self_evolution", "budget", "owner_inject", "state"], node_ids),
+            },
+            {
+                "id": "brain_llm",
+                "label": "LLM client",
+                "leaf_kind": "node",
+                "leaves": _filter(["llm"], node_ids),
+            },
+        ],
+    }
+
+    # -------- MEMORY --------
+    memory = {
+        "id": "memory",
+        "label": "MEMORY",
+        "tagline": "7 storage backends — files, logs, state, ChromaDB",
+        "kind": "structural",
+        "color": "#fdcb6e",
+        "l1": [
+            {
+                "id": "mem_working",
+                "label": "Working memory",
+                "leaf_kind": "node",
+                "leaves": _filter(["mem_scratchpad", "mem_identity"], node_ids),
+            },
+            {
+                "id": "mem_longterm",
+                "label": "Long-term files",
+                "leaf_kind": "node",
+                "leaves": _filter(["mem_wisdom", "mem_knowledge", "mem_episodic"], node_ids),
+            },
+            {
+                "id": "mem_logs",
+                "label": "Append-only logs",
+                "leaf_kind": "node",
+                "leaves": _filter(["log_chat", "log_events", "log_supervisor", "log_tools", "log_progress"], node_ids),
+            },
+            {
+                "id": "mem_state",
+                "label": "State JSON",
+                "leaf_kind": "node",
+                "leaves": _filter([
+                    "state_main", "state_queue", "state_budget", "state_directives",
+                    "state_commitments", "state_experiments", "state_reflected",
+                    "state_consciousness", "state_cooldown",
+                ], node_ids),
+            },
+            {
+                "id": "mem_chromadb",
+                "label": "ChromaDB",
+                "leaf_kind": "node",
+                "leaves": _filter(["chroma_episodes", "chroma_skills", "chroma_history"], node_ids),
+            },
+            {
+                "id": "mem_taskhistory",
+                "label": "Task results",
+                "leaf_kind": "node",
+                "leaves": _filter(["file_task_results"], node_ids),
+            },
+        ],
+    }
+
+    # -------- TOOLS --------
+    tools_groups = {
+        "tools_files": ("Files & Repo", {
+            "repo_read", "repo_list", "repo_write_commit", "repo_commit_push",
+            "drive_read", "drive_list", "drive_write", "git_status", "git_diff",
+        }),
+        "tools_shell": ("Shell & Code editing", {"run_shell", "claude_code_edit"}),
+        "tools_memory": ("Memory & Reflection", {
+            "record_memory", "save_skill", "find_skills", "memory_search",
+            "semantic_search", "semantic_find_skills", "recall",
+            "chromadb_stats", "update_scratchpad", "update_identity",
+            "compact_context", "summarize_dialogue", "deep_reflection",
+            "knowledge_read", "knowledge_write", "knowledge_list",
+        }),
+        "tools_taskctl": ("Task & runtime control", {
+            "schedule_task", "cancel_task", "wait_for_task", "get_task_result",
+            "switch_model", "request_restart", "request_review", "promote_to_stable",
+            "toggle_consciousness", "toggle_evolution", "enable_tools",
+            "list_available_tools", "forward_to_worker", "propose_change",
+            "apply_change", "check_evolution_status", "generate_evolution_stats",
+        }),
+        "tools_comm": ("Communication", {
+            "send_owner_message", "send_photo", "chat_history", "recent_session",
+        }),
+        "tools_ops": ("Ops & Analysis", {
+            "run_ops_check", "restart_service", "read_service_logs",
+            "codebase_health", "codebase_digest", "multi_model_review",
+        }),
+        "tools_web": ("Web, Browser & GitHub", {
+            "web_search", "browse_page", "browser_action", "analyze_screenshot",
+            "vlm_query", "create_github_issue", "close_github_issue",
+            "comment_on_issue", "get_github_issue", "list_github_issues",
+        }),
+    }
+    # Verify every tool is placed exactly once
+    placed = set()
+    for _, (_, names) in tools_groups.items():
+        for n in names:
+            if n in placed:
+                print(f"WARNING: tool {n} in multiple groups", file=sys.stderr)
+            placed.add(n)
+    unplaced = [t["name"] for t in tools if t["name"] not in placed]
+    if unplaced:
+        tools_groups["tools_other"] = ("Other", set(unplaced))
+
+    tools_block = {
+        "id": "tools",
+        "label": "TOOLS",
+        "tagline": f"{len(tools)} capabilities — LLM-accessible actions",
+        "kind": "structural",
+        "color": "#00b894",
+        "l1": [
+            {
+                "id": gid,
+                "label": label,
+                "leaf_kind": "tool",
+                "leaves": sorted([n for n in names if n in tool_names]),
+            }
+            for gid, (label, names) in tools_groups.items()
+        ],
+    }
+
+    # -------- SAFETY --------
+    # Group Dark Zones by theme. Each DZ lives in exactly one L1 group.
+    safety_groups = [
+        ("safety_observability", "Observability gaps",
+         ["D1", "D2", "D5", "D15", "D18"]),
+        ("safety_consistency", "Data consistency",
+         ["D4", "D19", "D20", "D22", "D23"]),
+        ("safety_configdrift", "Configuration drift",
+         ["D8", "D11", "D12", "D13"]),
+        ("safety_attack", "Attack surface",
+         ["D14", "D16", "D17", "D25"]),
+        ("safety_orphan", "Orphan / restart state",
+         ["D3", "D6", "D7", "D10"]),
+        ("safety_budget", "Budget & external",
+         ["D9", "D21", "D24"]),
+    ]
+
+    safety = {
+        "id": "safety",
+        "label": "SAFETY",
+        "tagline": f"{len(dark_zones)} Dark Zones — cross-cutting risk map",
+        "kind": "overlay",
+        "color": "#e17055",
+        "l1": [
+            {
+                "id": gid,
+                "label": label,
+                "leaf_kind": "darkzone",
+                "leaves": [d for d in ids if d in dz_ids],
+            }
+            for gid, label, ids in safety_groups
+        ],
+    }
+
+    # Sanity: cover all DZs
+    placed_dz = {d for g in safety["l1"] for d in g["leaves"]}
+    missing_dz = sorted(dz_ids - placed_dz)
+    if missing_dz:
+        print(f"WARNING: unplaced Dark Zones in safety taxonomy: {missing_dz}", file=sys.stderr)
+        safety["l1"].append({
+            "id": "safety_other",
+            "label": "Other",
+            "leaf_kind": "darkzone",
+            "leaves": missing_dz,
+        })
+
+    aggregates = [interface, brain, memory, tools_block, safety]
+
+    # -------- Overlay: compute DZ count per structural aggregate --------
+    # For each structural aggregate, count DZs that reference its member nodes.
+    def _dz_count_for_nodes(member_ids):
+        node_by_id = {n["id"]: n for n in topology_nodes}
+        affected = set()
+        for nid in member_ids:
+            n = node_by_id.get(nid)
+            if not n:
+                continue
+            for dz in n.get("dark_zone_ids", []):
+                affected.add(dz)
+        return sorted(affected)
+
+    def _dz_count_for_tools(tool_names_set):
+        affected = set()
+        for t in tools:
+            if t["name"] not in tool_names_set:
+                continue
+            for dz in t.get("dark_zone_ids", []):
+                affected.add(dz)
+        return sorted(affected)
+
+    for agg in aggregates:
+        if agg["id"] == "safety":
+            continue
+        all_leaves = []
+        for l1 in agg["l1"]:
+            all_leaves.extend(l1["leaves"])
+            leaf_kind = l1.get("leaf_kind")
+            if leaf_kind == "tool":
+                dzs = _dz_count_for_tools(set(l1["leaves"]))
+            elif leaf_kind == "node":
+                dzs = _dz_count_for_nodes(l1["leaves"])
+            else:
+                dzs = []
+            l1["dark_zone_ids"] = dzs
+        if agg["id"] == "tools":
+            agg["dark_zone_ids"] = _dz_count_for_tools(set(all_leaves))
+        else:
+            agg["dark_zone_ids"] = _dz_count_for_nodes(all_leaves)
+
+    # Safety aggregate DZs = every DZ (its whole domain)
+    safety["dark_zone_ids"] = sorted(dz_ids)
+
+    # Simple inter-aggregate edges for L0 "helicopter" context
+    l0_edges = [
+        {"source": "interface", "target": "brain", "label": "dispatch tasks"},
+        {"source": "brain", "target": "memory", "label": "read / write"},
+        {"source": "brain", "target": "tools", "label": "invoke"},
+        {"source": "tools", "target": "memory", "label": "mutate"},
+        {"source": "tools", "target": "interface", "label": "git / telegram / restart"},
+        {"source": "safety", "target": "brain", "label": "guards", "style": "dashed"},
+        {"source": "safety", "target": "memory", "label": "guards", "style": "dashed"},
+        {"source": "safety", "target": "tools", "label": "guards", "style": "dashed"},
+    ]
+
+    return {
+        "aggregates": aggregates,
+        "l0_edges": l0_edges,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Git
 # ---------------------------------------------------------------------------
 
@@ -713,6 +1030,9 @@ def build_snapshot() -> Dict[str, Any]:
     _associate_tools_with_zones(tools, dark_zones)
     _associate_nodes_with_zones(nodes, dark_zones)
 
+    # Hierarchy — progressive drill-down structure (Phase 1.5)
+    hierarchy = _build_hierarchy(nodes, tools, dark_zones)
+
     snapshot = {
         "meta": {
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -746,6 +1066,7 @@ def build_snapshot() -> Dict[str, Any]:
             "nodes": nodes,
             "edges": edges,
         },
+        "hierarchy": hierarchy,
     }
     return snapshot
 
@@ -770,6 +1091,9 @@ def main() -> int:
         print(f"  dark_zones={s['dark_zones']} modules={s['modules']} "
               f"memory_files={s['memory_files']}")
         print(f"  topology: {s['nodes']} nodes, {s['edges']} edges")
+        h = snap["hierarchy"]
+        print(f"  hierarchy: {len(h['aggregates'])} L0 aggregates, "
+              f"{sum(len(a['l1']) for a in h['aggregates'])} L1 groups")
     return 0
 
 

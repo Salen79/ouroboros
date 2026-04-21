@@ -1,6 +1,6 @@
 // Dark Zones view — list on the left, detail on the right.
 
-import { renderDarkZone } from '../lib/panel.js?v=phase1';
+import { renderDarkZone } from '../lib/panel.js?v=phase1.5';
 
 export class DarkZonesView {
   constructor({ snapshot, listId, detailId }) {

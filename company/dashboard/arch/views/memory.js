@@ -1,6 +1,6 @@
 // Memory view — bottom-layer-focused graph: 7 backends + their writers/readers.
 
-import { buildElements, defaultStyle, layeredLayout } from '../lib/graph.js?v=phase1';
+import { buildElements, defaultStyle, layeredLayout } from '../lib/graph.js?v=phase1.5';
 
 export class MemoryView {
   constructor({ snapshot, containerId, onSelectNode }) {

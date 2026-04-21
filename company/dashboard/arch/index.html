@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>THAI Architecture — Phase 1</title>
-<link rel="stylesheet" href="styles.css?v=phase1">
+<link rel="stylesheet" href="styles.css?v=phase1.5">
 <!-- Cytoscape via CDN with dagre layout for hierarchical graph -->
 <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
@@ -36,20 +36,7 @@
 
   <main id="main">
     <section id="view-overview" class="view active">
-      <div id="cy" class="cy-container"></div>
-      <div class="legend">
-        <div class="legend-row"><span class="dot process"></span> Process / worker</div>
-        <div class="legend-row"><span class="dot external"></span> External</div>
-        <div class="legend-row"><span class="dot infra"></span> Infra</div>
-        <div class="legend-row"><span class="dot module"></span> Module</div>
-        <div class="legend-row"><span class="dot file"></span> File memory</div>
-        <div class="legend-row"><span class="dot log"></span> Log</div>
-        <div class="legend-row"><span class="dot state"></span> State JSON</div>
-        <div class="legend-row"><span class="dot chroma"></span> ChromaDB</div>
-        <div class="legend-row"><span class="edge-sample solid"></span> Normal flow</div>
-        <div class="legend-row"><span class="edge-sample dashed"></span> Conditional</div>
-        <div class="legend-row"><span class="edge-sample unsafe"></span> Unsafe / Dark-Zone</div>
-      </div>
+      <div id="cy" class="overview-host"></div>
     </section>
 
     <section id="view-darkzones" class="view">
@@ -84,6 +71,6 @@
     </aside>
   </main>
 
-  <script type="module" src="main.js?v=phase1"></script>
+  <script type="module" src="main.js?v=phase1.5"></script>
 </body>
 </html>

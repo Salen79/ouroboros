@@ -1,15 +1,17 @@
-// Обзор — Phase 1.7 ecosystem composition (block-level, SAFETY organ,
-// simplified 2-type edges + filter + legend + static DZ markers, RU UI).
+// Обзор / Overview — Phase 1.9 (hover invert + No-edges filter + RU/EN).
+
+import { getLang, t, tField } from '../lib/i18n.js?v=phase1.9';
 
 const EDGE_COLORS = {
-  control: '#74b9ff',  // Управление (invokes / governs)
-  data:    '#55efc4',  // Данные (reads_from / writes_to / observes)
+  control: '#74b9ff',  // Управление / Control (invokes / governs)
+  data:    '#55efc4',  // Данные / Data (reads_from / writes_to / observes)
 };
 
-const EDGE_LABELS_RU = {
-  control: 'Управление',
-  data:    'Данные',
-};
+function edgeKindLabel(kind) {
+  if (kind === 'control') return t('legend.control');
+  if (kind === 'data')    return t('legend.data');
+  return kind;
+}
 
 export class OverviewView {
   constructor({ snapshot, containerId, onSelectLeaf, navigateExternalView }) {
@@ -139,7 +141,7 @@ export class OverviewView {
       parts.push(`
         <text class="organ-label l0-label"
               x="${r.label_x}" y="${r.label_y}"
-              text-anchor="middle" dominant-baseline="hanging">${this._esc(r.label)}</text>
+              text-anchor="middle" dominant-baseline="hanging">${this._esc(tField(r, 'label'))}</text>
       `);
     }
     return parts.join('');
@@ -158,7 +160,7 @@ export class OverviewView {
                 stroke-dasharray="6 6" stroke-width="1"/>
           <text x="${b.label_x}" y="${b.label_y}"
                 text-anchor="middle"
-                class="mem-band-label">${this._esc(b.label)}</text>
+                class="mem-band-label">${this._esc(tField(b, 'label'))}</text>
         </g>
       `);
     }
@@ -185,10 +187,10 @@ export class OverviewView {
                 stroke="rgba(255,255,255,0.06)"
                 stroke-width="1"/>
           <text class="block-label" x="${b.label_x}" y="${b.label_y}"
-                text-anchor="middle" dominant-baseline="hanging">${this._esc(meta.label || '')}</text>
+                text-anchor="middle" dominant-baseline="hanging">${this._esc(tField(meta, 'label'))}</text>
           ${meta.question ? `
             <text class="block-question" x="${b.label_x}" y="${b.label_y + 22}"
-                  text-anchor="middle" dominant-baseline="hanging">${this._esc(meta.question)}</text>
+                  text-anchor="middle" dominant-baseline="hanging">${this._esc(tField(meta, 'question'))}</text>
           ` : ''}
         </g>
       `);
@@ -218,6 +220,7 @@ export class OverviewView {
       const color = EDGE_COLORS[e.kind] || '#8b8fa3';
       const dash = e.kind === 'data' ? '7 5' : '';
       const path = this._routePath(s, t);
+      const edgeLabel = tField(e, 'label') || e.label || '';
       parts.push(`
         <g class="edge edge-${e.kind} vis-${e.visibility || 'l0'}"
            data-edge="${this._esc(e.source + '->' + e.target)}"
@@ -229,7 +232,7 @@ export class OverviewView {
                 fill="none"
                 marker-end="url(#arrow-${e.kind})"
                 opacity="0.82"/>
-          <title>${this._esc((EDGE_LABELS_RU[e.kind] || e.kind) + ': ' + (e.label || ''))}</title>
+          <title>${this._esc(edgeKindLabel(e.kind) + ': ' + edgeLabel)}</title>
         </g>
       `);
     }
@@ -288,7 +291,7 @@ export class OverviewView {
         isPaused ? 'paused' : '',
       ].filter(Boolean).join(' ');
 
-      const semantic = n.semantic_label || n.label;
+      const semantic = tField(n, 'semantic_label') || n.semantic_label || n.label;
       const tech = n.label || '';
       const showBoth = semantic !== tech && h >= 34;
       // Position semantic text at 38% and tech at 74% of node height when
@@ -368,25 +371,29 @@ export class OverviewView {
       const visible = isWeaknesses ? items.slice(0, 8) : items;
       const rows = visible.map((it, i) => {
         const y = innerTop + i * rowH;
+        const title = tField(it, 'title') || it.title || '';
         if (isWeaknesses) {
           return `
             <g class="safety-row safety-row-dz" data-goto-dz="${this._esc(it.dz_id || '')}"
                transform="translate(${b.x + 16}, ${y})">
               <circle cx="6" cy="13" r="5" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
-              <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(it.title)}</text>
+              <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
             </g>`;
         }
         return `
           <g class="safety-row" transform="translate(${b.x + 16}, ${y})">
             <circle cx="6" cy="13" r="4" fill="#74b9ff" stroke="none"/>
-            <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(it.title)}</text>
+            <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
             ${it.ref ? `<title>${this._esc(it.ref)}</title>` : ''}
           </g>`;
       }).join('');
 
+      const moreText = getLang() === 'en'
+        ? `+ ${items.length - 8} more — open “Dark Zones”`
+        : `+ ещё ${items.length - 8} — открыть «Тёмные зоны»`;
       const more = (isWeaknesses && items.length > 8)
         ? `<text class="safety-more" x="${b.x + b.w / 2}" y="${innerTop + 8 * rowH + 16}"
-              text-anchor="middle">+ ещё ${items.length - 8} — открыть «Тёмные зоны»</text>`
+              text-anchor="middle">${this._esc(moreText)}</text>`
         : '';
 
       parts.push(`
@@ -407,13 +414,13 @@ export class OverviewView {
       <div class="ov-legend">
         <div class="legend-row">
           <span class="edge-sample control"></span>
-          <span class="legend-label">Управление</span>
-          <span class="legend-hint">вызов, контроль</span>
+          <span class="legend-label">${this._esc(t('legend.control'))}</span>
+          <span class="legend-hint">${this._esc(t('legend.control.hint'))}</span>
         </div>
         <div class="legend-row">
           <span class="edge-sample data"></span>
-          <span class="legend-label">Данные</span>
-          <span class="legend-hint">чтение, запись, наблюдение</span>
+          <span class="legend-label">${this._esc(t('legend.data'))}</span>
+          <span class="legend-hint">${this._esc(t('legend.data.hint'))}</span>
         </div>
         <div class="legend-row legend-marker-row">
           <span class="legend-marker">
@@ -422,7 +429,7 @@ export class OverviewView {
               <text x="0" y="1" text-anchor="middle" dominant-baseline="central" font-size="9">⚠</text>
             </svg>
           </span>
-          <span class="legend-label">Известные слабости</span>
+          <span class="legend-label">${this._esc(t('legend.weaknesses'))}</span>
         </div>
       </div>
     `;
@@ -471,47 +478,19 @@ export class OverviewView {
       if (this.zoom !== 'l0') this.zoomTo('l0', { push: true });
     });
 
+    // Phase 1.9 hover: only the hovered element gets a glow + soft fill.
+    // Nothing else is dimmed; edges are not touched.
     this.svg.addEventListener('mouseover', e => {
       const nodeG = e.target.closest('[data-node-id]');
-      if (nodeG) this._highlightNeighborhood(nodeG.dataset.nodeId);
+      if (nodeG) { nodeG.classList.add('hl-focus'); return; }
+      const blockG = e.target.closest('[data-block-id]');
+      if (blockG) { blockG.classList.add('hl-focus'); }
     });
     this.svg.addEventListener('mouseout', e => {
       const nodeG = e.target.closest('[data-node-id]');
-      if (nodeG) this._clearHighlight();
-    });
-  }
-
-  _highlightNeighborhood(nodeId) {
-    const nodeToBlock = {};
-    for (const o of ['brain', 'interface', 'memory']) {
-      for (const b of (this.snap.blocks[o] || [])) {
-        for (const nid of (b.nodes || [])) nodeToBlock[nid] = b.id;
-      }
-    }
-    const myBlock = nodeToBlock[nodeId];
-    const edges = this.snap.typed_edges || [];
-    const activeEndpoints = new Set([nodeId, myBlock].filter(Boolean));
-    for (const e of edges) {
-      if (e.source === myBlock) activeEndpoints.add(e.target);
-      if (e.target === myBlock) activeEndpoints.add(e.source);
-    }
-
-    this.svg.querySelectorAll('[data-node-id]').forEach(el => {
-      const isMe = el.dataset.nodeId === nodeId;
-      el.classList.toggle('hl-neighbor', isMe);
-      el.classList.toggle('hl-dim', !isMe);
-    });
-    this.svg.querySelectorAll('[data-edge]').forEach(el => {
-      const [s, t] = el.dataset.edge.split('->');
-      const active = activeEndpoints.has(s) && activeEndpoints.has(t);
-      el.classList.toggle('hl-active', active);
-      el.classList.toggle('hl-dim', !active);
-    });
-  }
-
-  _clearHighlight() {
-    this.svg.querySelectorAll('.hl-neighbor,.hl-dim,.hl-active').forEach(el => {
-      el.classList.remove('hl-neighbor', 'hl-dim', 'hl-active');
+      if (nodeG) { nodeG.classList.remove('hl-focus'); }
+      const blockG = e.target.closest('[data-block-id]');
+      if (blockG) { blockG.classList.remove('hl-focus'); }
     });
   }
 
@@ -593,20 +572,14 @@ export class OverviewView {
   // -------------------------------------------------------------------
 
   _renderBreadcrumb() {
-    const ORGAN_LABELS_RU = {
-      external: 'ВНЕШНЕЕ',
-      interface: 'ИНТЕРФЕЙС',
-      brain: 'МОЗГ',
-      tools: 'ИНСТРУМЕНТЫ',
-      memory: 'ПАМЯТЬ',
-      safety: 'БЕЗОПАСНОСТЬ',
-    };
-    const crumbs = [{ label: 'Обзор', state: 'l0' }];
+    const crumbs = [{ label: t('crumb.overview'), state: 'l0' }];
     if (this.zoom && this.zoom !== 'l0') {
       const organId = this.zoom.replace(/^l1-/, '');
-      const lbl = ORGAN_LABELS_RU[organId] || organId.toUpperCase();
+      const org = this.snap.layout.organs[organId];
+      const lbl = org ? tField(org, 'label') : organId.toUpperCase();
       crumbs.push({ label: lbl, state: this.zoom });
     }
+    const dzCount = this.snap.summary.dark_zones;
     this.crumbsEl.innerHTML = `
       ${crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;
@@ -614,14 +587,15 @@ export class OverviewView {
                (last ? '' : '<span class="crumb-sep">›</span>');
       }).join('')}
       <span class="crumb-spacer"></span>
-      <div class="filter-chips" role="group" aria-label="Фильтр связей">
-        <button class="fchip ${this.filter === 'all' ? 'active' : ''}" data-filter="all">Все связи</button>
-        <button class="fchip ${this.filter === 'control' ? 'active' : ''}" data-filter="control">Только управление</button>
-        <button class="fchip ${this.filter === 'data' ? 'active' : ''}" data-filter="data">Только данные</button>
+      <div class="filter-chips" role="group">
+        <button class="fchip ${this.filter === 'all' ? 'active' : ''}" data-filter="all">${this._esc(t('chips.edges.all'))}</button>
+        <button class="fchip ${this.filter === 'control' ? 'active' : ''}" data-filter="control">${this._esc(t('chips.edges.control'))}</button>
+        <button class="fchip ${this.filter === 'data' ? 'active' : ''}" data-filter="data">${this._esc(t('chips.edges.data'))}</button>
+        <button class="fchip ${this.filter === 'none' ? 'active' : ''}" data-filter="none">${this._esc(t('chips.edges.none'))}</button>
       </div>
       <button class="safety-pill" data-safety="open"
-              title="${this.snap.summary.dark_zones} известных слабостей — открыть таксономию">
-        ⚠ ${this.snap.summary.dark_zones} слабостей
+              title="${this._esc(t('safety.pill.tooltip', dzCount))}">
+        ${this._esc(t('safety.pill.count', dzCount))}
       </button>
     `;
     this.crumbsEl.querySelectorAll('.crumb').forEach(el => {

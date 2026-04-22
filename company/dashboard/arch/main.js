@@ -1,16 +1,17 @@
-// Архитектура THAI — главный оркестратор (Phase 1.7).
+// Architecture dashboard — orchestrator (Phase 1.9).
 
-import { OverviewView } from './views/overview.js?v=phase1.8';
-import { MemoryView } from './views/memory.js?v=phase1.8';
-import { DarkZonesView } from './views/darkzones.js?v=phase1.8';
-import { ToolsView } from './views/tools.js?v=phase1.8';
-import { renderNode, renderTool } from './lib/panel.js?v=phase1.8';
+import { OverviewView } from './views/overview.js?v=phase1.9';
+import { MemoryView } from './views/memory.js?v=phase1.9';
+import { DarkZonesView } from './views/darkzones.js?v=phase1.9';
+import { ToolsView } from './views/tools.js?v=phase1.9';
+import { renderNode, renderTool } from './lib/panel.js?v=phase1.9';
+import { t, getLang, setLang } from './lib/i18n.js?v=phase1.9';
 
-const SNAPSHOT_URL = 'architecture.json?v=phase1.8';
+const SNAPSHOT_URL = 'architecture.json?v=phase1.9';
 
 async function loadSnapshot() {
   const res = await fetch(SNAPSHOT_URL, { cache: 'no-cache' });
-  if (!res.ok) throw new Error(`Не удалось загрузить ${SNAPSHOT_URL}: ${res.status}`);
+  if (!res.ok) throw new Error(`${t('loading')} — ${res.status}`);
   return await res.json();
 }
 
@@ -19,7 +20,85 @@ function formatMetaSubline(snap) {
   const sum = snap.summary || {};
   const when = meta.generated_at ? meta.generated_at.slice(0, 16).replace('T', ' ') : '';
   const sha = (meta.git && meta.git.sha) ? meta.git.sha.slice(0, 7) : '';
-  return `${sum.tools_total} инструментов · ${sum.dark_zones} слабостей · ${sum.modules} модулей · ${sum.nodes} узлов · ${sum.edges} связей · ${sha} · снимок ${when}`;
+  return `${sum.tools_total} ${t('meta.tools')} · ${sum.dark_zones} ${t('meta.weaknesses')} · ${sum.modules} ${t('meta.modules')} · ${sum.nodes} ${t('meta.nodes')} · ${sum.edges} ${t('meta.edges')} · ${sha} · ${t('meta.snapshot')} ${when}`;
+}
+
+function applyStaticI18n() {
+  // Title / meta subline / tabs / search placeholder / filter options /
+  // tool-tab chips / panel close button.
+  document.title = t('title');
+  document.documentElement.lang = getLang();
+
+  const brandTitle = document.querySelector('.brand .title');
+  if (brandTitle) brandTitle.textContent = t('title');
+
+  const tabMap = {
+    overview: 'tab.overview',
+    darkzones: 'tab.darkzones',
+    memory: 'tab.memory',
+    tools: 'tab.tools',
+  };
+  document.querySelectorAll('.view-btn').forEach(b => {
+    const key = tabMap[b.dataset.view];
+    if (!key) return;
+    // Preserve any <span class="pill"> children; rewrite only the text node
+    const pill = b.querySelector('.pill');
+    b.innerHTML = t(key) + (pill ? ' ' + pill.outerHTML : '');
+  });
+
+  const search = document.getElementById('search');
+  if (search) search.placeholder = t('search.placeholder');
+
+  const filter = document.getElementById('filter');
+  if (filter) {
+    filter.innerHTML = `
+      <option value="all">${t('filter.all')}</option>
+      <option value="write">${t('filter.write')}</option>
+      <option value="memory">${t('filter.memory')}</option>
+      <option value="dark">${t('filter.dark')}</option>
+      <option value="tools">${t('filter.tools')}</option>
+    `;
+  }
+
+  const toolChips = {
+    all: 'tools.chip.all',
+    core: 'tools.chip.core',
+    write: 'tools.chip.write',
+    destructive: 'tools.chip.destructive',
+    consciousness: 'tools.chip.consciousness',
+  };
+  document.querySelectorAll('.tool-chip').forEach(c => {
+    const k = toolChips[c.dataset.toolFilter];
+    if (k) c.textContent = t(k);
+  });
+
+  const close = document.getElementById('panel-close');
+  if (close) close.title = t('close');
+
+  const hint = document.querySelector('#view-darkzones .muted');
+  if (hint) hint.textContent = t('dz.select.hint');
+}
+
+function mountLangToggle() {
+  // Injects RU/EN toggle into the topbar right of the search/filter.
+  const right = document.querySelector('.topbar .right');
+  if (!right || document.getElementById('lang-toggle')) return;
+  const lang = getLang();
+  const btn = document.createElement('div');
+  btn.id = 'lang-toggle';
+  btn.className = 'lang-toggle';
+  btn.title = t('lang.toggle.title');
+  btn.innerHTML = `
+    <button data-lang="ru" class="${lang === 'ru' ? 'active' : ''}">RU</button>
+    <button data-lang="en" class="${lang === 'en' ? 'active' : ''}">EN</button>
+  `;
+  right.appendChild(btn);
+  btn.addEventListener('click', e => {
+    const b = e.target.closest('[data-lang]');
+    if (!b) return;
+    if (b.dataset.lang === lang) return;
+    setLang(b.dataset.lang);  // reloads the page
+  });
 }
 
 class App {
@@ -149,6 +228,9 @@ class App {
   }
 }
 
+applyStaticI18n();
+mountLangToggle();
+
 loadSnapshot()
   .then(snap => {
     const app = new App(snap);
@@ -157,9 +239,8 @@ loadSnapshot()
   })
   .catch(err => {
     document.body.innerHTML = `<div style="padding:40px;color:#e17055;font-family:monospace;">
-      <h2>Не удалось загрузить снимок</h2>
+      <h2>${t('loading')}</h2>
       <pre>${String(err)}</pre>
-      <p style="margin-top:12px;color:#8b8fa3">Запустить <code>python3 scripts/build_architecture_snapshot.py</code>?</p>
     </div>`;
     console.error(err);
   });

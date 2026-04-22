@@ -1,6 +1,7 @@
-// Инструменты — Phase 1.7: 6 функциональных блоков с раскрывающимися картами.
+// Инструменты / Tools — Phase 1.9: 6 collapsible functional blocks, RU/EN.
 
-import { renderTool } from '../lib/panel.js?v=phase1.8';
+import { renderTool } from '../lib/panel.js?v=phase1.9';
+import { t, tField } from '../lib/i18n.js?v=phase1.9';
 
 const BLOCK_ACCENT = {
   tools_read:        '#74b9ff',
@@ -32,7 +33,7 @@ export class ToolsView {
 
     const filteredBlocks = this.blocks.filter(b => this._toolsInBlock(b, q).length);
     const emptyState = !filteredBlocks.length
-      ? `<div class="tools-empty">Ничего не найдено по запросу <code>${this._esc(this.query)}</code></div>`
+      ? `<div class="tools-empty">${this._esc(t('tools.empty', `"${this.query}"`))}</div>`
       : '';
 
     this.gridEl.innerHTML = `
@@ -90,15 +91,15 @@ export class ToolsView {
         <header class="tb-head" data-block-toggle="${b.id}" tabindex="0" role="button">
           <span class="tb-caret ${expanded ? 'open' : ''}">▸</span>
           <div>
-            <div class="tb-title">${this._esc(b.label)}</div>
-            <div class="tb-question">${this._esc(b.question || '')}</div>
+            <div class="tb-title">${this._esc(tField(b, 'label'))}</div>
+            <div class="tb-question">${this._esc(tField(b, 'question') || '')}</div>
           </div>
           <span class="tb-count">${tools.length}</span>
           ${dzCount ? `<span class="tb-dz">⚠ ${dzCount}</span>` : ''}
         </header>
         ${expanded ? `
           <div class="tb-grid">
-            ${tools.map(t => this._renderToolCard(t)).join('')}
+            ${tools.map(tl => this._renderToolCard(tl)).join('')}
           </div>` : ''}
       </section>
     `;

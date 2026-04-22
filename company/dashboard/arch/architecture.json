@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-21T19:51:36.678406+00:00",
+    "generated_at": "2026-04-22T06:58:09.096205+00:00",
     "git": {
-      "sha": "8fcc71a573934c474dd6045a17aa287831637e62",
+      "sha": "22bd3aad0ffb57165bf1047450ca71e4c1efe083",
       "branch": "feat/architecture-dashboard-phase1",
-      "subject": "feat(phase1.7): functional block classification + RU translation"
+      "subject": "feat(phase1.8): semantic (role-based) labels replace file paths on nodes"
     },
     "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
     "repo": "/home/deploy/ouroboros",
@@ -2761,7 +2761,8 @@
         "dark_zone_ids": [],
         "organ": "external",
         "block_id": "external",
-        "semantic_label": "Мессенджер"
+        "semantic_label": "Мессенджер",
+        "semantic_label_en": "Messenger"
       },
       {
         "id": "openrouter",
@@ -2771,7 +2772,8 @@
         "dark_zone_ids": [],
         "organ": "external",
         "block_id": "external",
-        "semantic_label": "Облако моделей"
+        "semantic_label": "Облако моделей",
+        "semantic_label_en": "Model Cloud"
       },
       {
         "id": "colab_launcher",
@@ -2781,7 +2783,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_comm",
-        "semantic_label": "Главный процесс"
+        "semantic_label": "Главный процесс",
+        "semantic_label_en": "Main Process"
       },
       {
         "id": "worker_pool",
@@ -2791,7 +2794,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_dispatch",
-        "semantic_label": "Пул работников"
+        "semantic_label": "Пул работников",
+        "semantic_label_en": "Worker Pool"
       },
       {
         "id": "consciousness_thread",
@@ -2801,7 +2805,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_dispatch",
-        "semantic_label": "Фоновый поток"
+        "semantic_label": "Фоновый поток",
+        "semantic_label_en": "Background Thread"
       },
       {
         "id": "docker_chromadb",
@@ -2817,7 +2822,8 @@
         ],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Семантическая БД"
+        "semantic_label": "Семантическая БД",
+        "semantic_label_en": "Semantic DB"
       },
       {
         "id": "docker_postgres",
@@ -2827,7 +2833,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Реляционная БД"
+        "semantic_label": "Реляционная БД",
+        "semantic_label_en": "Relational DB"
       },
       {
         "id": "docker_redis",
@@ -2837,7 +2844,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Кеш"
+        "semantic_label": "Кеш",
+        "semantic_label_en": "Cache"
       },
       {
         "id": "fs_data",
@@ -2847,7 +2855,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Файловое хранилище"
+        "semantic_label": "Файловое хранилище",
+        "semantic_label_en": "File Storage"
       },
       {
         "id": "agent",
@@ -2863,7 +2872,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_perception",
-        "semantic_label": "Диспетчер задачи"
+        "semantic_label": "Диспетчер задачи",
+        "semantic_label_en": "Task Dispatcher"
       },
       {
         "id": "loop",
@@ -2881,7 +2891,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_thinking",
-        "semantic_label": "Цикл мышления"
+        "semantic_label": "Цикл мышления",
+        "semantic_label_en": "Thinking Loop"
       },
       {
         "id": "context",
@@ -2898,7 +2909,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_perception",
-        "semantic_label": "Сборщик контекста"
+        "semantic_label": "Сборщик контекста",
+        "semantic_label_en": "Context Builder"
       },
       {
         "id": "memory",
@@ -2915,7 +2927,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_perception",
-        "semantic_label": "Работа с памятью"
+        "semantic_label": "Работа с памятью",
+        "semantic_label_en": "Memory I/O"
       },
       {
         "id": "llm",
@@ -2927,7 +2940,8 @@
         "dark_zone_ids": [],
         "organ": "brain",
         "block_id": "brain_thinking",
-        "semantic_label": "Клиент модели"
+        "semantic_label": "Клиент модели",
+        "semantic_label_en": "Model Client"
       },
       {
         "id": "consciousness",
@@ -2943,7 +2957,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_continuous",
-        "semantic_label": "Сознание"
+        "semantic_label": "Сознание",
+        "semantic_label_en": "Consciousness"
       },
       {
         "id": "skill_manager",
@@ -2959,7 +2974,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_reflection",
-        "semantic_label": "Жизненный цикл навыков"
+        "semantic_label": "Жизненный цикл навыков",
+        "semantic_label_en": "Skill Lifecycle"
       },
       {
         "id": "experiment_engine",
@@ -2973,7 +2989,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_reflection",
-        "semantic_label": "Движок экспериментов"
+        "semantic_label": "Движок экспериментов",
+        "semantic_label_en": "Experiment Engine"
       },
       {
         "id": "pattern_detector",
@@ -2987,7 +3004,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_reflection",
-        "semantic_label": "Детектор паттернов"
+        "semantic_label": "Детектор паттернов",
+        "semantic_label_en": "Pattern Detector"
       },
       {
         "id": "strategic_planner",
@@ -3000,7 +3018,8 @@
         "organ": "brain",
         "block_id": "brain_continuous",
         "paused": true,
-        "semantic_label": "Стратег"
+        "semantic_label": "Стратег",
+        "semantic_label_en": "Strategist"
       },
       {
         "id": "inner_critic",
@@ -3014,7 +3033,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_selfcontrol",
-        "semantic_label": "Внутренний критик"
+        "semantic_label": "Внутренний критик",
+        "semantic_label_en": "Inner Critic"
       },
       {
         "id": "self_evolution",
@@ -3026,7 +3046,8 @@
         "dark_zone_ids": [],
         "organ": "brain",
         "block_id": "brain_selfcontrol",
-        "semantic_label": "Самоэволюция"
+        "semantic_label": "Самоэволюция",
+        "semantic_label_en": "Self-Evolution"
       },
       {
         "id": "budget",
@@ -3041,7 +3062,8 @@
         ],
         "organ": "brain",
         "block_id": "brain_selfcontrol",
-        "semantic_label": "Учёт бюджета"
+        "semantic_label": "Учёт бюджета",
+        "semantic_label_en": "Budget Ledger"
       },
       {
         "id": "owner_inject",
@@ -3053,7 +3075,8 @@
         "dark_zone_ids": [],
         "organ": "brain",
         "block_id": "brain_perception",
-        "semantic_label": "Почтовый ящик задачи"
+        "semantic_label": "Почтовый ящик задачи",
+        "semantic_label_en": "Task Mailbox"
       },
       {
         "id": "queue",
@@ -3067,7 +3090,8 @@
         ],
         "organ": "interface",
         "block_id": "iface_dispatch",
-        "semantic_label": "Очередь задач"
+        "semantic_label": "Очередь задач",
+        "semantic_label_en": "Task Queue"
       },
       {
         "id": "workers",
@@ -3082,7 +3106,8 @@
         ],
         "organ": "interface",
         "block_id": "iface_dispatch",
-        "semantic_label": "Работники"
+        "semantic_label": "Работники",
+        "semantic_label_en": "Workers"
       },
       {
         "id": "events",
@@ -3094,7 +3119,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_dispatch",
-        "semantic_label": "Шина событий"
+        "semantic_label": "Шина событий",
+        "semantic_label_en": "Event Bus"
       },
       {
         "id": "telegram",
@@ -3106,7 +3132,8 @@
         "dark_zone_ids": [],
         "organ": "interface",
         "block_id": "iface_comm",
-        "semantic_label": "Канал сообщений"
+        "semantic_label": "Канал сообщений",
+        "semantic_label_en": "Message Channel"
       },
       {
         "id": "state",
@@ -3122,7 +3149,8 @@
         ],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Хранитель состояния"
+        "semantic_label": "Хранитель состояния",
+        "semantic_label_en": "State Keeper"
       },
       {
         "id": "git_ops",
@@ -3136,7 +3164,8 @@
         ],
         "organ": "interface",
         "block_id": "iface_infra",
-        "semantic_label": "Git-операции"
+        "semantic_label": "Git-операции",
+        "semantic_label_en": "Git Operations"
       },
       {
         "id": "registry",
@@ -3151,7 +3180,8 @@
         ],
         "organ": "tools",
         "block_id": "tools_meta",
-        "semantic_label": "Реестр инструментов"
+        "semantic_label": "Реестр инструментов",
+        "semantic_label_en": "Tool Registry"
       },
       {
         "id": "mem_scratchpad",
@@ -3162,7 +3192,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_working",
-        "semantic_label": "Блокнот задачи"
+        "semantic_label": "Блокнот задачи",
+        "semantic_label_en": "Task Scratchpad"
       },
       {
         "id": "mem_identity",
@@ -3176,7 +3207,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_identity",
-        "semantic_label": "Идентичность"
+        "semantic_label": "Идентичность",
+        "semantic_label_en": "Identity"
       },
       {
         "id": "mem_wisdom",
@@ -3187,7 +3219,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_identity",
-        "semantic_label": "Мудрость"
+        "semantic_label": "Мудрость",
+        "semantic_label_en": "Wisdom"
       },
       {
         "id": "mem_knowledge",
@@ -3198,7 +3231,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_knowledge",
-        "semantic_label": "База знаний"
+        "semantic_label": "База знаний",
+        "semantic_label_en": "Knowledge Base"
       },
       {
         "id": "mem_episodic",
@@ -3211,7 +3245,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_experience",
-        "semantic_label": "Эпизоды дня"
+        "semantic_label": "Эпизоды дня",
+        "semantic_label_en": "Daily Episodes"
       },
       {
         "id": "log_chat",
@@ -3222,7 +3257,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "История чатов"
+        "semantic_label": "История чатов",
+        "semantic_label_en": "Chat History"
       },
       {
         "id": "log_events",
@@ -3240,7 +3276,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Лента событий"
+        "semantic_label": "Лента событий",
+        "semantic_label_en": "Event Stream"
       },
       {
         "id": "log_supervisor",
@@ -3255,7 +3292,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Лог супервизора"
+        "semantic_label": "Лог супервизора",
+        "semantic_label_en": "Supervisor Log"
       },
       {
         "id": "log_tools",
@@ -3266,7 +3304,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Журнал вызовов"
+        "semantic_label": "Журнал вызовов",
+        "semantic_label_en": "Call Journal"
       },
       {
         "id": "log_progress",
@@ -3277,7 +3316,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Прогресс задач"
+        "semantic_label": "Прогресс задач",
+        "semantic_label_en": "Task Progress"
       },
       {
         "id": "file_task_results",
@@ -3290,7 +3330,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_archive",
-        "semantic_label": "Архив задач"
+        "semantic_label": "Архив задач",
+        "semantic_label_en": "Task Archive"
       },
       {
         "id": "state_main",
@@ -3305,7 +3346,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Общее состояние"
+        "semantic_label": "Общее состояние",
+        "semantic_label_en": "Core State"
       },
       {
         "id": "state_queue",
@@ -3316,7 +3358,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Снимок очереди"
+        "semantic_label": "Снимок очереди",
+        "semantic_label_en": "Queue Snapshot"
       },
       {
         "id": "state_budget",
@@ -3330,7 +3373,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Дневной бюджет"
+        "semantic_label": "Дневной бюджет",
+        "semantic_label_en": "Daily Budget"
       },
       {
         "id": "state_directives",
@@ -3341,7 +3385,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_operational",
-        "semantic_label": "Директивы"
+        "semantic_label": "Директивы",
+        "semantic_label_en": "Directives"
       },
       {
         "id": "state_commitments",
@@ -3354,7 +3399,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Обязательства"
+        "semantic_label": "Обязательства",
+        "semantic_label_en": "Commitments"
       },
       {
         "id": "state_experiments",
@@ -3367,7 +3413,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Эксперименты"
+        "semantic_label": "Эксперименты",
+        "semantic_label_en": "Experiments"
       },
       {
         "id": "state_reflected",
@@ -3378,7 +3425,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Отрефлексированные задачи"
+        "semantic_label": "Отрефлексированные задачи",
+        "semantic_label_en": "Reflected Tasks"
       },
       {
         "id": "state_consciousness",
@@ -3389,7 +3437,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Метрики сознания"
+        "semantic_label": "Метрики сознания",
+        "semantic_label_en": "Consciousness Metrics"
       },
       {
         "id": "state_cooldown",
@@ -3400,7 +3449,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_service",
-        "semantic_label": "Кулдаун самомодификаций"
+        "semantic_label": "Кулдаун самомодификаций",
+        "semantic_label_en": "Self-Mod Cooldown"
       },
       {
         "id": "chroma_episodes",
@@ -3411,7 +3461,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_experience",
-        "semantic_label": "Семантические эпизоды"
+        "semantic_label": "Семантические эпизоды",
+        "semantic_label_en": "Semantic Episodes"
       },
       {
         "id": "chroma_skills",
@@ -3425,7 +3476,8 @@
         ],
         "organ": "memory",
         "block_id": "mem_experience",
-        "semantic_label": "Навыки (RAG)"
+        "semantic_label": "Навыки (RAG)",
+        "semantic_label_en": "Skills (RAG)"
       },
       {
         "id": "chroma_history",
@@ -3436,7 +3488,8 @@
         "dark_zone_ids": [],
         "organ": "memory",
         "block_id": "mem_experience",
-        "semantic_label": "Архив диалогов (RAG)"
+        "semantic_label": "Архив диалогов (RAG)",
+        "semantic_label_en": "Dialogue Archive (RAG)"
       }
     ],
     "edges": [
@@ -4457,7 +4510,8 @@
       "kind": "data",
       "subtype": "writes_to",
       "visibility": "l0",
-      "label": "следы в episodic/skills после задачи"
+      "label": "следы в episodic/skills после задачи",
+      "label_en": "traces into episodic/skills after task"
     },
     {
       "source": "mem_operational",
@@ -4465,7 +4519,8 @@
       "kind": "data",
       "subtype": "writes_to",
       "visibility": "l0",
-      "label": "offline indexing chat+events → ChromaDB"
+      "label": "offline indexing chat+events → ChromaDB",
+      "label_en": "offline indexing chat+events → ChromaDB"
     },
     {
       "source": "mem_experience",
@@ -4473,7 +4528,8 @@
       "kind": "data",
       "subtype": "reads_from",
       "visibility": "l0",
-      "label": "recall / find_skills в новый контекст"
+      "label": "recall / find_skills в новый контекст",
+      "label_en": "recall / find_skills into new context"
     },
     {
       "source": "mem_identity",
@@ -4481,7 +4537,8 @@
       "kind": "data",
       "subtype": "reads_from",
       "visibility": "l0",
-      "label": "identity.md в каждый prompt"
+      "label": "identity.md в каждый prompt",
+      "label_en": "identity.md into every prompt"
     },
     {
       "source": "mem_operational",
@@ -4489,7 +4546,8 @@
       "kind": "data",
       "subtype": "reads_from",
       "visibility": "l0",
-      "label": "directives 24h в контекст"
+      "label": "directives 24h в контекст",
+      "label_en": "directives 24h into context"
     },
     {
       "source": "iface_comm",
@@ -4497,7 +4555,8 @@
       "kind": "control",
       "subtype": "invokes",
       "visibility": "l0",
-      "label": "входящая задача → handle_task"
+      "label": "входящая задача → handle_task",
+      "label_en": "incoming task → handle_task"
     },
     {
       "source": "brain_thinking",
@@ -4505,7 +4564,8 @@
       "kind": "control",
       "subtype": "invokes",
       "visibility": "l0",
-      "label": "tool call (чтение)"
+      "label": "tool call (чтение)",
+      "label_en": "tool call (read)"
     },
     {
       "source": "brain_thinking",
@@ -4513,7 +4573,8 @@
       "kind": "control",
       "subtype": "invokes",
       "visibility": "l0",
-      "label": "tool call (запись)"
+      "label": "tool call (запись)",
+      "label_en": "tool call (write)"
     },
     {
       "source": "brain_thinking",
@@ -4521,7 +4582,8 @@
       "kind": "control",
       "subtype": "invokes",
       "visibility": "l0",
-      "label": "tool call (управление)"
+      "label": "tool call (управление)",
+      "label_en": "tool call (self-control)"
     },
     {
       "source": "brain_thinking",
@@ -4529,7 +4591,8 @@
       "kind": "control",
       "subtype": "invokes",
       "visibility": "l0",
-      "label": "tool call (опасное)"
+      "label": "tool call (опасное)",
+      "label_en": "tool call (dangerous)"
     },
     {
       "source": "tools_read",
@@ -4537,7 +4600,8 @@
       "kind": "data",
       "subtype": "reads_from",
       "visibility": "l0",
-      "label": "результаты чтения"
+      "label": "результаты чтения",
+      "label_en": "read results"
     },
     {
       "source": "tools_write",
@@ -4545,7 +4609,8 @@
       "kind": "data",
       "subtype": "writes_to",
       "visibility": "l0",
-      "label": "подтверждения изменений"
+      "label": "подтверждения изменений",
+      "label_en": "write confirmations"
     },
     {
       "source": "brain_thinking",
@@ -4553,7 +4618,8 @@
       "kind": "data",
       "subtype": "writes_to",
       "visibility": "l0",
-      "label": "scratchpad writes, event emits"
+      "label": "scratchpad writes, event emits",
+      "label_en": "scratchpad writes, event emits"
     },
     {
       "source": "brain_reflection",
@@ -4561,7 +4627,8 @@
       "kind": "data",
       "subtype": "writes_to",
       "visibility": "l0",
-      "label": "skills, episodes"
+      "label": "skills, episodes",
+      "label_en": "skills, episodes"
     },
     {
       "source": "safety_observe",
@@ -4569,7 +4636,8 @@
       "kind": "control",
       "subtype": "governs",
       "visibility": "l0",
-      "label": "inner_critic / stuck / drift"
+      "label": "inner_critic / stuck / drift",
+      "label_en": "inner_critic / stuck / drift"
     },
     {
       "source": "safety_contain",
@@ -4577,7 +4645,8 @@
       "kind": "control",
       "subtype": "governs",
       "visibility": "l0",
-      "label": "MAX_ROUNDS / cost cap / circuit breaker"
+      "label": "MAX_ROUNDS / cost cap / circuit breaker",
+      "label_en": "MAX_ROUNDS / cost cap / circuit breaker"
     },
     {
       "source": "safety_recover",
@@ -4585,7 +4654,8 @@
       "kind": "control",
       "subtype": "governs",
       "visibility": "l0",
-      "label": "git reset, queue snapshot restore"
+      "label": "git reset, queue snapshot restore",
+      "label_en": "git reset, queue snapshot restore"
     }
   ],
   "layout": {
@@ -4603,7 +4673,8 @@
         "h": 120,
         "label_x": 1000,
         "label_y": 40,
-        "label": "ВНЕШНЕЕ"
+        "label": "ВНЕШНЕЕ",
+        "label_en": "EXTERNAL"
       },
       "interface": {
         "x": 0,
@@ -4612,7 +4683,8 @@
         "h": 240,
         "label_x": 1000,
         "label_y": 185,
-        "label": "ИНТЕРФЕЙС"
+        "label": "ИНТЕРФЕЙС",
+        "label_en": "INTERFACE"
       },
       "brain": {
         "x": 440,
@@ -4621,7 +4693,8 @@
         "h": 580,
         "label_x": 990,
         "label_y": 455,
-        "label": "МОЗГ"
+        "label": "МОЗГ",
+        "label_en": "BRAIN"
       },
       "tools": {
         "x": 1560,
@@ -4630,7 +4703,8 @@
         "h": 580,
         "label_x": 1765,
         "label_y": 455,
-        "label": "ИНСТРУМЕНТЫ"
+        "label": "ИНСТРУМЕНТЫ",
+        "label_en": "TOOLS"
       },
       "memory": {
         "x": 30,
@@ -4639,7 +4713,8 @@
         "h": 330,
         "label_x": 1000,
         "label_y": 1065,
-        "label": "ПАМЯТЬ"
+        "label": "ПАМЯТЬ",
+        "label_en": "MEMORY"
       },
       "safety": {
         "x": 30,
@@ -4648,7 +4723,8 @@
         "h": 360,
         "label_x": 1000,
         "label_y": 1415,
-        "label": "БЕЗОПАСНОСТЬ"
+        "label": "БЕЗОПАСНОСТЬ",
+        "label_en": "SAFETY"
       }
     },
     "blocks": {
@@ -5226,6 +5302,7 @@
         "w": 230,
         "h": 270,
         "label": "Рабочая",
+        "label_en": "Working",
         "label_x": 145,
         "label_y": 1087
       },
@@ -5235,6 +5312,7 @@
         "w": 520,
         "h": 270,
         "label": "Оперативная",
+        "label_en": "Short-term",
         "label_x": 525,
         "label_y": 1087
       },
@@ -5244,6 +5322,7 @@
         "w": 1020,
         "h": 270,
         "label": "Долговременная",
+        "label_en": "Long-term",
         "label_x": 1315,
         "label_y": 1087
       },
@@ -5253,6 +5332,7 @@
         "w": 140,
         "h": 270,
         "label": "Архив",
+        "label_en": "Archive",
         "label_x": 1895,
         "label_y": 1087
       }
@@ -5264,7 +5344,9 @@
         "id": "iface_comm",
         "organ": "interface",
         "label": "Связь с внешним миром",
+        "label_en": "External Comms",
         "question": "Что мне говорят? Что я отвечаю?",
+        "question_en": "What am I told? What do I reply?",
         "nodes": [
           "colab_launcher",
           "telegram"
@@ -5274,7 +5356,9 @@
         "id": "iface_dispatch",
         "organ": "interface",
         "label": "Диспетчеризация",
+        "label_en": "Dispatch",
         "question": "Кто это сделает? Когда? В какой последовательности?",
+        "question_en": "Who will do this? When? In what sequence?",
         "nodes": [
           "queue",
           "workers",
@@ -5287,7 +5371,9 @@
         "id": "iface_infra",
         "organ": "interface",
         "label": "Жизнеобеспечение",
+        "label_en": "Infrastructure",
         "question": "Что со мной было? На какой версии я работаю?",
+        "question_en": "What happened to me? Which version am I running?",
         "nodes": [
           "state",
           "git_ops",
@@ -5303,7 +5389,9 @@
         "id": "brain_perception",
         "organ": "brain",
         "label": "Восприятие",
+        "label_en": "Perception",
         "question": "Что пришло? Какого это типа? Что я знаю про это?",
+        "question_en": "What arrived? What type is it? What do I know about it?",
         "nodes": [
           "agent",
           "context",
@@ -5315,7 +5403,9 @@
         "id": "brain_thinking",
         "organ": "brain",
         "label": "Мышление",
+        "label_en": "Thinking",
         "question": "Раунд за раундом: думаю → действую → наблюдаю",
+        "question_en": "Round by round: think → act → observe",
         "nodes": [
           "loop",
           "llm"
@@ -5325,7 +5415,9 @@
         "id": "brain_selfcontrol",
         "organ": "brain",
         "label": "Самоконтроль",
+        "label_en": "Self-Control",
         "question": "Правильно ли я делаю? Можно ли мне это делать?",
+        "question_en": "Am I doing it right? Am I allowed to do this?",
         "nodes": [
           "inner_critic",
           "self_evolution",
@@ -5336,7 +5428,9 @@
         "id": "brain_reflection",
         "organ": "brain",
         "label": "Рефлексия",
+        "label_en": "Reflection",
         "question": "Что я могу извлечь из того, что было?",
+        "question_en": "What can I extract from what happened?",
         "nodes": [
           "skill_manager",
           "experiment_engine",
@@ -5347,7 +5441,9 @@
         "id": "brain_continuous",
         "organ": "brain",
         "label": "Фоновое сознание",
+        "label_en": "Background Consciousness",
         "question": "Что происходит между задачами? К чему я иду?",
+        "question_en": "What happens between tasks? Where am I headed?",
         "nodes": [
           "consciousness",
           "strategic_planner"
@@ -5359,7 +5455,9 @@
         "id": "tools_read",
         "organ": "tools",
         "label": "Чтение мира",
+        "label_en": "World Read",
         "question": "Что есть?",
+        "question_en": "What's there?",
         "tools": [
           "repo_read",
           "repo_list",
@@ -5396,7 +5494,9 @@
         "id": "tools_write",
         "organ": "tools",
         "label": "Изменение мира",
+        "label_en": "World Write",
         "question": "Что сделать?",
+        "question_en": "What to do?",
         "tools": [
           "drive_write",
           "repo_write_commit",
@@ -5420,7 +5520,9 @@
         "id": "tools_selfctl",
         "organ": "tools",
         "label": "Управление собой",
+        "label_en": "Self-Control",
         "question": "Как мне изменить свой режим работы?",
+        "question_en": "How do I change my own operating mode?",
         "tools": [
           "schedule_task",
           "cancel_task",
@@ -5438,7 +5540,9 @@
         "id": "tools_reflection",
         "organ": "tools",
         "label": "Саморефлексия",
+        "label_en": "Self-Reflection",
         "question": "Как мне оценить своё поведение?",
+        "question_en": "How do I evaluate my own behavior?",
         "tools": [
           "deep_reflection",
           "multi_model_review",
@@ -5451,7 +5555,9 @@
         "id": "tools_danger",
         "organ": "tools",
         "label": "Опасная сила",
+        "label_en": "Dangerous Powers",
         "question": "Что могу сломать одним вызовом?",
+        "question_en": "What can I break with one call?",
         "tools": [
           "run_shell",
           "browser_action"
@@ -5461,7 +5567,9 @@
         "id": "tools_meta",
         "organ": "tools",
         "label": "Мета",
+        "label_en": "Meta",
         "question": "Какие у меня вообще есть инструменты?",
+        "question_en": "What tools do I even have?",
         "tools": [
           "list_available_tools",
           "enable_tools"
@@ -5474,8 +5582,11 @@
         "organ": "memory",
         "level": "working",
         "label": "Рабочая",
+        "label_en": "Working",
         "tagline": "per-task — теряется в конце задачи",
+        "tagline_en": "per-task — discarded at task end",
         "question": "Что происходит прямо сейчас?",
+        "question_en": "What's happening right now?",
         "nodes": [
           "mem_scratchpad"
         ],
@@ -5489,8 +5600,11 @@
         "organ": "memory",
         "level": "short",
         "label": "Оперативная",
+        "label_en": "Short-term",
         "tagline": "день / сессия — медленно устаревает",
+        "tagline_en": "session / day — ages out",
         "question": "Что было недавно? Что меня попросили 24 часа назад?",
+        "question_en": "What happened recently? What was I asked 24h ago?",
         "nodes": [
           "log_chat",
           "log_events",
@@ -5508,7 +5622,9 @@
         "level": "long",
         "sub": "identity",
         "label": "Идентичность",
+        "label_en": "Identity",
         "question": "Кто я? Что я знаю про себя?",
+        "question_en": "Who am I? What do I know about myself?",
         "nodes": [
           "mem_identity",
           "mem_wisdom"
@@ -5520,7 +5636,9 @@
         "level": "long",
         "sub": "knowledge",
         "label": "Знания",
+        "label_en": "Knowledge",
         "question": "Что я выучил про предметную область?",
+        "question_en": "What have I learned about the domain?",
         "nodes": [
           "mem_knowledge"
         ]
@@ -5531,7 +5649,9 @@
         "level": "long",
         "sub": "experience",
         "label": "Опыт",
+        "label_en": "Experience",
         "question": "Что я пробовал? Что сработало?",
+        "question_en": "What have I tried? What worked?",
         "nodes": [
           "mem_episodic",
           "chroma_episodes",
@@ -5545,7 +5665,9 @@
         "level": "long",
         "sub": "service",
         "label": "Служебная",
+        "label_en": "Service",
         "question": "В каком я состоянии? Что я пообещал?",
+        "question_en": "What state am I in? What did I commit to?",
         "nodes": [
           "state_main",
           "state_experiments",
@@ -5560,8 +5682,11 @@
         "organ": "memory",
         "level": "archive",
         "label": "Архив задач",
+        "label_en": "Task Archive",
         "tagline": "append-only — 645+ файлов",
+        "tagline_en": "append-only — 645+ files",
         "question": "Что я делал раньше и как это прошло?",
+        "question_en": "What did I do before and how did it go?",
         "nodes": [
           "file_task_results"
         ]
@@ -5572,7 +5697,9 @@
         "id": "safety_prevent",
         "organ": "safety",
         "label": "Предотвращение",
+        "label_en": "Prevention",
         "question": "Что агенту запрещено делать?",
+        "question_en": "What is the agent forbidden from doing?",
         "items": [
           {
             "title": "FILE_ZONES (red / yellow / green)",
@@ -5596,7 +5723,9 @@
         "id": "safety_observe",
         "organ": "safety",
         "label": "Наблюдение",
+        "label_en": "Observation",
         "question": "Что идёт не так прямо сейчас?",
+        "question_en": "What's going wrong right now?",
         "items": [
           {
             "title": "Inner Critic (checkpoints 40% / 75%)",
@@ -5620,7 +5749,9 @@
         "id": "safety_contain",
         "organ": "safety",
         "label": "Сдерживание",
+        "label_en": "Containment",
         "question": "Как остановить до того, как станет хуже?",
+        "question_en": "How to stop before it gets worse?",
         "items": [
           {
             "title": "MAX_ROUNDS = 12",
@@ -5644,7 +5775,9 @@
         "id": "safety_recover",
         "organ": "safety",
         "label": "Восстановление",
+        "label_en": "Recovery",
         "question": "Как вернуться в рабочее состояние?",
+        "question_en": "How to return to a working state?",
         "items": [
           {
             "title": "git reset on startup",
@@ -5668,155 +5801,207 @@
         "id": "safety_weaknesses",
         "organ": "safety",
         "label": "Известные слабости",
+        "label_en": "Known Weaknesses",
         "question": "Что мы знаем, что плохо, но пока не починили?",
+        "question_en": "What do we know is bad but haven't fixed yet?",
         "items": [
           {
             "title": "D1 — Two parallel event logs, not one",
+            "title_en": "D1 — Two parallel event logs, not one",
             "group": "Наблюдаемость",
+            "group_en": "Observability",
             "dz_id": "D1",
             "ref": null
           },
           {
             "title": "D2 — SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl",
+            "title_en": "D2 — SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl",
             "group": "Наблюдаемость",
+            "group_en": "Observability",
             "dz_id": "D2",
             "ref": null
           },
           {
             "title": "D5 — No skills written to ChromaDB after 04-07 despite active runtime through 04-12",
+            "title_en": "D5 — No skills written to ChromaDB after 04-07 despite active runtime through 04-12",
             "group": "Наблюдаемость",
+            "group_en": "Observability",
             "dz_id": "D5",
             "ref": null
           },
           {
             "title": "D15 — R1 silently auto-restores; no loud telemetry on first use",
+            "title_en": "D15 — R1 silently auto-restores; no loud telemetry on first use",
             "group": "Наблюдаемость",
+            "group_en": "Observability",
             "dz_id": "D15",
             "ref": null
           },
           {
             "title": "D18 — `pattern_detector` scans `task_results/` only — not events.jsonl",
+            "title_en": "D18 — `pattern_detector` scans `task_results/` only — not events.jsonl",
             "group": "Наблюдаемость",
+            "group_en": "Observability",
             "dz_id": "D18",
             "ref": null
           },
           {
             "title": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
+            "title_en": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
             "group": "Согласованность",
+            "group_en": "Consistency",
             "dz_id": "D4",
             "ref": null
           },
           {
             "title": "D19 — CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness",
+            "title_en": "D19 — CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness",
             "group": "Согласованность",
+            "group_en": "Consistency",
             "dz_id": "D19",
             "ref": null
           },
           {
             "title": "D20 — `current_sha` in state.json drifts — written only on `git reset`, not on self-commit",
+            "title_en": "D20 — `current_sha` in state.json drifts — written only on `git reset`, not on self-commit",
             "group": "Согласованность",
+            "group_en": "Consistency",
             "dz_id": "D20",
             "ref": null
           },
           {
             "title": "D22 — `_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`",
+            "title_en": "D22 — `_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`",
             "group": "Согласованность",
+            "group_en": "Consistency",
             "dz_id": "D22",
             "ref": null
           },
           {
             "title": "D23 — Post-restart banner detection is time-based with a 300s window",
+            "title_en": "D23 — Post-restart banner detection is time-based with a 300s window",
             "group": "Согласованность",
+            "group_en": "Consistency",
             "dz_id": "D23",
             "ref": null
           },
           {
             "title": "D8 — Strategic planner kill switch defaults to OFF and stays OFF",
+            "title_en": "D8 — Strategic planner kill switch defaults to OFF and stays OFF",
             "group": "Конфигурация",
+            "group_en": "Configuration",
             "dz_id": "D8",
             "ref": null
           },
           {
             "title": "D11 — MAX_ROUNDS discrepancy: doc says 25, code default is 12",
+            "title_en": "D11 — MAX_ROUNDS discrepancy: doc says 25, code default is 12",
             "group": "Конфигурация",
+            "group_en": "Configuration",
             "dz_id": "D11",
             "ref": null
           },
           {
             "title": "D12 — Per-task cost cap discrepancy: doc says $5, code default is $3",
+            "title_en": "D12 — Per-task cost cap discrepancy: doc says $5, code default is $3",
             "group": "Конфигурация",
+            "group_en": "Configuration",
             "dz_id": "D12",
             "ref": null
           },
           {
             "title": "D13 — Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap",
+            "title_en": "D13 — Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap",
             "group": "Конфигурация",
+            "group_en": "Configuration",
             "dz_id": "D13",
             "ref": null
           },
           {
             "title": "D14 — `identity.md` is read in 5 places, each silently skips if absent",
+            "title_en": "D14 — `identity.md` is read in 5 places, each silently skips if absent",
             "group": "Атаки",
+            "group_en": "Attack Surface",
             "dz_id": "D14",
             "ref": null
           },
           {
             "title": "D16 — `run_shell` is the escape-hatch bypass for every other guard",
+            "title_en": "D16 — `run_shell` is the escape-hatch bypass for every other guard",
             "group": "Атаки",
+            "group_en": "Attack Surface",
             "dz_id": "D16",
             "ref": null
           },
           {
             "title": "D17 — Worker destructive-keyword guard can refuse tasks before the agent sees them",
+            "title_en": "D17 — Worker destructive-keyword guard can refuse tasks before the agent sees them",
             "group": "Атаки",
+            "group_en": "Attack Surface",
             "dz_id": "D17",
             "ref": null
           },
           {
             "title": "D25 — Consciousness thread has `update_identity` in its whitelist",
+            "title_en": "D25 — Consciousness thread has `update_identity` in its whitelist",
             "group": "Атаки",
+            "group_en": "Attack Surface",
             "dz_id": "D25",
             "ref": null
           },
           {
             "title": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
+            "title_en": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
             "group": "Артефакты",
+            "group_en": "Artifacts",
             "dz_id": "D3",
             "ref": null
           },
           {
             "title": "D6 — Auto-resume on every restart is structural, not opt-in",
+            "title_en": "D6 — Auto-resume on every restart is structural, not opt-in",
             "group": "Артефакты",
+            "group_en": "Artifacts",
             "dz_id": "D6",
             "ref": null
           },
           {
             "title": "D7 — `_log_worker_boot_once` uses a module-level global guard",
+            "title_en": "D7 — `_log_worker_boot_once` uses a module-level global guard",
             "group": "Артефакты",
+            "group_en": "Artifacts",
             "dz_id": "D7",
             "ref": null
           },
           {
             "title": "D10 — Two orphan ChromaDB scaffolds on disk",
+            "title_en": "D10 — Two orphan ChromaDB scaffolds on disk",
             "group": "Артефакты",
+            "group_en": "Artifacts",
             "dz_id": "D10",
             "ref": null
           },
           {
             "title": "D9 — Shared OpenRouter key between THAI and Prism",
+            "title_en": "D9 — Shared OpenRouter key between THAI and Prism",
             "group": "Внешнее",
+            "group_en": "External",
             "dz_id": "D9",
             "ref": null
           },
           {
             "title": "D21 — `daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter",
+            "title_en": "D21 — `daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter",
             "group": "Внешнее",
+            "group_en": "External",
             "dz_id": "D21",
             "ref": null
           },
           {
             "title": "D24 — `inner_critic` does not block — it injects advice as a system message",
+            "title_en": "D24 — `inner_critic` does not block — it injects advice as a system message",
             "group": "Внешнее",
+            "group_en": "External",
             "dz_id": "D24",
             "ref": null
           }

@@ -679,35 +679,45 @@ BRAIN_BLOCKS = [
         "id": "brain_perception",
         "organ": "brain",
         "label": "Восприятие",
+        "label_en": "Perception",
         "question": "Что пришло? Какого это типа? Что я знаю про это?",
+        "question_en": "What arrived? What type is it? What do I know about it?",
         "nodes": ["agent", "context", "memory", "owner_inject"],
     },
     {
         "id": "brain_thinking",
         "organ": "brain",
         "label": "Мышление",
+        "label_en": "Thinking",
         "question": "Раунд за раундом: думаю → действую → наблюдаю",
+        "question_en": "Round by round: think → act → observe",
         "nodes": ["loop", "llm"],
     },
     {
         "id": "brain_selfcontrol",
         "organ": "brain",
         "label": "Самоконтроль",
+        "label_en": "Self-Control",
         "question": "Правильно ли я делаю? Можно ли мне это делать?",
+        "question_en": "Am I doing it right? Am I allowed to do this?",
         "nodes": ["inner_critic", "self_evolution", "budget"],
     },
     {
         "id": "brain_reflection",
         "organ": "brain",
         "label": "Рефлексия",
+        "label_en": "Reflection",
         "question": "Что я могу извлечь из того, что было?",
+        "question_en": "What can I extract from what happened?",
         "nodes": ["skill_manager", "experiment_engine", "pattern_detector"],
     },
     {
         "id": "brain_continuous",
         "organ": "brain",
         "label": "Фоновое сознание",
+        "label_en": "Background Consciousness",
         "question": "Что происходит между задачами? К чему я иду?",
+        "question_en": "What happens between tasks? Where am I headed?",
         "nodes": ["consciousness", "strategic_planner"],
     },
 ]
@@ -718,21 +728,27 @@ INTERFACE_BLOCKS = [
         "id": "iface_comm",
         "organ": "interface",
         "label": "Связь с внешним миром",
+        "label_en": "External Comms",
         "question": "Что мне говорят? Что я отвечаю?",
+        "question_en": "What am I told? What do I reply?",
         "nodes": ["colab_launcher", "telegram"],
     },
     {
         "id": "iface_dispatch",
         "organ": "interface",
         "label": "Диспетчеризация",
+        "label_en": "Dispatch",
         "question": "Кто это сделает? Когда? В какой последовательности?",
+        "question_en": "Who will do this? When? In what sequence?",
         "nodes": ["queue", "workers", "events", "worker_pool", "consciousness_thread"],
     },
     {
         "id": "iface_infra",
         "organ": "interface",
         "label": "Жизнеобеспечение",
+        "label_en": "Infrastructure",
         "question": "Что со мной было? На какой версии я работаю?",
+        "question_en": "What happened to me? Which version am I running?",
         "nodes": ["state", "git_ops", "fs_data",
                   "docker_chromadb", "docker_postgres", "docker_redis"],
     },
@@ -747,59 +763,61 @@ MEMORY_BLOCKS = [
         "id": "mem_working",
         "organ": "memory",
         "level": "working",
-        "label": "Рабочая",
+        "label": "Рабочая",         "label_en": "Working",
         "tagline": "per-task — теряется в конце задачи",
+        "tagline_en": "per-task — discarded at task end",
         "question": "Что происходит прямо сейчас?",
+        "question_en": "What's happening right now?",
         "nodes": ["mem_scratchpad"],
-        # Virtual items (no topology node) rendered as text labels
         "virtual_items": ["messages[]", "owner_mailbox/"],
     },
     {
         "id": "mem_operational",
         "organ": "memory",
         "level": "short",
-        "label": "Оперативная",
+        "label": "Оперативная",     "label_en": "Short-term",
         "tagline": "день / сессия — медленно устаревает",
+        "tagline_en": "session / day — ages out",
         "question": "Что было недавно? Что меня попросили 24 часа назад?",
+        "question_en": "What happened recently? What was I asked 24h ago?",
         "nodes": ["log_chat", "log_events", "log_supervisor", "log_tools",
                   "log_progress",
                   "state_directives", "state_budget", "state_queue"],
     },
-    # Долговременная split into 4 sub-blocks ↓
     {
         "id": "mem_identity",
         "organ": "memory",
-        "level": "long",
-        "sub": "identity",
-        "label": "Идентичность",
+        "level": "long", "sub": "identity",
+        "label": "Идентичность",    "label_en": "Identity",
         "question": "Кто я? Что я знаю про себя?",
+        "question_en": "Who am I? What do I know about myself?",
         "nodes": ["mem_identity", "mem_wisdom"],
     },
     {
         "id": "mem_knowledge",
         "organ": "memory",
-        "level": "long",
-        "sub": "knowledge",
-        "label": "Знания",
+        "level": "long", "sub": "knowledge",
+        "label": "Знания",          "label_en": "Knowledge",
         "question": "Что я выучил про предметную область?",
+        "question_en": "What have I learned about the domain?",
         "nodes": ["mem_knowledge"],
     },
     {
         "id": "mem_experience",
         "organ": "memory",
-        "level": "long",
-        "sub": "experience",
-        "label": "Опыт",
+        "level": "long", "sub": "experience",
+        "label": "Опыт",            "label_en": "Experience",
         "question": "Что я пробовал? Что сработало?",
+        "question_en": "What have I tried? What worked?",
         "nodes": ["mem_episodic", "chroma_episodes", "chroma_skills", "chroma_history"],
     },
     {
         "id": "mem_service",
         "organ": "memory",
-        "level": "long",
-        "sub": "service",
-        "label": "Служебная",
+        "level": "long", "sub": "service",
+        "label": "Служебная",       "label_en": "Service",
         "question": "В каком я состоянии? Что я пообещал?",
+        "question_en": "What state am I in? What did I commit to?",
         "nodes": ["state_main", "state_experiments", "state_commitments",
                   "state_reflected", "state_cooldown", "state_consciousness"],
     },
@@ -807,9 +825,11 @@ MEMORY_BLOCKS = [
         "id": "mem_archive",
         "organ": "memory",
         "level": "archive",
-        "label": "Архив задач",
+        "label": "Архив задач",     "label_en": "Task Archive",
         "tagline": "append-only — 645+ файлов",
+        "tagline_en": "append-only — 645+ files",
         "question": "Что я делал раньше и как это прошло?",
+        "question_en": "What did I do before and how did it go?",
         "nodes": ["file_task_results"],
     },
 ]
@@ -819,8 +839,8 @@ TOOLS_BLOCKS = [
     {
         "id": "tools_read",
         "organ": "tools",
-        "label": "Чтение мира",
-        "question": "Что есть?",
+        "label": "Чтение мира",     "label_en": "World Read",
+        "question": "Что есть?",    "question_en": "What's there?",
         "tools": [
             "repo_read", "repo_list", "git_status", "git_diff",
             "codebase_digest", "codebase_health",
@@ -838,8 +858,8 @@ TOOLS_BLOCKS = [
     {
         "id": "tools_write",
         "organ": "tools",
-        "label": "Изменение мира",
-        "question": "Что сделать?",
+        "label": "Изменение мира",  "label_en": "World Write",
+        "question": "Что сделать?", "question_en": "What to do?",
         "tools": [
             "drive_write", "repo_write_commit", "repo_commit_push",
             "propose_change", "apply_change", "claude_code_edit",
@@ -852,8 +872,9 @@ TOOLS_BLOCKS = [
     {
         "id": "tools_selfctl",
         "organ": "tools",
-        "label": "Управление собой",
+        "label": "Управление собой", "label_en": "Self-Control",
         "question": "Как мне изменить свой режим работы?",
+        "question_en": "How do I change my own operating mode?",
         "tools": [
             "schedule_task", "cancel_task", "forward_to_worker",
             "request_restart", "restart_service", "promote_to_stable",
@@ -864,8 +885,9 @@ TOOLS_BLOCKS = [
     {
         "id": "tools_reflection",
         "organ": "tools",
-        "label": "Саморефлексия",
+        "label": "Саморефлексия",   "label_en": "Self-Reflection",
         "question": "Как мне оценить своё поведение?",
+        "question_en": "How do I evaluate my own behavior?",
         "tools": [
             "deep_reflection", "multi_model_review", "request_review",
             "check_evolution_status", "generate_evolution_stats",
@@ -874,15 +896,17 @@ TOOLS_BLOCKS = [
     {
         "id": "tools_danger",
         "organ": "tools",
-        "label": "Опасная сила",
+        "label": "Опасная сила",    "label_en": "Dangerous Powers",
         "question": "Что могу сломать одним вызовом?",
+        "question_en": "What can I break with one call?",
         "tools": ["run_shell", "browser_action"],
     },
     {
         "id": "tools_meta",
         "organ": "tools",
-        "label": "Мета",
+        "label": "Мета",            "label_en": "Meta",
         "question": "Какие у меня вообще есть инструменты?",
+        "question_en": "What tools do I even have?",
         "tools": ["list_available_tools", "enable_tools"],
     },
 ]
@@ -894,8 +918,9 @@ SAFETY_BLOCKS = [
     {
         "id": "safety_prevent",
         "organ": "safety",
-        "label": "Предотвращение",
+        "label": "Предотвращение",  "label_en": "Prevention",
         "question": "Что агенту запрещено делать?",
+        "question_en": "What is the agent forbidden from doing?",
         "items": [
             {"title": "FILE_ZONES (red / yellow / green)", "ref": "config/FILE_ZONES.yaml"},
             {"title": "Destructive-keyword guard",          "ref": "supervisor/workers.py:320-351"},
@@ -906,8 +931,9 @@ SAFETY_BLOCKS = [
     {
         "id": "safety_observe",
         "organ": "safety",
-        "label": "Наблюдение",
+        "label": "Наблюдение",      "label_en": "Observation",
         "question": "Что идёт не так прямо сейчас?",
+        "question_en": "What's going wrong right now?",
         "items": [
             {"title": "Inner Critic (checkpoints 40% / 75%)", "ref": "ouroboros/inner_critic.py"},
             {"title": "Stuck Detector (3 similar thoughts)",  "ref": "ouroboros/consciousness.py:44-78"},
@@ -918,8 +944,9 @@ SAFETY_BLOCKS = [
     {
         "id": "safety_contain",
         "organ": "safety",
-        "label": "Сдерживание",
+        "label": "Сдерживание",     "label_en": "Containment",
         "question": "Как остановить до того, как станет хуже?",
+        "question_en": "How to stop before it gets worse?",
         "items": [
             {"title": "MAX_ROUNDS = 12",         "ref": "ouroboros/loop.py:1050"},
             {"title": "Per-task cost cap $3",    "ref": "ouroboros/loop.py:465"},
@@ -930,8 +957,9 @@ SAFETY_BLOCKS = [
     {
         "id": "safety_recover",
         "organ": "safety",
-        "label": "Восстановление",
+        "label": "Восстановление",  "label_en": "Recovery",
         "question": "Как вернуться в рабочее состояние?",
+        "question_en": "How to return to a working state?",
         "items": [
             {"title": "git reset on startup",         "ref": "supervisor/git_ops.py:208-315"},
             {"title": "R1 memory restore",            "ref": "ouroboros/agent.py:423-468"},
@@ -939,13 +967,12 @@ SAFETY_BLOCKS = [
             {"title": "Self-mod cooldown (3 tasks)",  "ref": "ouroboros/self_evolution.py:601-660"},
         ],
     },
-    # The 5th block is the Dark-Zones taxonomy; items are generated below
-    # from SAFETY_DZ_GROUPS.
     {
         "id": "safety_weaknesses",
         "organ": "safety",
-        "label": "Известные слабости",
+        "label": "Известные слабости", "label_en": "Known Weaknesses",
         "question": "Что мы знаем, что плохо, но пока не починили?",
+        "question_en": "What do we know is bad but haven't fixed yet?",
         "items": [],  # filled programmatically from SAFETY_DZ_GROUPS
     },
 ]
@@ -1032,14 +1059,78 @@ SEMANTIC_LABELS = {
 }
 
 
-# Dark-Zone taxonomy (from Phase 1.5, relabeled to Russian).
+# English counterparts (compact, tech-doc style).
+SEMANTIC_LABELS_EN = {
+    # ВНЕШНЕЕ / EXTERNAL
+    "telegram_api":          "Messenger",
+    "openrouter":             "Model Cloud",
+    # ИНТЕРФЕЙС / INTERFACE
+    "colab_launcher":        "Main Process",
+    "telegram":               "Message Channel",
+    "queue":                  "Task Queue",
+    "workers":                "Workers",
+    "events":                 "Event Bus",
+    "worker_pool":            "Worker Pool",
+    "consciousness_thread":   "Background Thread",
+    "state":                  "State Keeper",
+    "git_ops":                "Git Operations",
+    "fs_data":                "File Storage",
+    "docker_chromadb":        "Semantic DB",
+    "docker_postgres":        "Relational DB",
+    "docker_redis":           "Cache",
+    # МОЗГ / BRAIN
+    "agent":                  "Task Dispatcher",
+    "context":                "Context Builder",
+    "memory":                 "Memory I/O",
+    "owner_inject":           "Task Mailbox",
+    "loop":                   "Thinking Loop",
+    "llm":                    "Model Client",
+    "inner_critic":           "Inner Critic",
+    "self_evolution":         "Self-Evolution",
+    "budget":                 "Budget Ledger",
+    "skill_manager":          "Skill Lifecycle",
+    "experiment_engine":      "Experiment Engine",
+    "pattern_detector":       "Pattern Detector",
+    "consciousness":          "Consciousness",
+    "strategic_planner":      "Strategist",
+    # ИНСТРУМЕНТЫ / TOOLS
+    "registry":               "Tool Registry",
+    # ПАМЯТЬ / MEMORY
+    "mem_scratchpad":         "Task Scratchpad",
+    "log_chat":               "Chat History",
+    "log_events":             "Event Stream",
+    "log_supervisor":         "Supervisor Log",
+    "log_tools":              "Call Journal",
+    "log_progress":           "Task Progress",
+    "state_directives":       "Directives",
+    "state_budget":           "Daily Budget",
+    "state_queue":            "Queue Snapshot",
+    "mem_identity":           "Identity",
+    "mem_wisdom":             "Wisdom",
+    "mem_knowledge":          "Knowledge Base",
+    "mem_episodic":           "Daily Episodes",
+    "chroma_episodes":        "Semantic Episodes",
+    "chroma_skills":          "Skills (RAG)",
+    "chroma_history":         "Dialogue Archive (RAG)",
+    "state_main":             "Core State",
+    "state_experiments":      "Experiments",
+    "state_commitments":      "Commitments",
+    "state_reflected":        "Reflected Tasks",
+    "state_cooldown":         "Self-Mod Cooldown",
+    "state_consciousness":    "Consciousness Metrics",
+    "file_task_results":      "Task Archive",
+}
+
+
+# Dark-Zone taxonomy (RU + EN labels).
 SAFETY_DZ_GROUPS = [
-    ("Наблюдаемость",      ["D1", "D2", "D5", "D15", "D18"]),
-    ("Согласованность",    ["D4", "D19", "D20", "D22", "D23"]),
-    ("Конфигурация",       ["D8", "D11", "D12", "D13"]),
-    ("Атаки",              ["D14", "D16", "D17", "D25"]),
-    ("Артефакты",          ["D3", "D6", "D7", "D10"]),
-    ("Внешнее",            ["D9", "D21", "D24"]),
+    # (label_ru, label_en, ids)
+    ("Наблюдаемость",   "Observability",   ["D1", "D2", "D5", "D15", "D18"]),
+    ("Согласованность", "Consistency",     ["D4", "D19", "D20", "D22", "D23"]),
+    ("Конфигурация",    "Configuration",   ["D8", "D11", "D12", "D13"]),
+    ("Атаки",           "Attack Surface",  ["D14", "D16", "D17", "D25"]),
+    ("Артефакты",       "Artifacts",       ["D3", "D6", "D7", "D10"]),
+    ("Внешнее",         "External",        ["D9", "D21", "D24"]),
 ]
 
 
@@ -1050,67 +1141,84 @@ TYPED_EDGES = [
     # --- ПАМЯТЬ internal ---
     {"source": "mem_working", "target": "mem_experience",
      "kind": "data", "subtype": "writes_to", "visibility": "l0",
-     "label": "следы в episodic/skills после задачи"},
+     "label":    "следы в episodic/skills после задачи",
+     "label_en": "traces into episodic/skills after task"},
     {"source": "mem_operational", "target": "mem_experience",
      "kind": "data", "subtype": "writes_to", "visibility": "l0",
-     "label": "offline indexing chat+events → ChromaDB"},
+     "label":    "offline indexing chat+events → ChromaDB",
+     "label_en": "offline indexing chat+events → ChromaDB"},
     {"source": "mem_experience", "target": "mem_working",
      "kind": "data", "subtype": "reads_from", "visibility": "l0",
-     "label": "recall / find_skills в новый контекст"},
+     "label":    "recall / find_skills в новый контекст",
+     "label_en": "recall / find_skills into new context"},
 
     # --- ПАМЯТЬ → МОЗГ ---
     {"source": "mem_identity", "target": "brain_perception",
      "kind": "data", "subtype": "reads_from", "visibility": "l0",
-     "label": "identity.md в каждый prompt"},
+     "label":    "identity.md в каждый prompt",
+     "label_en": "identity.md into every prompt"},
     {"source": "mem_operational", "target": "brain_perception",
      "kind": "data", "subtype": "reads_from", "visibility": "l0",
-     "label": "directives 24h в контекст"},
+     "label":    "directives 24h в контекст",
+     "label_en": "directives 24h into context"},
 
     # --- ИНТЕРФЕЙС ↔ МОЗГ ---
     {"source": "iface_comm", "target": "brain_perception",
      "kind": "control", "subtype": "invokes", "visibility": "l0",
-     "label": "входящая задача → handle_task"},
+     "label":    "входящая задача → handle_task",
+     "label_en": "incoming task → handle_task"},
 
     # --- МОЗГ Мышление ↔ ИНСТРУМЕНТЫ ---
     {"source": "brain_thinking", "target": "tools_read",
      "kind": "control", "subtype": "invokes", "visibility": "l0",
-     "label": "tool call (чтение)"},
+     "label":    "tool call (чтение)",
+     "label_en": "tool call (read)"},
     {"source": "brain_thinking", "target": "tools_write",
      "kind": "control", "subtype": "invokes", "visibility": "l0",
-     "label": "tool call (запись)"},
+     "label":    "tool call (запись)",
+     "label_en": "tool call (write)"},
     {"source": "brain_thinking", "target": "tools_selfctl",
      "kind": "control", "subtype": "invokes", "visibility": "l0",
-     "label": "tool call (управление)"},
+     "label":    "tool call (управление)",
+     "label_en": "tool call (self-control)"},
     {"source": "brain_thinking", "target": "tools_danger",
      "kind": "control", "subtype": "invokes", "visibility": "l0",
-     "label": "tool call (опасное)"},
+     "label":    "tool call (опасное)",
+     "label_en": "tool call (dangerous)"},
     {"source": "tools_read", "target": "brain_thinking",
      "kind": "data", "subtype": "reads_from", "visibility": "l0",
-     "label": "результаты чтения"},
+     "label":    "результаты чтения",
+     "label_en": "read results"},
     {"source": "tools_write", "target": "brain_thinking",
      "kind": "data", "subtype": "writes_to", "visibility": "l0",
-     "label": "подтверждения изменений"},
+     "label":    "подтверждения изменений",
+     "label_en": "write confirmations"},
 
     # --- МОЗГ → ПАМЯТЬ ---
     {"source": "brain_thinking", "target": "mem_working",
      "kind": "data", "subtype": "writes_to", "visibility": "l0",
-     "label": "scratchpad writes, event emits"},
+     "label":    "scratchpad writes, event emits",
+     "label_en": "scratchpad writes, event emits"},
     {"source": "brain_reflection", "target": "mem_experience",
      "kind": "data", "subtype": "writes_to", "visibility": "l0",
-     "label": "skills, episodes"},
+     "label":    "skills, episodes",
+     "label_en": "skills, episodes"},
 
     # --- БЕЗОПАСНОСТЬ → МОЗГ Самоконтроль ---
     {"source": "safety_observe", "target": "brain_selfcontrol",
      "kind": "control", "subtype": "governs", "visibility": "l0",
-     "label": "inner_critic / stuck / drift"},
+     "label":    "inner_critic / stuck / drift",
+     "label_en": "inner_critic / stuck / drift"},
     {"source": "safety_contain", "target": "brain_selfcontrol",
      "kind": "control", "subtype": "governs", "visibility": "l0",
-     "label": "MAX_ROUNDS / cost cap / circuit breaker"},
+     "label":    "MAX_ROUNDS / cost cap / circuit breaker",
+     "label_en": "MAX_ROUNDS / cost cap / circuit breaker"},
 
     # --- БЕЗОПАСНОСТЬ Восстановление → ИНТЕРФЕЙС Жизнеобеспечение ---
     {"source": "safety_recover", "target": "iface_infra",
      "kind": "control", "subtype": "governs", "visibility": "l0",
-     "label": "git reset, queue snapshot restore"},
+     "label":    "git reset, queue snapshot restore",
+     "label_en": "git reset, queue snapshot restore"},
 ]
 
 
@@ -1120,17 +1228,23 @@ LAYOUT = {
     "viewbox": {"x": 0, "y": 0, "w": 2000, "h": 1780},
     "organs": {
         "external":  {"x": 0,    "y": 20,   "w": 2000, "h": 120,
-                      "label_x": 1000, "label_y": 40, "label": "ВНЕШНЕЕ"},
+                      "label_x": 1000, "label_y": 40,
+                      "label": "ВНЕШНЕЕ",     "label_en": "EXTERNAL"},
         "interface": {"x": 0,    "y": 170,  "w": 2000, "h": 240,
-                      "label_x": 1000, "label_y": 185, "label": "ИНТЕРФЕЙС"},
+                      "label_x": 1000, "label_y": 185,
+                      "label": "ИНТЕРФЕЙС",    "label_en": "INTERFACE"},
         "brain":     {"x": 440,  "y": 440,  "w": 1110, "h": 580,
-                      "label_x": 990, "label_y": 455, "label": "МОЗГ"},
+                      "label_x": 990, "label_y": 455,
+                      "label": "МОЗГ",         "label_en": "BRAIN"},
         "tools":     {"x": 1560, "y": 440,  "w": 410,  "h": 580,
-                      "label_x": 1765, "label_y": 455, "label": "ИНСТРУМЕНТЫ"},
+                      "label_x": 1765, "label_y": 455,
+                      "label": "ИНСТРУМЕНТЫ",  "label_en": "TOOLS"},
         "memory":    {"x": 30,   "y": 1050, "w": 1940, "h": 330,
-                      "label_x": 1000, "label_y": 1065, "label": "ПАМЯТЬ"},
+                      "label_x": 1000, "label_y": 1065,
+                      "label": "ПАМЯТЬ",       "label_en": "MEMORY"},
         "safety":    {"x": 30,   "y": 1400, "w": 1940, "h": 360,
-                      "label_x": 1000, "label_y": 1415, "label": "БЕЗОПАСНОСТЬ"},
+                      "label_x": 1000, "label_y": 1415,
+                      "label": "БЕЗОПАСНОСТЬ", "label_en": "SAFETY"},
     },
     "blocks": {
         # INTERFACE
@@ -1283,13 +1397,17 @@ LAYOUT = {
     # Lifetime band backgrounds inside MEMORY (decorative)
     "memory_bands": {
         "working":    {"x": 30,   "y": 1095, "w": 230, "h": 270,
-                       "label": "Рабочая",        "label_x": 145, "label_y": 1087},
+                       "label": "Рабочая",        "label_en": "Working",
+                       "label_x": 145, "label_y": 1087},
         "short_term": {"x": 270,  "y": 1095, "w": 520, "h": 270,
-                       "label": "Оперативная",    "label_x": 525, "label_y": 1087},
+                       "label": "Оперативная",    "label_en": "Short-term",
+                       "label_x": 525, "label_y": 1087},
         "long_term":  {"x": 800,  "y": 1095, "w": 1020,"h": 270,
-                       "label": "Долговременная", "label_x": 1315,"label_y": 1087},
+                       "label": "Долговременная", "label_en": "Long-term",
+                       "label_x": 1315,"label_y": 1087},
         "archive":    {"x": 1825, "y": 1095, "w": 140, "h": 270,
-                       "label": "Архив",          "label_x": 1895,"label_y": 1087},
+                       "label": "Архив",          "label_en": "Archive",
+                       "label_x": 1895,"label_y": 1087},
     },
 }
 
@@ -1329,13 +1447,11 @@ def _annotate_functional_roles(topology_nodes: List[Dict], tools: List[Dict]) ->
         if nid in {"strategic_planner"}:
             n["paused"] = True
 
-        # Phase 1.8: semantic label (role-based, Russian)
+        # Phase 1.8: semantic label (role-based, Russian) + EN counterpart
         sem = SEMANTIC_LABELS.get(nid)
-        if sem:
-            n["semantic_label"] = sem
-        else:
-            # Fall back to existing label so the frontend never blanks out
-            n["semantic_label"] = n.get("label", nid)
+        sem_en = SEMANTIC_LABELS_EN.get(nid)
+        n["semantic_label"]    = sem    if sem    else n.get("label", nid)
+        n["semantic_label_en"] = sem_en if sem_en else n["semantic_label"]
 
     tool_block = {}
     for tb in TOOLS_BLOCKS:
@@ -1350,16 +1466,18 @@ def _populate_safety_weaknesses(dark_zones: List[Dict]) -> None:
     weaknesses = next(b for b in SAFETY_BLOCKS if b["id"] == "safety_weaknesses")
     items = []
     dz_by_id = {d["id"]: d for d in dark_zones}
-    for (group_label, ids) in SAFETY_DZ_GROUPS:
+    for (group_ru, group_en, ids) in SAFETY_DZ_GROUPS:
         for dz_id in ids:
             dz = dz_by_id.get(dz_id)
             if not dz:
                 continue
             items.append({
-                "title": f"{dz_id} — {dz['title']}",
-                "group": group_label,
-                "dz_id": dz_id,
-                "ref": None,
+                "title":    f"{dz_id} — {dz['title']}",
+                "title_en": f"{dz_id} — {dz['title']}",  # DZ title is sourced EN
+                "group":    group_ru,
+                "group_en": group_en,
+                "dz_id":    dz_id,
+                "ref":      None,
             })
     weaknesses["items"] = items
 

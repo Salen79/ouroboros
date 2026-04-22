@@ -1,31 +1,40 @@
-// Память — Phase 1.7: 3 уровня по времени жизни + 4 под-блока в Долговременной.
+// Память / Memory — Phase 1.9: 3 lifetime levels + 4 long-term sub-blocks, RU/EN.
+
+import { t, tField, getLang } from '../lib/i18n.js?v=phase1.9';
 
 const LEVEL_META = {
   working: {
-    title: 'Рабочая',
-    tagline: 'per-task — теряется в конце задачи',
-    hint: 'Загружается в начале задачи, замещается в конце. Ничего отсюда не переживает рестарт нетронутым.',
+    titleRu: 'Рабочая',       titleEn: 'Working',
+    taglineRu: 'per-task — теряется в конце задачи',
+    taglineEn: 'per-task — discarded at task end',
+    hintKey: 'mem.working.hint',
     accent: '#74b9ff',
   },
   short: {
-    title: 'Оперативная',
-    tagline: 'день / сессия — медленно устаревает',
-    hint: 'Append-only логи и состояние с TTL. Недавний контекст, регулярно старится.',
+    titleRu: 'Оперативная',   titleEn: 'Short-term',
+    taglineRu: 'день / сессия — медленно устаревает',
+    taglineEn: 'session / day — ages out',
+    hintKey: 'mem.short.hint',
     accent: '#fdcb6e',
   },
   long: {
-    title: 'Долговременная',
-    tagline: 'persistent — накапливается между рестартами',
-    hint: 'Идентичность, мудрость, навыки, исторические состояния. Пишется редко, читается часто.',
+    titleRu: 'Долговременная', titleEn: 'Long-term',
+    taglineRu: 'persistent — накапливается между рестартами',
+    taglineEn: 'persistent — accumulates across restarts',
+    hintKey: 'mem.long.hint',
     accent: '#a29bfe',
   },
   archive: {
-    title: 'Архив задач',
-    tagline: 'append-only — 645+ файлов',
-    hint: 'Один JSON на задачу. Входные данные для pattern_detector и ретроспективной аналитики.',
+    titleRu: 'Архив задач',    titleEn: 'Task Archive',
+    taglineRu: 'append-only — 645+ файлов',
+    taglineEn: 'append-only — 645+ files',
+    hintKey: 'mem.archive.hint',
     accent: '#00b894',
   },
 };
+
+function metaTitle(m)   { return getLang() === 'en' ? m.titleEn   : m.titleRu; }
+function metaTagline(m) { return getLang() === 'en' ? m.taglineEn : m.taglineRu; }
 
 export class MemoryView {
   constructor({ snapshot, containerId, onSelectNode }) {
@@ -44,16 +53,17 @@ export class MemoryView {
 
     const totalNodes = memBlocks.reduce((acc, b) => acc + (b.nodes || []).length, 0);
 
+    const locations = t('memory.locations');
     this.container.innerHTML = `
       <div class="mem-root">
         <div class="mem-head">
-          <div class="mem-head-title">Память — по времени жизни</div>
+          <div class="mem-head-title">${this._esc(t('memory.title'))}</div>
           <div class="mem-head-sub">
-            ${totalNodes} хранилищ ·
-            <span style="color:${LEVEL_META.working.accent}">${this._countNodes(byLevel.working)} рабочих</span> ·
-            <span style="color:${LEVEL_META.short.accent}">${this._countNodes(byLevel.short)} оперативных</span> ·
-            <span style="color:${LEVEL_META.long.accent}">${this._countNodes(byLevel.long)} долговременных</span> ·
-            <span style="color:${LEVEL_META.archive.accent}">${this._countNodes(byLevel.archive)} в архиве</span>
+            ${totalNodes} ${this._esc(locations)} ·
+            <span style="color:${LEVEL_META.working.accent}">${this._countNodes(byLevel.working)} ${this._esc(metaTitle(LEVEL_META.working).toLowerCase())}</span> ·
+            <span style="color:${LEVEL_META.short.accent}">${this._countNodes(byLevel.short)} ${this._esc(metaTitle(LEVEL_META.short).toLowerCase())}</span> ·
+            <span style="color:${LEVEL_META.long.accent}">${this._countNodes(byLevel.long)} ${this._esc(metaTitle(LEVEL_META.long).toLowerCase())}</span> ·
+            <span style="color:${LEVEL_META.archive.accent}">${this._countNodes(byLevel.archive)} ${this._esc(metaTitle(LEVEL_META.archive).toLowerCase())}</span>
           </div>
         </div>
         <div class="mem-bands">
@@ -85,19 +95,22 @@ export class MemoryView {
     const subBlocks = blocks.map(b => this._renderBlock(b, meta.accent)).join('');
     const blockCount = blocks.length;
     const totalNodes = this._countNodes(blocks);
+    const subBlockLabel = getLang() === 'en'
+      ? (blockCount > 1 ? ` · ${blockCount} ${t('memory.subblocks')}` : '')
+      : (blockCount > 1 ? ` · ${blockCount} ${t('memory.subblocks')}` : '');
 
     return `
       <section class="mem-band" data-level="${levelKey}" style="--band-accent: ${meta.accent}">
         <header class="mem-band-head">
           <div class="mem-band-dot"></div>
           <div>
-            <div class="mem-band-title">${this._esc(meta.title)}</div>
-            <div class="mem-band-tagline">${this._esc(meta.tagline)}</div>
+            <div class="mem-band-title">${this._esc(metaTitle(meta))}</div>
+            <div class="mem-band-tagline">${this._esc(metaTagline(meta))}</div>
           </div>
-          <div class="mem-band-count">${totalNodes}${blockCount > 1 ? ` · ${blockCount} под-блока` : ''}</div>
+          <div class="mem-band-count">${totalNodes}${subBlockLabel}</div>
         </header>
         <div class="mem-band-body">
-          <div class="mem-band-hint">${this._esc(meta.hint)}</div>
+          <div class="mem-band-hint">${this._esc(t(meta.hintKey))}</div>
           ${subBlocks}
         </div>
       </section>
@@ -116,17 +129,17 @@ export class MemoryView {
     const virtualHtml = (block.virtual_items || [])
       .map(v => `
         <div class="mem-node mem-node-virtual" style="--card-accent: ${accent}">
-          <div class="mem-node-kind">ВИРТ</div>
+          <div class="mem-node-kind">${this._esc(t('kind.virtual'))}</div>
           <div class="mem-node-label">${this._esc(v)}</div>
-          <div class="mem-node-sub">in-process, не персистится</div>
+          <div class="mem-node-sub">${this._esc(t('kind.virtual.sub'))}</div>
         </div>
       `).join('');
 
     return `
       <div class="mem-bucket">
         <div class="mem-bucket-head">
-          <div class="mem-bucket-title">${this._esc(block.label)}</div>
-          <div class="mem-bucket-question">${this._esc(block.question || '')}</div>
+          <div class="mem-bucket-title">${this._esc(tField(block, 'label'))}</div>
+          <div class="mem-bucket-question">${this._esc(tField(block, 'question') || '')}</div>
         </div>
         <div class="mem-bucket-grid">${nodesHtml}${virtualHtml}</div>
       </div>
@@ -135,7 +148,7 @@ export class MemoryView {
 
   _renderNode(n, accent) {
     const dzs = n.dark_zone_ids || [];
-    const semantic = n.semantic_label || n.label;
+    const semantic = tField(n, 'semantic_label') || n.semantic_label || n.label;
     const tech = n.label || '';
     const showTech = semantic !== tech;
     return `
@@ -154,13 +167,14 @@ export class MemoryView {
   }
 
   _kindLabel(kind) {
-    return {
-      file_md:    'ФАЙЛ',
-      file_dir:   'ПАПКА',
-      logfile:    'ЛОГ',
-      state_json: 'JSON',
-      chromadb:   'CHROMA',
-    }[kind] || (kind || '').toUpperCase();
+    const k = {
+      file_md:    t('kind.file'),
+      file_dir:   t('kind.dir'),
+      logfile:    t('kind.log'),
+      state_json: t('kind.json'),
+      chromadb:   t('kind.chroma'),
+    }[kind];
+    return k || (kind || '').toUpperCase();
   }
 
   resize() { /* no-op */ }

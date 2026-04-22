@@ -923,11 +923,20 @@ svg.ecosystem[data-zoom^="l1"] .edge.vis-detail { opacity: 0.6; }
 svg.ecosystem[data-zoom="l1-brain"] .edge.vis-l1-brain { opacity: 0.82; }
 svg.ecosystem[data-zoom="l1-interface"] .edge.vis-l1-iface { opacity: 0.82; }
 
-/* --- Hover highlight --- */
-svg.ecosystem .hl-dim { opacity: 0.15; transition: opacity .15s; }
-svg.ecosystem .hl-neighbor .node-rect { stroke-width: 2; stroke: #fdcb6e; }
-svg.ecosystem .edge.hl-active { opacity: 1 !important; }
-svg.ecosystem .edge.hl-active path { stroke-width: 2.6; }
+/* --- Hover: Phase 1.9 invert (focus-glow only, nothing dimmed) --- */
+svg.ecosystem .node.hl-focus .node-rect {
+  stroke-width: 2;
+  stroke: #fdcb6e;
+  filter: drop-shadow(0 0 6px rgba(253, 203, 110, 0.55));
+  fill: rgba(253, 203, 110, 0.08);
+  transition: fill .12s, stroke .12s, filter .12s;
+}
+svg.ecosystem .block.hl-focus .block-bg {
+  fill: rgba(108, 92, 231, 0.10);
+  stroke: rgba(108, 92, 231, 0.55);
+  filter: drop-shadow(0 0 10px rgba(108, 92, 231, 0.30));
+  transition: fill .14s, stroke .14s, filter .14s;
+}
 
 /* --- Search --- */
 svg.ecosystem .search-hit .node-rect { stroke: #fdcb6e; stroke-width: 3; }
@@ -1220,6 +1229,8 @@ svg.ecosystem .dz-pulse { animation: none; display: none; }
 /* --- Filter: dim non-matching edges --- */
 svg.ecosystem[data-filter="control"] .edge.edge-data { opacity: 0.1 !important; }
 svg.ecosystem[data-filter="data"] .edge.edge-control { opacity: 0.1 !important; }
+/* Phase 1.9: hide all edges entirely */
+svg.ecosystem[data-filter="none"] .edge { opacity: 0 !important; pointer-events: none; }
 
 /* --- Memory: bucket head with question --- */
 .mem-bucket-head {
@@ -1325,3 +1336,34 @@ svg.ecosystem[data-filter="data"] .edge.edge-control { opacity: 0.1 !important; 
 .dz-group-head:first-child { margin-top: 0; }
 
 .dz-empty { padding: 30px; text-align: center; }
+
+/* ============================================================ */
+/* Phase 1.9 — Language toggle                                  */
+/* ============================================================ */
+
+.lang-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--card);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.lang-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all .13s;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.lang-toggle button:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.lang-toggle button.active {
+  background: var(--accent);
+  color: white;
+}

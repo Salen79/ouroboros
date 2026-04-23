@@ -27,6 +27,9 @@ Thumbs.db
 .next/
 company/vendor-lens/frontend/.next/
 
+# Architecture dashboard screenshots (generated locally, not source)
+company/dashboard/arch/screenshots/
+
 # Release artifacts (not tracked)
 .create_release.py
 .release_notes.md

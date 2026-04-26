@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-26T06:04:52.599489+00:00",
+    "generated_at": "2026-04-26T06:39:38.149236+00:00",
     "git": {
-      "sha": "a99a345d21bc1cde25533a474846a6150db0f747",
+      "sha": "88c78282b0f77358da1719a834d6713a46896d0d",
       "branch": "ouroboros",
-      "subject": "feat(d16): static pattern guard layer for run_shell"
+      "subject": "fix(d22): fall back to scratchpad for prev_task on empty kwargs"
     },
     "source_map": "ARCHITECTURE_MAP.md",
     "repo": "/home/deploy/ouroboros",
@@ -790,7 +790,7 @@
         "required": []
       },
       "module": "ouroboros/tools/git.py",
-      "line": 277,
+      "line": 346,
       "is_code_tool": true,
       "timeout_sec": 120,
       "is_core": true,
@@ -809,7 +809,7 @@
         "required": []
       },
       "module": "ouroboros/tools/git.py",
-      "line": 272,
+      "line": 341,
       "is_code_tool": true,
       "timeout_sec": 120,
       "is_core": true,
@@ -1287,7 +1287,7 @@
         ]
       },
       "module": "ouroboros/tools/git.py",
-      "line": 264,
+      "line": 333,
       "is_code_tool": true,
       "timeout_sec": 120,
       "is_core": true,
@@ -1375,7 +1375,7 @@
         ]
       },
       "module": "ouroboros/tools/git.py",
-      "line": 255,
+      "line": 324,
       "is_code_tool": true,
       "timeout_sec": 120,
       "is_core": true,

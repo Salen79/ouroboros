@@ -814,6 +814,35 @@ class _LoopDetector:
 
 # --- Fix 3: Post-Task Scratchpad Write ---
 
+def _read_prev_from_scratchpad(scratchpad_path: pathlib.Path) -> Tuple[str, str]:
+    """D22 fallback: parse the existing scratchpad's 'Last task' / 'Result' lines.
+
+    Returns (prev_task_id, prev_summary). The scratchpad does not store a
+    structured task_id — we surface the truncated task description in the
+    id slot so the next write's "Previous:" line is at least populated when
+    state.json or task_results don't yield anything.
+    """
+    if not scratchpad_path.exists():
+        return "", ""
+    try:
+        text = scratchpad_path.read_text(encoding="utf-8")
+    except OSError:
+        return "", ""
+
+    prev_task_short = ""
+    prev_summary = ""
+    for line in text.splitlines():
+        # Match either "Last task: <text> — ..." (current format) or any
+        # variant a future write might use; keep parsing tolerant.
+        if line.startswith("Last task:") and not prev_task_short:
+            prev_task_short = line[len("Last task:"):].split("—", 1)[0].strip()
+        elif line.startswith("Result:") and not prev_summary:
+            prev_summary = line[len("Result:"):].strip()
+        if prev_task_short and prev_summary:
+            break
+    return prev_task_short[:40], prev_summary[:80]
+
+
 def _post_task_scratchpad_write(
     drive_root: Optional[pathlib.Path],
     task_text: str,
@@ -835,6 +864,11 @@ def _post_task_scratchpad_write(
         Last task: {task_id} — {rounds}R, ${cost} — {summary[:100]}
         Previous: {prev_task_id} — {summary[:60]}
         Active directives: {from directives.json if any}
+
+    D22: when prev_task_id/prev_task_summary aren't supplied (e.g. task_results
+    glob found nothing, or state.json drifted), fall back to parsing the
+    existing scratchpad's "Last task" / "Result" lines so the next write's
+    "Previous:" line stays populated even with stale upstream state.
     """
     if drive_root is None:
         return
@@ -864,6 +898,15 @@ def _post_task_scratchpad_write(
                 directives_text = "; ".join(active[:5])
     except Exception:
         pass
+
+    # D22: scratchpad-as-source-of-truth fallback. We read BEFORE we write
+    # so the "Previous:" line on the new content reflects what the scratchpad
+    # saw last, regardless of state.json drift.
+    if not prev_task_id and not prev_task_summary:
+        try:
+            prev_task_id, prev_task_summary = _read_prev_from_scratchpad(scratchpad_path)
+        except Exception:
+            log.debug("scratchpad fallback parse failed", exc_info=True)
 
     # Build previous task line
     prev_line = ""

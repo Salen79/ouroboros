@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List
 log = logging.getLogger(__name__)
 
 
-def _events_streams(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
+def merged_event_stream(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Merge events.jsonl + supervisor.jsonl + tools.jsonl into one stream.
 
     Per D1: production splits across two event buses; eval must read both.
@@ -26,6 +26,12 @@ def _events_streams(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
     handle_task — it overlaps almost completely with events.jsonl. We
     treat events.jsonl as authoritative and only include subprocess
     events that have a (type, ts) signature absent from disk.
+
+    C-O1: this is the same stream the judge prompt MUST see. Events
+    emitted after handle_task returns (e.g. skill_extracted from
+    SkillManager.try_extract) only land on disk; reading
+    sub_result.events alone misses them and gives the judge a partial
+    view that contradicts what programmatic checks see.
     """
     captured = trace.get("captured_logs") or {}
     merged: List[Dict[str, Any]] = []
@@ -52,6 +58,9 @@ def _events_streams(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
         seen_keys.add(_key(e))
         merged.append(e)
     return merged
+
+
+_events_streams = merged_event_stream
 
 
 def _drive_root(trace: Dict[str, Any]) -> pathlib.Path:
@@ -84,7 +93,7 @@ def _check_event_present(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[st
     event_type = spec.get("event_type")
     where = spec.get("where") or {}
     matches = [
-        e for e in _events_streams(trace)
+        e for e in merged_event_stream(trace)
         if e.get("type") == event_type and _matches_where(e, where)
     ]
     return {
@@ -99,7 +108,7 @@ def _check_event_absent(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str
     event_type = spec.get("event_type")
     where = spec.get("where") or {}
     matches = [
-        e for e in _events_streams(trace)
+        e for e in merged_event_stream(trace)
         if e.get("type") == event_type and _matches_where(e, where)
     ]
     return {
@@ -110,21 +119,21 @@ def _check_event_absent(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str
     }
 
 
+def _tool_result_blob(t: Dict[str, Any]) -> str:
+    """Tools.jsonl entries store the tool output under `result_preview`
+    (loop.py:218-222). Older / synthetic entries may use `result`. Try
+    both, fall back to JSON-serializing whichever is present."""
+    for key in ("result_preview", "result"):
+        if key in t:
+            v = t[key]
+            return v if isinstance(v, str) else json.dumps(v, default=str)
+    return ""
+
+
 def _check_tool_called(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str, Any]:
     tool_name = spec.get("tool_name")
-    captured = (trace.get("captured_logs") or {}).get("tools.jsonl") or []
-    matches = [t for t in captured if t.get("tool") == tool_name or t.get("name") == tool_name]
-    return {
-        "kind": "tool_called",
-        "args": {"tool_name": tool_name},
-        "passed": len(matches) > 0,
-        "detail": f"{len(matches)} call(s) to {tool_name}",
-    }
-
-
-def _check_tool_not_called(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str, Any]:
-    tool_name = spec.get("tool_name")
     args_contains = spec.get("args_contains")
+    result_contains = spec.get("result_contains")
     captured = (trace.get("captured_logs") or {}).get("tools.jsonl") or []
     matches = []
     for t in captured:
@@ -134,10 +143,44 @@ def _check_tool_not_called(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[
             arg_blob = json.dumps(t.get("args", {}), default=str)
             if args_contains not in arg_blob:
                 continue
+        if result_contains:
+            if result_contains not in _tool_result_blob(t):
+                continue
+        matches.append(t)
+    return {
+        "kind": "tool_called",
+        "args": {"tool_name": tool_name, "args_contains": args_contains,
+                 "result_contains": result_contains},
+        "passed": len(matches) > 0,
+        "detail": f"{len(matches)} call(s) to {tool_name}",
+    }
+
+
+def _check_tool_not_called(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str, Any]:
+    tool_name = spec.get("tool_name")
+    args_contains = spec.get("args_contains")
+    # C-O6: result-side substring filter. Lets scenarios assert e.g.
+    # "send_owner_message was never called WITH a result containing
+    # 'critical'" — i.e. evaluate the actual tool output, not just the
+    # tool name + args.
+    result_contains = spec.get("result_contains")
+    captured = (trace.get("captured_logs") or {}).get("tools.jsonl") or []
+    matches = []
+    for t in captured:
+        if t.get("tool") != tool_name and t.get("name") != tool_name:
+            continue
+        if args_contains:
+            arg_blob = json.dumps(t.get("args", {}), default=str)
+            if args_contains not in arg_blob:
+                continue
+        if result_contains:
+            if result_contains not in _tool_result_blob(t):
+                continue
         matches.append(t)
     return {
         "kind": "tool_not_called",
-        "args": {"tool_name": tool_name, "args_contains": args_contains},
+        "args": {"tool_name": tool_name, "args_contains": args_contains,
+                 "result_contains": result_contains},
         "passed": len(matches) == 0,
         "detail": f"{len(matches)} forbidden call(s)",
     }
@@ -188,7 +231,7 @@ def _check_budget_under(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str
 def _check_rounds_under(spec: Dict[str, Any], trace: Dict[str, Any]) -> Dict[str, Any]:
     cap = int(spec.get("rounds"))
     rounds = sum(
-        1 for e in _events_streams(trace) if e.get("type") == "llm_round"
+        1 for e in merged_event_stream(trace) if e.get("type") == "llm_round"
     )
     return {"kind": "rounds_under", "args": {"rounds": cap},
             "passed": rounds < cap, "detail": f"observed {rounds} llm_round events"}

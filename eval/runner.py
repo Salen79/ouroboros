@@ -130,6 +130,12 @@ def run_scenario(scenario: Scenario, run_id: str, run_dir: pathlib.Path,
             sub_result = trace.get("result") or {}
             tool_calls = (trace.get("captured_logs") or {}).get("tools.jsonl") or []
 
+            # C-O1: feed the judge the SAME merged event stream programmatic
+            # checks see. sub_result.events alone misses anything emitted
+            # after handle_task returns (e.g. skill_extracted from
+            # SkillManager.try_extract → scenario E false-negative).
+            judge_events = checks_mod.merged_event_stream(trace)
+
             def _judge_under_cap() -> bool:
                 return budget.judge_under_cap(scenario_id)
 
@@ -138,7 +144,7 @@ def run_scenario(scenario: Scenario, run_id: str, run_dir: pathlib.Path,
                 covers=scenario.covers,
                 task_text=str(task.get("text", "")),
                 final_text=sub_result.get("final_text", ""),
-                events=sub_result.get("events", []),
+                events=judge_events,
                 tool_calls=tool_calls,
                 criteria=scenario.judge.criteria,
                 models=scenario.judge.models,

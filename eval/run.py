@@ -1,4 +1,6 @@
-"""CLI entry: python eval/run.py --scenario A_infra_confusion"""
+"""CLI entry: python eval/run.py --scenario A_infra_confusion
+                python eval/run.py --all
+"""
 from __future__ import annotations
 
 import argparse
@@ -7,12 +9,21 @@ import logging
 import sys
 
 from eval.runner import run_eval
+from eval.scenario import SCENARIOS_DIR
+
+
+def _discover_scenarios() -> list[str]:
+    """Return sorted list of scenario ids from scenarios/*.yaml."""
+    return sorted(p.stem for p in SCENARIOS_DIR.glob("*.yaml") if not p.stem.startswith("_"))
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="THAI eval runner (Phase B)")
-    p.add_argument("--scenario", action="append", required=True,
+    p = argparse.ArgumentParser(description="THAI eval runner (Phase C)")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--scenario", action="append",
                    help="Scenario id (filename stem under scenarios/). Repeatable.")
+    g.add_argument("--all", action="store_true",
+                   help="Run every scenario in scenarios/*.yaml.")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
 
@@ -21,7 +32,12 @@ def main() -> int:
         format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
     )
 
-    summary = run_eval(args.scenario)
+    scenarios = _discover_scenarios() if args.all else args.scenario
+    if not scenarios:
+        print("No scenarios found.", file=sys.stderr)
+        return 2
+
+    summary = run_eval(scenarios)
     print(json.dumps(
         {k: v for k, v in summary.items() if k != "_run_dir"},
         indent=2, default=str,

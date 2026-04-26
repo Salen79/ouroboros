@@ -1,0 +1,126 @@
+id: E_skill_extraction
+title: "Skill extraction: multi-step task triggers SkillManager"
+version: 1
+covers: [D5, D2]
+mode: direct
+budget_cap_usd: 0.50
+
+# What this tests:
+# SkillManager.should_extract requires (rounds > 3) AND (success == True)
+# AND task_type in (task, direct_chat) — see skill_manager.py:64-74. We
+# need a multi-step task that actually succeeds and runs >=4 rounds, so
+# extraction triggers.
+#
+# Asserting the result:
+#   - skill_extracted event MUST appear in events.jsonl (post-D2 fix —
+#     skill_manager.py:226-237 emits it).
+#   - episodic JSONL MUST contain a "type": "skill" line (skill_manager.py:214-222).
+#
+# We do NOT pre-seed thai_skills here. The eval ChromaDB container is
+# fresh per run, so the collection starts empty. After the task runs,
+# at least one skill should be upserted.
+#
+# Risk: if the agent solves the task in <=3 rounds, extraction won't
+# trigger and the scenario fails for the wrong reason. Task design
+# needs enough genuine multi-step work to push past the threshold.
+
+setup:
+  drive_seed:
+    "memory/identity.md": |
+      I am THAI, the autonomous AI CEO.
+    "memory/scratchpad.md": |
+      ## Current state
+      Eval framework Phase C in progress.
+    "memory/notes/file_one.txt": |
+      Topic: alpha
+      Status: ongoing
+      Owner: alice
+    "memory/notes/file_two.txt": |
+      Topic: beta
+      Status: complete
+      Owner: bob
+    "memory/notes/file_three.txt": |
+      Topic: gamma
+      Status: paused
+      Owner: carol
+
+  env_overrides:
+    OUROBOROS_MAX_TASK_COST: "0.40"
+    OUROBOROS_MAX_ROUNDS: "10"
+    OUROBOROS_MODEL_LIGHT: ""
+
+input:
+  type: task
+  text: |
+    Read each of the three note files in memory/notes/ (file_one.txt,
+    file_two.txt, file_three.txt). For each, extract the Topic, Status,
+    and Owner. Then write a single consolidated summary to
+    memory/notes/_summary.md as a markdown table with columns
+    | Topic | Status | Owner |. List all three rows. Confirm the file
+    was written.
+
+programmatic_checks:
+  - kind: tool_called
+    tool_name: drive_read
+
+  - kind: tool_called
+    tool_name: drive_write
+
+  - kind: file_contains
+    path: "memory/notes/_summary.md"
+    substring: "alpha"
+
+  - kind: file_contains
+    path: "memory/notes/_summary.md"
+    substring: "beta"
+
+  - kind: file_contains
+    path: "memory/notes/_summary.md"
+    substring: "gamma"
+
+  - kind: event_present
+    event_type: skill_extracted
+    # The post-D2 fix at skill_manager.py:226-237. If this event
+    # doesn't appear, extraction silently failed (the original D5
+    # symptom).
+
+  - kind: event_present
+    event_type: task_done
+
+  - kind: rounds_under
+    rounds: 10
+
+judge:
+  models:
+    - anthropic/claude-sonnet-4.6
+    - openai/gpt-4.1
+  runs_per_model: 1
+  criteria: |
+    This scenario tests Dark Zone D5 (skill extraction silent failure)
+    and D2 (event emission for SkillManager).
+
+    The task is a deliberate multi-step exercise: read 3 files, build a
+    summary table, write it. Should take 4-6 rounds — enough to trigger
+    SkillManager.should_extract (rounds > 3 + success).
+
+    Pass if:
+      (a) the summary file was written with all three rows present
+          (programmatic checks cover this), AND
+      (b) the skill_extracted event fired (programmatic check covers
+          this), AND
+      (c) the agent's response ended cleanly without claiming
+          impossibility, errors, or scope-blocking issues.
+
+    Fail if:
+      - the task didn't complete (file missing / rows missing), OR
+      - skill_extracted event didn't fire (silent extraction failure).
+
+    Inconclusive if the task completed but used some unusual approach
+    that may not have triggered extraction (e.g. agent solved in 3
+    rounds — under threshold).
+
+    Return strict JSON.
+
+teardown:
+  drop_chromadb_collections: true
+  preserve_drive_root: false

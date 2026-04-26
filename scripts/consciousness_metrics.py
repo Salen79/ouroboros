@@ -76,22 +76,29 @@ class ConsciousnessMetrics:
 
     # ── Data loaders ────────────────────────────────────────────────
 
+    # D1: events live in two parallel logs (events.jsonl + supervisor.jsonl),
+    # disjoint writer sets. Aggregators must read both to avoid silently missing
+    # ~40% of events. Files are merged and sorted by `ts`.
+    EVENT_LOG_FILES = ("events.jsonl", "supervisor.jsonl")
+
     def _load_events_for_date(self, date: str) -> list[dict]:
         events = []
-        events_file = self.logs_dir / "events.jsonl"
-        if not events_file.exists():
-            return events
-        with open(events_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    ev = json.loads(line)
-                    if ev.get("ts", "").startswith(date):
-                        events.append(ev)
-                except json.JSONDecodeError:
-                    continue
+        for fname in self.EVENT_LOG_FILES:
+            events_file = self.logs_dir / fname
+            if not events_file.exists():
+                continue
+            with open(events_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ev = json.loads(line)
+                        if ev.get("ts", "").startswith(date):
+                            events.append(ev)
+                    except json.JSONDecodeError:
+                        continue
+        events.sort(key=lambda e: e.get("ts", ""))
         return events
 
     def _load_task_results_for_date(self, date: str) -> list[dict]:

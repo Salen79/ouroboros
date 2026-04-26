@@ -91,29 +91,33 @@ def read_git_merge_log() -> Dict[str, int]:
 
 
 def read_events_log() -> Dict[str, Any]:
-    """Parse events.jsonl for plan_generated events and gate triggers."""
-    path = DATA_DIR / "logs" / "events.jsonl"
+    """Parse events.jsonl + supervisor.jsonl (D1) for plan/gate events.
+
+    Two parallel event logs with disjoint writer sets — must read both.
+    """
     stats = {"plans_generated": 0, "gates_triggered": 0, "total_events": 0}
-    if not path.exists():
-        return stats
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                stats["total_events"] += 1
-                try:
-                    event = json.loads(line)
-                    event_type = event.get("type", "")
-                    if event_type == "plan_generated":
-                        stats["plans_generated"] += 1
-                    elif event_type in ("gate_triggered", "shareholder_gate"):
-                        stats["gates_triggered"] += 1
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
+    for fname in ("events.jsonl", "supervisor.jsonl"):
+        path = DATA_DIR / "logs" / fname
+        if not path.exists():
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    stats["total_events"] += 1
+                    try:
+                        event = json.loads(line)
+                        event_type = event.get("type", "")
+                        if event_type == "plan_generated":
+                            stats["plans_generated"] += 1
+                        elif event_type in ("gate_triggered", "shareholder_gate"):
+                            stats["gates_triggered"] += 1
+                    except json.JSONDecodeError:
+                        continue
+        except OSError:
+            pass
     return stats
 
 

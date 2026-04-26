@@ -251,6 +251,21 @@ def _parse_dark_zones(md: str) -> List[Dict[str, Any]]:
     zones: List[Dict[str, Any]] = []
     # Each zone is "### D1. title" then paragraphs
     zone_pattern = re.compile(r"^###\s+(D\d+)\.\s*(.+?)$", re.MULTILINE)
+    # Optional first paragraph: **Status:** open|closed|catalogued [(...)] [— summary]
+    # Examples:
+    #   **Status:** open
+    #   **Status:** catalogued
+    #   **Status:** closed (`08047f7`) — R1 memory core guarantee.
+    #   **Status:** closed (operational) — Prism issued separate key.
+    #   **Status:** closed (manual cleanup) — Orphan scaffolds removed.
+    # Use `[ \t]*` (not `\s*`) so the optional groups can't reach across the
+    # blank line and accidentally consume a bullet point on the next paragraph.
+    status_pattern = re.compile(
+        r"^\*\*Status:\*\*[ \t]+(open|closed|catalogued)"
+        r"(?:[ \t]*\([ \t]*`?([^)`]+?)`?[ \t]*\))?"
+        r"(?:[ \t]*[—-][ \t]*(.+?))?[ \t]*$",
+        re.MULTILINE,
+    )
     matches = list(zone_pattern.finditer(dz_body))
     for i, m in enumerate(matches):
         start = m.end()
@@ -258,6 +273,29 @@ def _parse_dark_zones(md: str) -> List[Dict[str, Any]]:
         zid = m.group(1)
         title = m.group(2).strip()
         body = dz_body[start:end].strip()
+
+        # Pull the leading **Status:** line if present, default to "open".
+        status = "open"
+        fix_commit: str | None = None
+        fix_summary: str | None = None
+        sm = status_pattern.match(body)
+        if sm:
+            status = sm.group(1)
+            paren = (sm.group(2) or "").strip() or None
+            fix_summary = (sm.group(3) or "").strip() or None
+            if paren:
+                # Heuristic: 7+ hex chars → commit SHA; otherwise a free-form
+                # marker like "operational" or "manual cleanup".
+                if re.fullmatch(r"[0-9a-f]{7,40}", paren):
+                    fix_commit = paren
+                else:
+                    fix_summary = (
+                        f"{paren} — {fix_summary}" if fix_summary else paren
+                    )
+            # Strip the consumed status line + any blank lines so body_md
+            # doesn't double-render the marker in the side panel.
+            body = body[sm.end():].lstrip("\n")
+
         # Extract file:line references from body
         refs = sorted(set(re.findall(r"`([a-zA-Z0-9_/.\-]+\.(?:py|md|json|yaml|yml|jsonl|sqlite3|sh))(?::\d+(?:-\d+)?)?`", body)))
         # Also pull raw file:line pairs
@@ -268,6 +306,9 @@ def _parse_dark_zones(md: str) -> List[Dict[str, Any]]:
             "body_md": body,
             "files": refs,
             "file_lines": [f"{f}:{l}" for f, l in filelines],
+            "status": status,
+            "fix_commit": fix_commit,
+            "fix_summary": fix_summary,
         })
     return zones
 
@@ -1516,6 +1557,7 @@ def _populate_safety_weaknesses(dark_zones: List[Dict]) -> None:
                 "group_en": group_en,
                 "dz_id":    dz_id,
                 "ref":      None,
+                "status":   dz.get("status", "open"),
             })
     weaknesses["items"] = items
 
@@ -1931,6 +1973,9 @@ def build_snapshot() -> Dict[str, Any]:
             "tools_destructive": sum(1 for t in tools if t["is_destructive"]),
             "tools_consciousness": sum(1 for t in tools if t["is_consciousness"]),
             "dark_zones": len(dark_zones),
+            "dark_zones_open": sum(1 for d in dark_zones if d.get("status") == "open"),
+            "dark_zones_closed": sum(1 for d in dark_zones if d.get("status") == "closed"),
+            "dark_zones_catalogued": sum(1 for d in dark_zones if d.get("status") == "catalogued"),
             "modules": len(modules_table),
             "memory_files": len(ownership_matrix),
             "nodes": len(nodes),

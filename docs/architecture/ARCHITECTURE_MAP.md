@@ -680,12 +680,16 @@ apply_change             analyze_screenshot      (= total 64)
 Only observations. No norms, no recommendations.
 
 ### D1. Two parallel event logs, not one
+**Status:** closed (`c65d444`) — Event log unification: supervisor writers redirected to `events.jsonl`.
+
 `logs/events.jsonl` and `logs/supervisor.jsonl` are separate files with
 disjoint writer sets (§2.1). `scripts/consciousness_metrics.py` reads
 only `events.jsonl`. No file cross-links them by task_id or timestamp.
 Any audit that assumes a single log will silently miss 40%+ of events.
 
 ### D2. SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl
+**Status:** closed (`3e6a9fb`) — Skill / experiment lifecycle events now emitted to `events.jsonl`; `consciousness_metrics.py` reads them.
+
 `skill_manager.py` has zero references to `events.jsonl` /
 `append_jsonl`; it writes to ChromaDB `thai_skills` (`:186-190`) and to
 `memory/episodic/YYYY-MM-DD.jsonl` via an injected callback (`:195-208`).
@@ -696,12 +700,16 @@ in `events.jsonl` — a type that is never emitted — so every day the score
 sits at 0.0 even if skills are being written.
 
 ### D3. Outgoing chat messages truncated to 500 chars when reinjected
+**Status:** open
+
 `context.py:268` — `raw_text if is_incoming else raw_text[:500]`. Incoming
 messages are preserved full-length; outgoing messages (THAI's own past
 replies) are sliced. THAI therefore cannot reliably re-read long responses
 it sent earlier. Comment on lines `:266-267` states the intent.
 
 ### D4. `thai_skills` has two independent writers producing different metadata schemas
+**Status:** open
+
 - UUIDv4 ids from `skill_manager.py:186-190` — metadata has `name`,
   `tools`, `rounds_at_creation`, `avg_rounds`, `times_used`, `times_helped`,
   `times_matched`, `score`, `created`.
@@ -714,6 +722,8 @@ de-conflict the two id formats. A "skill" returned by `find_skills` may
 have fields the consumer expects or may not.
 
 ### D5. No skills written to ChromaDB after 04-07 despite active runtime through 04-12
+**Status:** open
+
 Creation-day histogram from the 04-20 investigation: 4 on 04-01, 6 on
 04-03, 6 on 04-04, 1 on 04-05, 4 on 04-07, 4 unknown — zero on 04-08..04-12.
 Code paths that would have caused silence: all 5 failing tasks on 04-12
@@ -726,6 +736,8 @@ and both are indistinguishable from "nothing happened" because the wrapping
 `log.debug(..., exc_info=True)`.
 
 ### D6. Auto-resume on every restart is structural, not opt-in
+**Status:** open
+
 `colab_launcher.py:287` calls `auto_resume_after_restart()` unconditionally
 on every bootstrap. The function (`workers.py:196-292`) checks for
 `pending_restart_verify.json` or a recent `launcher_start`/`restart` event
@@ -737,6 +749,8 @@ which means every single restart spends at least one LLM round on
 auto-resume even when the human didn't ask for it.
 
 ### D7. `_log_worker_boot_once` uses a module-level global guard
+**Status:** open
+
 `agent.py:155-156, 212-228`: `_worker_boot_logged = False` at module
 level, protected by `threading.Lock`. Because the launcher uses `fork`
 multiprocessing, each worker process inherits `_worker_boot_logged=False`
@@ -746,6 +760,8 @@ persists between tests and suppresses expected `worker_boot` emissions.
 This is the R1 investigation's "structural quirk".
 
 ### D8. Strategic planner kill switch defaults to OFF and stays OFF
+**Status:** open
+
 `consciousness.py:328` — `if os.environ.get("STRATEGIC_PLANNER_ENABLED",
 "false").lower() != "true":` → emit `strategic_planner_disabled
 reason="env_guard"`, return. `TRIAGE_APR10.md:24` confirms this was
@@ -755,6 +771,8 @@ fired 34 times (every ~30 min). Planning has been effectively dead since
 the triage merge on 04-11 19:22.
 
 ### D9. Shared OpenRouter key between THAI and Prism
+**Status:** closed (operational) — Prism issued its own OpenRouter key; THAI's daily cap no longer drained by Prism traffic.
+
 `OPENROUTER_API_KEY` in `~/ouroboros/.env` matches byte-for-byte the key
 in `/opt/prism/backend/.env` (per Apr 20 diagnostic §K.3). There is no
 application-level separation of budget on OpenRouter's side. The +$75.23
@@ -764,6 +782,8 @@ lifetime OpenRouter delta between 04-12 and 04-20 — while THAI was off
 only, so THAI's local cap cannot protect against Prism drain.
 
 ### D10. Two orphan ChromaDB scaffolds on disk
+**Status:** closed (manual cleanup) — Both orphan `chroma.sqlite3` scaffolds removed from disk; only the docker HTTP endpoint remains.
+
 - `ouroboros-data/memory/chromadb/chroma.sqlite3` (188 KB, mtime 04-05,
   0 collections) — from an old experiment, 16 days untouched.
 - `ouroboros-data/chromadb/chroma.sqlite3` (188 KB, mtime 04-20 19:46:14,
@@ -777,16 +797,22 @@ Neither is referenced by runtime code. `semantic_memory.py:22-23` hardcodes
 indirection, so the only legitimate path is the docker HTTP endpoint.
 
 ### D11. MAX_ROUNDS discrepancy: doc says 25, code default is 12
+**Status:** closed (`ce014ab`) — Doc reconciled with code: `CLAUDE.md` MAX_ROUNDS now matches the 12-round default; env override path called out.
+
 `loop.py:1050` — `MAX_ROUNDS = int(os.environ.get("OUROBOROS_MAX_ROUNDS", "12"))`.
 `.env` does NOT set `OUROBOROS_MAX_ROUNDS`. CLAUDE.md:108 says 25.
 Shutdown chat on 04-12 shows "Task exceeded MAX_ROUNDS (12)" — matching
 the code, contradicting the doc.
 
 ### D12. Per-task cost cap discrepancy: doc says $5, code default is $3
+**Status:** closed (`ce014ab`) — Doc updated: `.env` sets `OUROBOROS_MAX_TASK_COST=5.00`; code default of $3 noted as a fallback.
+
 `loop.py:465` — `OUROBOROS_MAX_TASK_COST` env default `3.0`. CLAUDE.md:203
 says $5.00. `.env` does not set this.
 
 ### D13. Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap
+**Status:** open
+
 `memory.py:340-358` `extract_directive` triggers on literal Russian
 ("останови", "забудь", "пауза") or English ("stop", "forget", "pause")
 substring — no context awareness. A task titled "stop the old cron job"
@@ -796,6 +822,8 @@ context happens at `context.py:559-574` as a markdown block headlined
 "⚠️ Active Shareholder Directives (OVERRIDE task plans)".
 
 ### D14. `identity.md` is read in 5 places, each silently skips if absent
+**Status:** closed (`08047f7`) — R1 fix: `_ensure_memory_core()` writes a placeholder for missing `identity.md` / `scratchpad.md` before any task and emits `startup_memory_restore`.
+
 All five call sites guard with `if identity_path.exists()` — PRE_RESTART
 §1 lists them. Before the R1 fix (commit `08047f7`, 04-14), a missing
 `identity.md` produced no warning anywhere in `events.jsonl` or in the
@@ -808,6 +836,8 @@ re-verify in the LLM's context — the model could still believe a stale
 premise about identity.
 
 ### D15. R1 silently auto-restores; no loud telemetry on first use
+**Status:** closed (`55605c7`) — `startup_memory_restore` now always emits on first task after boot, even when no files were restored, so dashboards can see the signal.
+
 `agent.py:441-454`: if a file is missing, a placeholder is silently
 written and `startup_memory_restore` is emitted with the restored file
 list. Emission only happens if `restored` is non-empty (`:457`), so the
@@ -817,6 +847,8 @@ startup_verification. A search for `startup_memory_restore` in
 `events.jsonl` gives the signal, but no dashboard surfaces it.
 
 ### D16. `run_shell` is the escape-hatch bypass for every other guard
+**Status:** closed (`a99a345`) — `tools/shell_guards.PATTERNS` blocks inline `python -c "...PersistentClient..."`, `bash -c "python -c ..."`, and dangerous `rm -rf` against critical paths.
+
 `tools/shell.py:21` executes arbitrary Python/bash with cwd restricted
 to the repo but no command allowlist. The first-class ChromaDB guards in
 `semantic_memory.py` (hardcoded host, graceful fallback, heartbeat) protect
@@ -825,6 +857,8 @@ moment the LLM writes `import chromadb; chromadb.PersistentClient(...)`
 inside a `run_shell` call. D10 is one instance of this.
 
 ### D17. Worker destructive-keyword guard can refuse tasks before the agent sees them
+**Status:** closed (`3843df8`) — Worker keyword refusals now emit `task_refused_by_guard` to `events.jsonl`, surfacing pre-agent rejections to the dashboard.
+
 `supervisor/workers.py:320-351`: the worker scans task text for
 delete/refactor/cleanup/DROP/etc. keywords and refuses execution before
 calling `agent.handle_task`. The refusal is emitted to `events.jsonl`
@@ -834,6 +868,8 @@ would be safe — never gets to the LLM. This is invisible to the LLM and
 to the owner unless they inspect `supervisor.jsonl`.
 
 ### D18. `pattern_detector` scans `task_results/` only — not events.jsonl
+**Status:** open
+
 Despite what the architecture description implies, `pattern_detector.py`
 reads `task_results/` JSON files (`:115-138`) and does NOT parse
 `events.jsonl`. So "recurring_error" patterns are grounded only in what
@@ -842,6 +878,8 @@ event. Patterns missed here silently become patterns the experiment
 engine cannot see.
 
 ### D19. CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness
+**Status:** open
+
 `supervisor/queue.py:502-567` writes it; `consciousness.py:773-788` reads
 `get_expired()` from it. Two processes (launcher main thread and
 consciousness thread) in principle could write concurrently — in practice
@@ -849,6 +887,8 @@ both live in the same Python process so GIL protects them, but there is
 no explicit lock at the JSON level.
 
 ### D20. `current_sha` in state.json drifts — written only on `git reset`, not on self-commit
+**Status:** closed (`74f6fcf`) — `current_sha` now refreshed after self-commits; `supervisor.state` validates `DRIVE_ROOT` to prevent test pollution from corrupting production state.
+
 `git_ops.py:310-313` updates `state.json.current_sha` after
 `checkout_and_reset`. THAI's own `repo_commit_push` / self-commits do
 NOT update this field. On 04-12, state.json said `e5ddd048…` but live
@@ -857,6 +897,8 @@ to state.json. Anything downstream reading `state.json.current_sha` as
 ground truth (e.g. drift diagnostics) silently uses yesterday's SHA.
 
 ### D21. `daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter
+**Status:** open
+
 `budget.py:30-37` caps `OUROBOROS_DAILY_AUTO_CAP=$50` local. The
 `TOTAL_BUDGET=500` in `.env` is checked in `context.py:369` by reading
 live OpenRouter credits. There is no `budget.json` file despite multiple
@@ -864,6 +906,8 @@ references in scripts and prose; budget accounting is split across
 `state.json` (lifetime) and `daily_budget.json` (daily).
 
 ### D22. `_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`
+**Status:** closed (`88c7828`) — Post-task scratchpad now falls back to reading `scratchpad.md` directly when `state.json` is stale or missing the previous-task fields.
+
 `loop.py:817-896` builds the new scratchpad using `prev_task_id` and
 `prev_short` from state, not from the scratchpad itself. If state.json is
 stale (D20-style drift), the scratchpad will reference an incorrect
@@ -871,6 +915,8 @@ previous task. No verification between scratchpad content and state.json
 exists.
 
 ### D23. Post-restart banner detection is time-based with a 300s window
+**Status:** open
+
 `context.py:118-128`: the POST-RESTART DETECTED banner is shown only if
 `memory/.restart_marker` is less than 300s old. A restart that takes
 longer than 5 minutes to boot the first task (rare, but e.g. after a long
@@ -878,6 +924,8 @@ longer than 5 minutes to boot the first task (rare, but e.g. after a long
 and leave the LLM with no cue that a restart happened.
 
 ### D24. `inner_critic` does not block — it injects advice as a system message
+**Status:** open
+
 `inner_critic.py:1,59`: the critic produces JSON with `on_track,
 confidence, suggestion` and returns formatted text. That text is
 inserted into the conversation at `loop.py:1332` as a `role="system"`
@@ -885,12 +933,16 @@ message. The LLM may ignore it. `on_track=False` has no programmatic
 effect beyond the advisory — no task is aborted, no rounds are reclaimed.
 
 ### D25. Consciousness thread has `update_identity` in its whitelist
+**Status:** closed (`c9af2d1`) — `update_identity` removed from the background-thread tool whitelist; `identity.md` writes only via main task loop now.
+
 `consciousness.py:1281` — the light-model consciousness cycle can
 rewrite `identity.md` entirely. No approval gate, no diff review, no
 owner notification. This is the one writer besides the R1 placeholder
 and the regular `_update_identity` tool call during a task.
 
 ### D26. `run_shell` guards do not read script files referenced by exec
+**Status:** open
+
 `tools/shell_guards.py:PATTERNS` (commit `a99a345`, D16 closure) catches
 inline forms — `python -c "...PersistentClient..."`,
 `bash -c "python -c ..."`, direct `rm -rf` against critical paths — by
@@ -907,6 +959,8 @@ like `python <file>` / `bash <file>`, read the file and run the same
 pattern set against its contents (extra disk read per exec).
 
 ### D27. `claude_code_edit` bypasses `run_shell` guards entirely
+**Status:** open
+
 `tools/shell.py:286 _claude_code_edit` accepts a free-form `prompt`
 string and dispatches it to the Claude CLI via `_run_claude_cli`
 (`shell.py:166`) — never through `_run_shell`, so
@@ -925,6 +979,8 @@ restrict `claude_code_edit`'s working directory away from
 `ouroboros-data/` and the in-process ChromaDB client surface.
 
 ### D29. Test pollution risk in `supervisor.state` via module-level `STATE_PATH`
+**Status:** catalogued
+
 `supervisor/state.py` initializes `STATE_PATH` at import-time from
 default `~/ouroboros-data/state/state.json`. Any test that imports
 the module and calls `load_state()` / `save_state()` writes to live

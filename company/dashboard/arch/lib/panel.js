@@ -9,10 +9,16 @@ function esc(s) {
   }[c]));
 }
 
-function dzChips(ids, onClick) {
+function dzChips(ids, snapshot) {
   if (!ids || !ids.length) return '';
+  const dzById = (snapshot && snapshot.dark_zones)
+    ? Object.fromEntries(snapshot.dark_zones.map(d => [d.id, d]))
+    : {};
   return `<div class="badges">
-    ${ids.map(id => `<span class="chip darkzone" data-goto-dz="${id}">${id}</span>`).join('')}
+    ${ids.map(id => {
+      const status = (dzById[id] && dzById[id].status) || 'open';
+      return `<span class="chip darkzone status-${status}" data-goto-dz="${id}">${id}</span>`;
+    }).join('')}
   </div>`;
 }
 
@@ -61,21 +67,26 @@ export function renderNode(node, snapshot) {
       ${node.layer ? `· ${esc(t('panel.layer'))}: <code>${esc(node.layer)}</code>` : ''}
       ${node.kind ? `· ${esc(t('panel.kind'))}: <code>${esc(node.kind)}</code>` : ''}
     </div>
-    ${dzChips(node.dark_zones)}
+    ${dzChips(node.dark_zones, snapshot)}
     ${node.description ? `<h3>${esc(t('panel.description'))}</h3><p>${esc(node.description)}</p>` : ''}
     ${moduleRow}
     ${ownership}
     ${dark.length ? `
       <h3>${esc(t('panel.weaknesses'))} (${dark.length})</h3>
-      ${dark.map(d => `
+      ${dark.map(d => {
+        const status = d.status || 'open';
+        const glyph = status === 'closed' ? '✓' : status === 'catalogued' ? '·' : '⚠';
+        return `
         <div style="margin-bottom:10px;">
           <div style="font-weight:600;color:var(--accent-2);">
-            <span class="chip darkzone" data-goto-dz="${d.id}">${d.id}</span>
+            <span class="chip darkzone status-${status}" data-goto-dz="${d.id}">${d.id}</span>
+            <span class="dz-status inline ${status}" title="${esc(t('dz.status.' + status))}">${glyph}</span>
             ${esc(d.title)}
           </div>
           <p style="margin-top:4px;font-size:12.5px;color:var(--muted);">${esc(d.body_md.slice(0, 220))}${d.body_md.length > 220 ? '…' : ''}</p>
         </div>
-      `).join('')}
+      `;
+      }).join('')}
     ` : ''}
   `;
 }
@@ -98,7 +109,7 @@ export function renderTool(tool, snapshot) {
       ${tool.is_code_tool ? '· code_tool' : ''}
     </div>
     <div class="badges">${chips.join('')}</div>
-    ${dzChips(tool.dark_zone_ids)}
+    ${dzChips(tool.dark_zone_ids, snapshot)}
     <h3>${esc(t('panel.description'))}</h3>
     <p>${esc(tool.description) || `<span class="muted">${esc(t('panel.no_description'))}</span>`}</p>
     ${hasParams ? `
@@ -108,9 +119,45 @@ export function renderTool(tool, snapshot) {
   `;
 }
 
+function statusGlyph(status) {
+  if (status === 'closed') return '✓';
+  if (status === 'catalogued') return '·';
+  return '⚠';
+}
+
+function renderStatusBlock(dz) {
+  const status = dz.status || 'open';
+  const label = t('dz.status.' + status);
+  const glyph = statusGlyph(status);
+  if (status !== 'closed') {
+    return `
+      <div class="dz-status-block status-${status}">
+        <span class="dz-status-icon">${glyph}</span>
+        <span class="dz-status-label">${esc(label)}</span>
+      </div>
+    `;
+  }
+  // closed — show commit + fix summary if present
+  const commit = dz.fix_commit;
+  const summary = dz.fix_summary;
+  return `
+    <div class="dz-status-block status-closed">
+      <div class="dz-status-row">
+        <span class="dz-status-icon">${glyph}</span>
+        <span class="dz-status-label">${esc(label)}</span>
+        ${commit ? `<a class="dz-fix-commit" href="https://github.com/Salen79/ouroboros/commit/${esc(commit)}"
+                       target="_blank" rel="noopener" title="${esc(t('dz.fix.commit.tooltip'))}"
+                       >${esc(commit.slice(0, 7))}</a>` : ''}
+      </div>
+      ${summary ? `<div class="dz-fix-summary">${esc(summary)}</div>` : ''}
+    </div>
+  `;
+}
+
 export function renderDarkZone(dz) {
   return `
     <h2><span class="dz-id">${dz.id}</span>${esc(dz.title)}</h2>
+    ${renderStatusBlock(dz)}
     <div class="dz-body">${esc(dz.body_md)}</div>
     ${dz.files && dz.files.length ? `
       <h3 style="margin-top:20px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">${esc(t('dz.refs.files'))}</h3>

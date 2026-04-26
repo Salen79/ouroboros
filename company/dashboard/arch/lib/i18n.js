@@ -70,6 +70,8 @@ const UI = {
                                   en: n => `⚠ ${n} weaknesses` },
   'safety.pill.tooltip':       { ru: n => `${n} известных слабостей — открыть таксономию`,
                                   en: n => `${n} known weaknesses — open taxonomy` },
+  'safety.pill.closed.tooltip':{ ru: (c, n) => `${c} из ${n} слабостей закрыты`,
+                                  en: (c, n) => `${c} of ${n} weaknesses closed` },
 
   // Zoom hint
   'zoom.hint.l0':              { ru: 'клик на орган — увеличить',
@@ -116,6 +118,12 @@ const UI = {
   'dz.empty':                  { ru: 'Ничего не найдено.',   en: 'Nothing found.' },
   'dz.refs.files':             { ru: 'Упомянутые файлы',     en: 'Referenced files' },
   'dz.refs.lines':             { ru: 'Ссылки file:line',     en: 'File:line references' },
+  'dz.counter.closed':         { ru: 'закрыто из всего',     en: 'closed of total' },
+  'dz.status.open':            { ru: 'открыто',              en: 'open' },
+  'dz.status.closed':          { ru: 'закрыто',              en: 'closed' },
+  'dz.status.catalogued':      { ru: 'каталог',              en: 'catalogued' },
+  'dz.fix.commit.tooltip':     { ru: 'Коммит, закрывший зону — открыть на GitHub',
+                                  en: 'Commit that closed this zone — open on GitHub' },
 
   // Panel
   'panel.role':                { ru: 'Роль',                 en: 'Role' },

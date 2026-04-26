@@ -373,11 +373,19 @@ export class OverviewView {
         const y = innerTop + i * rowH;
         const title = tField(it, 'title') || it.title || '';
         if (isWeaknesses) {
+          const status = it.status || 'open';
+          const dotFill = status === 'closed' ? '#00b894'
+                        : status === 'catalogued' ? '#74b9ff'
+                        : '#fdcb6e';
+          const dotStroke = status === 'closed' ? '#019875'
+                          : status === 'catalogued' ? '#0984e3'
+                          : '#e17055';
+          const textCls = status === 'closed' ? ' safety-row-text-closed' : '';
           return `
-            <g class="safety-row safety-row-dz" data-goto-dz="${this._esc(it.dz_id || '')}"
+            <g class="safety-row safety-row-dz status-${status}" data-goto-dz="${this._esc(it.dz_id || '')}"
                transform="translate(${b.x + 16}, ${y})">
-              <circle cx="6" cy="13" r="5" fill="#fdcb6e" stroke="#e17055" stroke-width="1"/>
-              <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
+              <circle cx="6" cy="13" r="5" fill="${dotFill}" stroke="${dotStroke}" stroke-width="1"/>
+              <text class="safety-row-text${textCls}" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
             </g>`;
         }
         const countBadge = (typeof it.count === 'number' && it.count > 0)
@@ -589,6 +597,9 @@ export class OverviewView {
       crumbs.push({ label: lbl, state: this.zoom });
     }
     const dzCount = this.snap.summary.dark_zones;
+    const dzClosed = this.snap.summary.dark_zones_closed != null
+      ? this.snap.summary.dark_zones_closed
+      : (this.snap.dark_zones || []).filter(d => d.status === 'closed').length;
     this.crumbsEl.innerHTML = `
       ${crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;
@@ -605,6 +616,9 @@ export class OverviewView {
       <button class="safety-pill" data-safety="open"
               title="${this._esc(t('safety.pill.tooltip', dzCount))}">
         ${this._esc(t('safety.pill.count', dzCount))}
+        <span class="safety-pill-closed" title="${this._esc(t('safety.pill.closed.tooltip', dzClosed, dzCount))}">
+          · ✓ ${dzClosed}/${dzCount}
+        </span>
       </button>
     `;
     this.crumbsEl.querySelectorAll('.crumb').forEach(el => {

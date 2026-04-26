@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-26T06:55:39.381504+00:00",
+    "generated_at": "2026-04-26T15:02:12.466565+00:00",
     "git": {
-      "sha": "3843df81e40a2f5b7d578e29a67019608eeb7573",
-      "branch": "ouroboros",
-      "subject": "fix(d17): emit visible refusal events when worker guard blocks task"
+      "sha": "d3c2243daad026766cf4434700dd610bad908e22",
+      "branch": "fix/dashboard-dz-status",
+      "subject": "fix(eval): close B-O8 — eval subprocess now runs in shallow clone"
     },
     "source_map": "ARCHITECTURE_MAP.md",
     "repo": "/home/deploy/ouroboros",
@@ -18,6 +18,9 @@
     "tools_destructive": 7,
     "tools_consciousness": 14,
     "dark_zones": 28,
+    "dark_zones_open": 14,
+    "dark_zones_closed": 13,
+    "dark_zones_catalogued": 1,
     "modules": 23,
     "memory_files": 11,
     "nodes": 53,
@@ -2462,7 +2465,10 @@
         "logs/supervisor.jsonl",
         "scripts/consciousness_metrics.py"
       ],
-      "file_lines": []
+      "file_lines": [],
+      "status": "closed",
+      "fix_commit": "c65d444",
+      "fix_summary": "Event log unification: supervisor writers redirected to `events.jsonl`."
     },
     {
       "id": "D2",
@@ -2476,7 +2482,10 @@
         "skill_manager.py",
         "state/experiments.json"
       ],
-      "file_lines": []
+      "file_lines": [],
+      "status": "closed",
+      "fix_commit": "3e6a9fb",
+      "fix_summary": "Skill / experiment lifecycle events now emitted to `events.jsonl`; `consciousness_metrics.py` reads them."
     },
     {
       "id": "D3",
@@ -2487,7 +2496,10 @@
       ],
       "file_lines": [
         "context.py:268"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D4",
@@ -2500,7 +2512,10 @@
       "file_lines": [
         "skill_manager.py:186-190",
         "skill_manager.py:63-93"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D5",
@@ -2513,7 +2528,10 @@
       "file_lines": [
         "loop.py:1481-1482",
         "skill_manager.py:47-57"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D6",
@@ -2528,7 +2546,10 @@
       "file_lines": [
         "colab_launcher.py:287",
         "workers.py:196-292"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D7",
@@ -2539,7 +2560,10 @@
       ],
       "file_lines": [
         "agent.py:155-156"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D8",
@@ -2551,7 +2575,10 @@
       ],
       "file_lines": [
         "consciousness.py:328"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D9",
@@ -2561,7 +2588,10 @@
         "budget.py",
         "ouroboros-data/state/daily_budget.json"
       ],
-      "file_lines": []
+      "file_lines": [],
+      "status": "closed",
+      "fix_commit": null,
+      "fix_summary": "operational — Prism issued its own OpenRouter key; THAI's daily cap no longer drained by Prism traffic."
     },
     {
       "id": "D10",
@@ -2574,7 +2604,10 @@
       ],
       "file_lines": [
         "semantic_memory.py:22-23"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": null,
+      "fix_summary": "manual cleanup — Both orphan `chroma.sqlite3` scaffolds removed from disk; only the docker HTTP endpoint remains."
     },
     {
       "id": "D11",
@@ -2585,7 +2618,10 @@
       ],
       "file_lines": [
         "loop.py:1050"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "ce014ab",
+      "fix_summary": "Doc reconciled with code: `CLAUDE.md` MAX_ROUNDS now matches the 12-round default; env override path called out."
     },
     {
       "id": "D12",
@@ -2596,7 +2632,10 @@
       ],
       "file_lines": [
         "loop.py:465"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "ce014ab",
+      "fix_summary": "Doc updated: `.env` sets `OUROBOROS_MAX_TASK_COST=5.00`; code default of $3 noted as a fallback."
     },
     {
       "id": "D13",
@@ -2609,7 +2648,10 @@
       "file_lines": [
         "context.py:559-574",
         "memory.py:340-358"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D14",
@@ -2622,7 +2664,10 @@
       ],
       "file_lines": [
         "agent.py:423-468"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "08047f7",
+      "fix_summary": "R1 fix: `_ensure_memory_core()` writes a placeholder for missing `identity.md` / `scratchpad.md` before any task and emits `startup_memory_restore`."
     },
     {
       "id": "D15",
@@ -2634,7 +2679,10 @@
       ],
       "file_lines": [
         "agent.py:441-454"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "55605c7",
+      "fix_summary": "`startup_memory_restore` now always emits on first task after boot, even when no files were restored, so dashboards can see the signal."
     },
     {
       "id": "D16",
@@ -2646,7 +2694,10 @@
       ],
       "file_lines": [
         "tools/shell.py:21"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "a99a345",
+      "fix_summary": "`tools/shell_guards.PATTERNS` blocks inline `python -c \"...PersistentClient...\"`, `bash -c \"python -c ...\"`, and dangerous `rm -rf` against critical paths."
     },
     {
       "id": "D17",
@@ -2659,7 +2710,10 @@
       ],
       "file_lines": [
         "supervisor/workers.py:320-351"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "3843df8",
+      "fix_summary": "Worker keyword refusals now emit `task_refused_by_guard` to `events.jsonl`, surfacing pre-agent rejections to the dashboard."
     },
     {
       "id": "D18",
@@ -2669,7 +2723,10 @@
         "events.jsonl",
         "pattern_detector.py"
       ],
-      "file_lines": []
+      "file_lines": [],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D19",
@@ -2682,7 +2739,10 @@
       "file_lines": [
         "consciousness.py:773-788",
         "supervisor/queue.py:502-567"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D20",
@@ -2693,7 +2753,10 @@
       ],
       "file_lines": [
         "git_ops.py:310-313"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "74f6fcf",
+      "fix_summary": "`current_sha` now refreshed after self-commits; `supervisor.state` validates `DRIVE_ROOT` to prevent test pollution from corrupting production state."
     },
     {
       "id": "D21",
@@ -2709,7 +2772,10 @@
       "file_lines": [
         "budget.py:30-37",
         "context.py:369"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D22",
@@ -2720,7 +2786,10 @@
       ],
       "file_lines": [
         "loop.py:817-896"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "88c7828",
+      "fix_summary": "Post-task scratchpad now falls back to reading `scratchpad.md` directly when `state.json` is stale or missing the previous-task fields."
     },
     {
       "id": "D23",
@@ -2731,7 +2800,10 @@
       ],
       "file_lines": [
         "context.py:118-128"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D24",
@@ -2743,7 +2815,10 @@
       "file_lines": [
         "inner_critic.py:1",
         "loop.py:1332"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D25",
@@ -2755,7 +2830,10 @@
       ],
       "file_lines": [
         "consciousness.py:1281"
-      ]
+      ],
+      "status": "closed",
+      "fix_commit": "c9af2d1",
+      "fix_summary": "`update_identity` removed from the background-thread tool whitelist; `identity.md` writes only via main task loop now."
     },
     {
       "id": "D26",
@@ -2766,7 +2844,10 @@
       ],
       "file_lines": [
         "shell_guards.py:67"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D27",
@@ -2780,7 +2861,10 @@
         "shell.py:173",
         "shell.py:319",
         "tools/shell.py:286"
-      ]
+      ],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
     },
     {
       "id": "D29",
@@ -2790,7 +2874,10 @@
         "state.json",
         "supervisor/state.py"
       ],
-      "file_lines": []
+      "file_lines": [],
+      "status": "catalogued",
+      "fix_commit": null,
+      "fix_summary": null
     }
   ],
   "topology": {
@@ -5877,7 +5964,8 @@
             "group": "Наблюдаемость",
             "group_en": "Observability",
             "dz_id": "D1",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D2 — SkillManager and ExperimentEngine emit to ChromaDB and `*.json`, never to events.jsonl",
@@ -5885,7 +5973,8 @@
             "group": "Наблюдаемость",
             "group_en": "Observability",
             "dz_id": "D2",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D5 — No skills written to ChromaDB after 04-07 despite active runtime through 04-12",
@@ -5893,7 +5982,8 @@
             "group": "Наблюдаемость",
             "group_en": "Observability",
             "dz_id": "D5",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D15 — R1 silently auto-restores; no loud telemetry on first use",
@@ -5901,7 +5991,8 @@
             "group": "Наблюдаемость",
             "group_en": "Observability",
             "dz_id": "D15",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D18 — `pattern_detector` scans `task_results/` only — not events.jsonl",
@@ -5909,7 +6000,8 @@
             "group": "Наблюдаемость",
             "group_en": "Observability",
             "dz_id": "D18",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
@@ -5917,7 +6009,8 @@
             "group": "Согласованность",
             "group_en": "Consistency",
             "dz_id": "D4",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D19 — CommitmentTracker state lives in `commitments.json`, written by both supervisor.queue and consciousness",
@@ -5925,7 +6018,8 @@
             "group": "Согласованность",
             "group_en": "Consistency",
             "dz_id": "D19",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D20 — `current_sha` in state.json drifts — written only on `git reset`, not on self-commit",
@@ -5933,7 +6027,8 @@
             "group": "Согласованность",
             "group_en": "Consistency",
             "dz_id": "D20",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D22 — `_post_task_scratchpad_write` reads the scratchpad's previous entry from `state/state.json`",
@@ -5941,7 +6036,8 @@
             "group": "Согласованность",
             "group_en": "Consistency",
             "dz_id": "D22",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D23 — Post-restart banner detection is time-based with a 300s window",
@@ -5949,7 +6045,8 @@
             "group": "Согласованность",
             "group_en": "Consistency",
             "dz_id": "D23",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D8 — Strategic planner kill switch defaults to OFF and stays OFF",
@@ -5957,7 +6054,8 @@
             "group": "Конфигурация",
             "group_en": "Configuration",
             "dz_id": "D8",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D11 — MAX_ROUNDS discrepancy: doc says 25, code default is 12",
@@ -5965,7 +6063,8 @@
             "group": "Конфигурация",
             "group_en": "Configuration",
             "dz_id": "D11",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D12 — Per-task cost cap discrepancy: doc says $5, code default is $3",
@@ -5973,7 +6072,8 @@
             "group": "Конфигурация",
             "group_en": "Configuration",
             "dz_id": "D12",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D13 — Directives system is subtle: extraction regex is keyword-based, 24h window, 10-entry cap",
@@ -5981,7 +6081,8 @@
             "group": "Конфигурация",
             "group_en": "Configuration",
             "dz_id": "D13",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D14 — `identity.md` is read in 5 places, each silently skips if absent",
@@ -5989,7 +6090,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D14",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D16 — `run_shell` is the escape-hatch bypass for every other guard",
@@ -5997,7 +6099,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D16",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D17 — Worker destructive-keyword guard can refuse tasks before the agent sees them",
@@ -6005,7 +6108,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D17",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D25 — Consciousness thread has `update_identity` in its whitelist",
@@ -6013,7 +6117,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D25",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D26 — `run_shell` guards do not read script files referenced by exec",
@@ -6021,7 +6126,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D26",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D27 — `claude_code_edit` bypasses `run_shell` guards entirely",
@@ -6029,7 +6135,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D27",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D29 — Test pollution risk in `supervisor.state` via module-level `STATE_PATH`",
@@ -6037,7 +6144,8 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D29",
-            "ref": null
+            "ref": null,
+            "status": "catalogued"
           },
           {
             "title": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
@@ -6045,7 +6153,8 @@
             "group": "Артефакты",
             "group_en": "Artifacts",
             "dz_id": "D3",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D6 — Auto-resume on every restart is structural, not opt-in",
@@ -6053,7 +6162,8 @@
             "group": "Артефакты",
             "group_en": "Artifacts",
             "dz_id": "D6",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D7 — `_log_worker_boot_once` uses a module-level global guard",
@@ -6061,7 +6171,8 @@
             "group": "Артефакты",
             "group_en": "Artifacts",
             "dz_id": "D7",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D10 — Two orphan ChromaDB scaffolds on disk",
@@ -6069,7 +6180,8 @@
             "group": "Артефакты",
             "group_en": "Artifacts",
             "dz_id": "D10",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D9 — Shared OpenRouter key between THAI and Prism",
@@ -6077,7 +6189,8 @@
             "group": "Внешнее",
             "group_en": "External",
             "dz_id": "D9",
-            "ref": null
+            "ref": null,
+            "status": "closed"
           },
           {
             "title": "D21 — `daily_budget.json` is THAI's only local cap; the $500 `TOTAL_BUDGET` lives in OpenRouter",
@@ -6085,7 +6198,8 @@
             "group": "Внешнее",
             "group_en": "External",
             "dz_id": "D21",
-            "ref": null
+            "ref": null,
+            "status": "open"
           },
           {
             "title": "D24 — `inner_critic` does not block — it injects advice as a system message",
@@ -6093,7 +6207,8 @@
             "group": "Внешнее",
             "group_en": "External",
             "dz_id": "D24",
-            "ref": null
+            "ref": null,
+            "status": "open"
           }
         ]
       }

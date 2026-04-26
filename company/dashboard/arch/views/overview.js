@@ -380,11 +380,20 @@ export class OverviewView {
               <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
             </g>`;
         }
+        const countBadge = (typeof it.count === 'number' && it.count > 0)
+          ? `<g class="safety-row-count" transform="translate(${b.w - 56}, 4)">
+               <rect x="0" y="0" width="38" height="18" rx="9" ry="9"
+                     fill="rgba(225,112,85,0.18)" stroke="rgba(225,112,85,0.55)" stroke-width="1"/>
+               <text x="19" y="13" text-anchor="middle" dominant-baseline="middle"
+                     fill="#e17055" font-size="11" font-weight="600">×${it.count}</text>
+             </g>`
+          : '';
         return `
           <g class="safety-row" transform="translate(${b.x + 16}, ${y})">
             <circle cx="6" cy="13" r="4" fill="#74b9ff" stroke="none"/>
             <text class="safety-row-text" x="20" y="16" dominant-baseline="alphabetic">${this._esc(title)}</text>
-            ${it.ref ? `<title>${this._esc(it.ref)}</title>` : ''}
+            ${countBadge}
+            ${it.ref ? `<title>${this._esc(it.ref)}${typeof it.count === 'number' ? ` — fired ${it.count}×` : ''}</title>` : ''}
           </g>`;
       }).join('');
 

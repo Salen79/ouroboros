@@ -1461,6 +1461,44 @@ def _annotate_functional_roles(topology_nodes: List[Dict], tools: List[Dict]) ->
         t["block_id"] = tool_block.get(t["name"], "tools_read")
 
 
+def _populate_safety_prevent_counts() -> None:
+    """D17: stamp activation counters onto safety_prevent items.
+
+    Reads `events.jsonl` + `supervisor.jsonl` (D1 dual-log compatibility) and
+    counts `task_refused_by_guard` / `worker_destructive_blocked` to surface
+    how often the destructive-keyword guard has fired. The frontend renders
+    `count` as a small chip next to the item title.
+    """
+    prevent = next(b for b in SAFETY_BLOCKS if b["id"] == "safety_prevent")
+    keyword_guard_count = 0
+    for log_name, evt_type in (
+        ("events.jsonl", "task_refused_by_guard"),
+        ("supervisor.jsonl", "worker_destructive_blocked"),
+    ):
+        log_path = DATA_ROOT / "logs" / log_name
+        if not log_path.exists():
+            continue
+        try:
+            with log_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        evt = json.loads(line)
+                    except Exception:
+                        continue
+                    if evt.get("type") == evt_type:
+                        keyword_guard_count += 1
+        except Exception:
+            continue
+    for it in prevent.get("items", []):
+        ref = str(it.get("ref") or "")
+        if ref.startswith("supervisor/workers.py:320-351"):
+            it["count"] = keyword_guard_count
+            it["count_source"] = "task_refused_by_guard + worker_destructive_blocked"
+
+
 def _populate_safety_weaknesses(dark_zones: List[Dict]) -> None:
     """Fill the 5th SAFETY block with DZ taxonomy items (keyed to DZ IDs)."""
     weaknesses = next(b for b in SAFETY_BLOCKS if b["id"] == "safety_weaknesses")
@@ -1849,6 +1887,7 @@ def build_snapshot() -> Dict[str, Any]:
     # Phase 1.7 — block-level functional classification
     _annotate_functional_roles(nodes, tools)
     _populate_safety_weaknesses(dark_zones)
+    _populate_safety_prevent_counts()
 
     # Filter typed edges — Phase 1.7 edges are BLOCK-level so we validate
     # against the set of known block IDs (plus node IDs for any legacy

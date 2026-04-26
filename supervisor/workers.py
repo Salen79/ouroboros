@@ -296,13 +296,87 @@ def auto_resume_after_restart() -> None:
 # Worker process
 # ---------------------------------------------------------------------------
 
+# Background workers refuse tasks whose text matches any of these substrings.
+# Refactor / delete / rename / overwrite operations are only allowed in the
+# direct chat via `claude_code_edit`.
+DESTRUCTIVE_KEYWORDS = (
+    "удал", "удали", "удаляй", "рефактор", "рефакторинг",
+    "почист", "очист", "перепиши", "переименуй",
+    "delete file", "remove file", "refactor", "cleanup",
+    "clean up", "rename file", "overwrite",
+)
+
+
+def _match_destructive_keyword(text: str) -> Optional[str]:
+    """Return the first DESTRUCTIVE_KEYWORDS substring that appears in `text` (lowercased), or None."""
+    lowered = (text or "").lower()
+    return next((kw for kw in DESTRUCTIVE_KEYWORDS if kw in lowered), None)
+
+
+def _emit_guard_refusal(
+    *,
+    wid: int,
+    task: Dict[str, Any],
+    matched_keyword: str,
+    out_q: Any,
+    drive_root: pathlib.Path,
+) -> None:
+    """D17: Visible refusal — Telegram (system progress msg) + supervisor.jsonl + events.jsonl.
+
+    Refactored out of `worker_main` so the side effects (queue put + 2 log
+    appends) are unit-testable without spinning up a real worker process.
+    """
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    task_id = task.get("id")
+    preview = str(task.get("text") or "").lower()[:200]
+    short_preview = preview[:120] + ("…" if len(preview) > 120 else "")
+    warn_msg = (
+        f"⚠️ Задача отклонена guard: «{short_preview}». "
+        f"Причина: keyword «{matched_keyword}». "
+        f"Используй claude_code_edit в прямом диалоге с Sergey."
+    )
+    # Telegram notify — `is_progress=True` routes to progress.jsonl, not
+    # chat.jsonl. Refusal is an operational signal, not conversation; we don't
+    # want it polluting THAI's chat history / context window.
+    out_q.put({
+        "type": "send_message",
+        "chat_id": task.get("chat_id"),
+        "text": warn_msg,
+        "worker_id": wid,
+        "is_worker": True,
+        "is_progress": True,
+    })
+    append_jsonl(
+        drive_root / "logs" / "supervisor.jsonl",
+        {
+            "ts": ts,
+            "type": "worker_destructive_blocked",
+            "task_id": task_id,
+            "matched_keyword": matched_keyword,
+            "text_snippet": preview,
+        },
+    )
+    # D17: events.jsonl makes the refusal visible to dashboard +
+    # meta_cognition aggregators (which only read events.jsonl/supervisor.jsonl).
+    append_jsonl(
+        drive_root / "logs" / "events.jsonl",
+        {
+            "ts": ts,
+            "type": "task_refused_by_guard",
+            "task_id": task_id,
+            "guard": "destructive_keyword",
+            "matched_keyword": matched_keyword,
+            "task_text_preview": preview,
+        },
+    )
+
+
 def worker_main(wid: int, in_q: Any, out_q: Any, repo_dir: str, drive_root: str) -> None:
     import sys as _sys
     import traceback as _tb
     import pathlib as _pathlib
     _sys.path.insert(0, repo_dir)
     _drive = _pathlib.Path(drive_root)
-    from supervisor.state import append_jsonl as _append_jsonl
     try:
         from ouroboros.agent import make_agent
         agent = make_agent(repo_dir=repo_dir, drive_root=drive_root, event_queue=out_q)
@@ -315,38 +389,11 @@ def worker_main(wid: int, in_q: Any, out_q: Any, repo_dir: str, drive_root: str)
             if task is None or task.get("type") == "shutdown":
                 break
 
-            # Guard: destructive operations are forbidden in background workers.
-            # Refactoring, file deletion, renaming — only via claude_code_edit in direct chat.
-            _task_text = str(task.get("text") or "").lower()
-            _DESTRUCTIVE_KEYWORDS = [
-                "удал", "удали", "удаляй", "рефактор", "рефакторинг",
-                "почист", "очист", "перепиши", "переименуй",
-                "delete file", "remove file", "refactor", "cleanup",
-                "clean up", "rename file", "overwrite",
-            ]
-            _is_destructive = any(kw in _task_text for kw in _DESTRUCTIVE_KEYWORDS)
-            if _is_destructive and not task.get("_allow_destructive"):
-                import datetime as _dt
-                _warn_msg = (
-                    "⛔ WORKER GUARD: Эта задача содержит деструктивные операции "
-                    "(удаление/рефакторинг файлов). Воркеры не могут выполнять такие задачи. "
-                    "Используй claude_code_edit в прямом диалоге с Sergey."
-                )
-                out_q.put({
-                    "type": "send_message",
-                    "chat_id": task.get("chat_id"),
-                    "text": _warn_msg,
-                    "worker_id": wid,
-                    "is_worker": True,
-                })
-                _append_jsonl(
-                    _drive / "logs" / "supervisor.jsonl",
-                    {
-                        "ts": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-                        "type": "worker_destructive_blocked",
-                        "task_id": task.get("id"),
-                        "text_snippet": _task_text[:200],
-                    },
+            matched = _match_destructive_keyword(str(task.get("text") or ""))
+            if matched and not task.get("_allow_destructive"):
+                _emit_guard_refusal(
+                    wid=wid, task=task, matched_keyword=matched,
+                    out_q=out_q, drive_root=_drive,
                 )
                 continue
 

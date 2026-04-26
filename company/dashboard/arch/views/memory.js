@@ -1,6 +1,6 @@
 // Память / Memory — Phase 1.9: 3 lifetime levels + 4 long-term sub-blocks, RU/EN.
 
-import { t, tField, getLang } from '../lib/i18n.js?v=phase1.9';
+import { t, tField, getLang } from '../lib/i18n.js?v=phase1.10';
 
 const LEVEL_META = {
   working: {

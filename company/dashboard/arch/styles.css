@@ -1206,6 +1206,17 @@ svg.ecosystem .safety-more {
   pointer-events: none;
 }
 
+/* Confabulation-detector counter cards inside the safety strip */
+svg.ecosystem .safety-detector-card { cursor: pointer; }
+svg.ecosystem .safety-detector-card rect {
+  transition: stroke .15s, fill .15s;
+}
+svg.ecosystem .safety-detector-card:hover rect {
+  fill: rgba(225,112,85,0.18);
+  stroke: #fdcb6e;
+}
+svg.ecosystem .safety-detectors-hint { pointer-events: none; }
+
 /* --- SAFETY organ: dashed outline to set it apart --- */
 svg.ecosystem .organ-safety .organ-bg { stroke-dasharray: 8 6; }
 

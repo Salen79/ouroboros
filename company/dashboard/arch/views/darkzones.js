@@ -1,7 +1,7 @@
 // Тёмные зоны / Dark Zones — Phase 1.9 with RU/EN group headers + status badges.
 
-import { renderDarkZone } from '../lib/panel.js?v=phase1.9';
-import { t, getLang } from '../lib/i18n.js?v=phase1.9';
+import { renderDarkZone } from '../lib/panel.js?v=phase1.10';
+import { t, getLang } from '../lib/i18n.js?v=phase1.10';
 
 // Must match SAFETY_DZ_GROUPS in build_architecture_snapshot.py
 const TAXONOMY = [

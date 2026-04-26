@@ -1,7 +1,7 @@
 // Инструменты / Tools — Phase 1.9: 6 collapsible functional blocks, RU/EN.
 
-import { renderTool } from '../lib/panel.js?v=phase1.9';
-import { t, tField } from '../lib/i18n.js?v=phase1.9';
+import { renderTool } from '../lib/panel.js?v=phase1.10';
+import { t, tField } from '../lib/i18n.js?v=phase1.10';
 
 const BLOCK_ACCENT = {
   tools_read:        '#74b9ff',

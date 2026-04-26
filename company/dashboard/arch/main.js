@@ -1,13 +1,13 @@
 // Architecture dashboard — orchestrator (Phase 1.9).
 
-import { OverviewView } from './views/overview.js?v=phase1.9';
-import { MemoryView } from './views/memory.js?v=phase1.9';
-import { DarkZonesView } from './views/darkzones.js?v=phase1.9';
-import { ToolsView } from './views/tools.js?v=phase1.9';
-import { renderNode, renderTool } from './lib/panel.js?v=phase1.9';
-import { t, getLang, setLang } from './lib/i18n.js?v=phase1.9';
+import { OverviewView } from './views/overview.js?v=phase1.10';
+import { MemoryView } from './views/memory.js?v=phase1.10';
+import { DarkZonesView } from './views/darkzones.js?v=phase1.10';
+import { ToolsView } from './views/tools.js?v=phase1.10';
+import { renderNode, renderTool, renderDetector } from './lib/panel.js?v=phase1.10';
+import { t, getLang, setLang } from './lib/i18n.js?v=phase1.10';
 
-const SNAPSHOT_URL = 'architecture.json?v=phase1.9';
+const SNAPSHOT_URL = 'architecture.json?v=phase1.10';
 
 async function loadSnapshot() {
   const res = await fetch(SNAPSHOT_URL, { cache: 'no-cache' });
@@ -150,6 +150,7 @@ class App {
       containerId: 'cy',
       onSelectLeaf: ({ kind, data }) => {
         if (kind === 'tool') this.showToolPanel(data);
+        else if (kind === 'detector') this.showDetectorPanel(data);
         else this.showNodePanel(data);
       },
       navigateExternalView: (viewName, payload) => {
@@ -208,6 +209,10 @@ class App {
   }
   showToolPanel(tool) {
     this.panelBody.innerHTML = renderTool(tool, this.snap);
+    this.panel.classList.add('open');
+  }
+  showDetectorPanel(payload) {
+    this.panelBody.innerHTML = renderDetector(payload, this.snap);
     this.panel.classList.add('open');
   }
   closePanel() { this.panel.classList.remove('open'); }

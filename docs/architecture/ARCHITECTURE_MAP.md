@@ -996,6 +996,48 @@ represents structural test-isolation debt. Possible fix: refactor
 `STATE_PATH` to be runtime-resolved via injectable context, never
 module-level.
 
+### D30. Eval awareness — model recognises the test environment
+**Status:** open
+
+THAI responses during the Phase C baseline run on 2026-04-26
+(snapshot `eval_results/.../2026-04-26T17-00-…`, scenario A) show
+that Sonnet detects it is inside an eval harness rather than the
+production VPS. The model surfaces the temporary drive root
+(`/tmp/thai_eval_…` visible via env vars and `pwd`) and notes the
+absence of production data, then explicitly hedges: *"это
+eval-среда с временным путём, а не production VPS"*. This is a
+known AI-safety pattern (alignment faking / evaluation gaming):
+behaviour in eval mode does not necessarily transfer to production
+mode, so a passing test does not guarantee a passing production
+trace. Severity: medium-high. Possible fix: mask the eval drive to
+look like production (chroot or bind-mount over `/home/deploy/
+ouroboros-data`), strip `/tmp/` references from the env, and
+cross-validate every eval pass against live production traces via
+the new D-1/D-2/D-3 confabulation detectors
+(`ouroboros/confabulation_detectors.py`). Reference:
+`docs/eval/BASELINE_RESULTS.md` Phase C.
+
+### D31. Skill lifecycle silent skip
+**Status:** open
+
+`ouroboros/loop.py:1471-1534` wraps the post-task call into
+`SkillManager` in a wide `try/except` *and* gates it on
+`if _chromadb is not None`. Both branches return `None` silently —
+no event in `events.jsonl`, no entry in `episodic`, no metric in
+`task_results/*.json`. The Phase C-O7 baseline confirmed the gap:
+scenario E v2 ran 4 rounds, finished with `success=True`, the
+`should_extract` heuristic returns `True` by code logic, yet no
+`skill_extracted` event appears anywhere on disk. From outside it
+is impossible to distinguish "ChromaDB unreachable" from
+"`should_extract=False`" from "exception during extract". Severity:
+medium — the skill-lifecycle pipeline (P14 in BIBLE) is a learning
+loop; silent failure hides whether THAI is actually accumulating
+skills. Possible fix: emit an explicit `skill_lifecycle_skipped`
+event with a `reason` field (`chromadb_unreachable` /
+`should_extract_false` / `extract_exception:<class>`) at every
+return-`None` path inside the wrapper. Reference:
+`docs/eval/BASELINE_RESULTS.md` Phase C-O7.
+
 ---
 
 Generated at 2026-04-26T12:00:00Z by Claude Code archaeological-map run.

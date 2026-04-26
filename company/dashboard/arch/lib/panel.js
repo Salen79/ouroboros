@@ -1,6 +1,6 @@
 // Side panel renderer — given a datum and the full snapshot, builds HTML.
 
-import { t, tField } from './i18n.js?v=phase1.9';
+import { t, tField } from './i18n.js?v=phase1.10';
 
 function esc(s) {
   if (s == null) return '';
@@ -151,6 +151,84 @@ function renderStatusBlock(dz) {
       </div>
       ${summary ? `<div class="dz-fix-summary">${esc(summary)}</div>` : ''}
     </div>
+  `;
+}
+
+export function renderDetector(payload, snapshot) {
+  const item = payload.item || {};
+  const alerts = payload.alerts || [];
+  const totals = ((payload.block || {}).totals) || {};
+  const updated = ((payload.block || {}).generated_at) || '';
+
+  const ref = item.ref || '';
+  const subline = ref
+    ? `<code>${esc(ref)}</code>`
+    : '<span class="muted">no source pointer</span>';
+
+  const counters = `
+    <div class="badges" style="margin-top:8px;">
+      <span class="chip" style="background:rgba(225,112,85,0.18);color:#fab1a0;">
+        ${esc(t('detector.today'))}: <b>${item.today | 0}</b>
+      </span>
+      <span class="chip" style="background:rgba(225,112,85,0.18);color:#fab1a0;">
+        ${esc(t('detector.week'))}: <b>${item.week | 0}</b>
+      </span>
+      <span class="chip" style="background:rgba(225,112,85,0.18);color:#fab1a0;">
+        ${esc(t('detector.all'))}: <b>${item.all | 0}</b>
+      </span>
+    </div>
+  `;
+
+  const renderEvidence = ev => {
+    if (!ev) return '';
+    if (ev.phantom_facts) {
+      return ev.phantom_facts.map(p =>
+        `<span class="file-tag" title="${esc(p.kind)}">${esc(p.token)}</span>`,
+      ).join(' ');
+    }
+    if (ev.panic_terms) {
+      return ev.panic_terms.map(t => `<span class="file-tag">${esc(t)}</span>`).join(' ');
+    }
+    if (ev.by_term) {
+      return Object.entries(ev.by_term).map(
+        ([term, n]) => `<span class="file-tag">${esc(term)} ×${n}</span>`,
+      ).join(' ');
+    }
+    return '';
+  };
+
+  const renderExcerpt = ev => {
+    const x = ev && (ev.report_excerpt || (ev.samples && ev.samples[0])) || '';
+    if (!x) return '';
+    const trimmed = x.length > 240 ? x.slice(0, 240) + '…' : x;
+    return `<p style="margin-top:4px;font-size:12.5px;color:var(--muted);white-space:pre-wrap;">${esc(trimmed)}</p>`;
+  };
+
+  const list = alerts.length
+    ? alerts.slice(0, 10).map(a => `
+      <div style="margin-bottom:10px;padding:8px 10px;border:1px solid rgba(225,112,85,0.25);border-radius:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="chip darkzone status-open">${esc(a.type)}</span>
+          <span class="muted" style="font-size:11px;">${esc((a.ts || '').slice(0, 16).replace('T', ' '))}</span>
+        </div>
+        <div style="margin-top:6px;font-size:13px;">${esc(a.summary || '')}</div>
+        ${renderEvidence(a.evidence) ? `<div style="margin-top:6px;">${renderEvidence(a.evidence)}</div>` : ''}
+        ${renderExcerpt(a.evidence)}
+      </div>
+    `).join('')
+    : `<p class="muted">${esc(t('detector.no_alerts'))}</p>`;
+
+  return `
+    <h2><span class="dz-id">${esc(payload.id)}</span> ${esc(item.title || '')}</h2>
+    <div class="subline">${subline}</div>
+    ${counters}
+    <p class="muted" style="margin-top:8px;font-size:12px;">
+      ${esc(t('detector.run'))}: ${esc(t('detector.today'))} ${totals.today | 0}
+      · ${esc(t('detector.week'))} ${totals.week | 0} · ${esc(t('detector.all'))} ${totals.all | 0}
+      ${updated ? ` · ${esc(updated.slice(0, 16).replace('T', ' '))}` : ''}
+    </p>
+    <h3>${esc(t('detector.recent'))}</h3>
+    ${list}
   `;
 }
 

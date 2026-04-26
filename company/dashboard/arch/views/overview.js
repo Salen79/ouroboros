@@ -1,6 +1,6 @@
 // Обзор / Overview — Phase 1.9 (hover invert + No-edges filter + RU/EN).
 
-import { getLang, t, tField } from '../lib/i18n.js?v=phase1.9';
+import { getLang, t, tField } from '../lib/i18n.js?v=phase1.10';
 
 const EDGE_COLORS = {
   control: '#74b9ff',  // Управление / Control (invokes / governs)
@@ -367,6 +367,12 @@ export class OverviewView {
       const innerTop = b.y + 70; // below the label + question
       const rowH = 26;
       const isWeaknesses = sb.id === 'safety_weaknesses';
+      const isDetectors = sb.kind === 'detectors' || sb.id === 'safety_detectors';
+
+      if (isDetectors) {
+        parts.push(this._renderSafetyDetectorsBlock(sb, b));
+        continue;
+      }
 
       const visible = isWeaknesses ? items.slice(0, 8) : items;
       const rows = visible.map((it, i) => {
@@ -422,6 +428,72 @@ export class OverviewView {
     return parts.join('');
   }
 
+  // Detector strip — three large counter cards (today / week / all),
+  // one per detector, plus a dimmed "open details" hint.
+  _renderSafetyDetectorsBlock(sb, b) {
+    const items = sb.items || [];
+    const totals = sb.totals || { today: 0, week: 0, all: 0 };
+    const cardW = 600;
+    const cardH = 70;
+    const gap = 20;
+    const totalW = items.length * cardW + (items.length - 1) * gap;
+    const startX = b.x + (b.w - totalW) / 2;
+    const cardY = b.y + 60;
+
+    const lblToday = getLang() === 'en' ? 'today' : 'сегодня';
+    const lblWeek  = getLang() === 'en' ? 'week'  : 'неделя';
+    const lblAll   = getLang() === 'en' ? 'all'   : 'всего';
+
+    const cards = items.map((it, i) => {
+      const x = startX + i * (cardW + gap);
+      const today = it.today | 0;
+      const week  = it.week  | 0;
+      const all   = it.all   | 0;
+      const hot = today > 0 || week > 0;
+      const stroke = hot ? '#e17055' : '#a26052';
+      const fill = hot ? 'rgba(225,112,85,0.30)' : 'rgba(225,112,85,0.18)';
+      const tFill = hot ? '#fab1a0' : '#ffd1c2';
+      const title = tField(it, 'title') || it.title || it.id;
+      return `
+        <g class="safety-detector-card" data-detector-id="${this._esc(it.id)}"
+           transform="translate(${x}, ${cardY})">
+          <rect x="0" y="0" width="${cardW}" height="${cardH}" rx="10" ry="10"
+                fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+          <text class="safety-detector-id" x="20" y="26"
+                fill="#fab1a0" font-size="18" font-weight="700">${this._esc(it.id)}</text>
+          <text class="safety-detector-title" x="20" y="50"
+                fill="rgba(255,255,255,0.78)" font-size="13">${this._esc(title)}</text>
+          <g transform="translate(${cardW - 320}, 14)">
+            <text x="60"  y="22" text-anchor="middle" fill="${tFill}" font-size="22" font-weight="700">${today}</text>
+            <text x="60"  y="46" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="11">${this._esc(lblToday)}</text>
+            <text x="170" y="22" text-anchor="middle" fill="${tFill}" font-size="22" font-weight="700">${week}</text>
+            <text x="170" y="46" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="11">${this._esc(lblWeek)}</text>
+            <text x="280" y="22" text-anchor="middle" fill="${tFill}" font-size="22" font-weight="700">${all}</text>
+            <text x="280" y="46" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="11">${this._esc(lblAll)}</text>
+          </g>
+          <title>${this._esc(it.ref || '')}</title>
+        </g>
+      `;
+    }).join('');
+
+    const detailsHint = getLang() === 'en'
+      ? `Click a card → recent ${(this.snap.confabulation_alerts && this.snap.confabulation_alerts.alerts_recent || []).length} alerts`
+      : `Кликни карточку → последние ${(this.snap.confabulation_alerts && this.snap.confabulation_alerts.alerts_recent || []).length} alerts`;
+    const updated = sb.generated_at
+      ? (getLang() === 'en' ? `updated ${sb.generated_at.slice(0, 16).replace('T', ' ')}` : `обновлено ${sb.generated_at.slice(0, 16).replace('T', ' ')}`)
+      : (getLang() === 'en' ? 'no run yet' : 'ни разу не запущен');
+
+    return `
+      <g class="safety-block-body safety-detectors-body" data-block-id="${sb.id}" data-block-organ="safety">
+        ${cards}
+        <text class="safety-detectors-hint" x="${b.x + b.w / 2}" y="${b.y + b.h - 18}"
+              text-anchor="middle" fill="rgba(255,255,255,0.40)" font-size="11">
+          ${this._esc(detailsHint)} · ${this._esc(updated)} · totals: today ${totals.today | 0} / week ${totals.week | 0} / all ${totals.all | 0}
+        </text>
+      </g>
+    `;
+  }
+
   // -------------------------------------------------------------------
   // Legend + filter bar (rendered as HTML siblings of the SVG)
   // -------------------------------------------------------------------
@@ -463,6 +535,26 @@ export class OverviewView {
       if (gotoDz && gotoDz.dataset.gotoDz) {
         e.stopPropagation();
         this.navigateExternalView('darkzones', gotoDz.dataset.gotoDz);
+        return;
+      }
+      // Detector card click → side panel with recent alerts
+      const detectorCard = e.target.closest('[data-detector-id]');
+      if (detectorCard) {
+        e.stopPropagation();
+        const id = detectorCard.dataset.detectorId;
+        const block = (this.snap.blocks && this.snap.blocks.safety || [])
+          .find(b => b.id === 'safety_detectors');
+        const item = (block && block.items || []).find(it => it.id === id);
+        const alerts = (this.snap.confabulation_alerts || {}).alerts_recent || [];
+        this.onSelectLeaf && this.onSelectLeaf({
+          kind: 'detector',
+          data: {
+            id,
+            block,
+            item,
+            alerts: alerts.filter(a => a.type === id),
+          },
+        });
         return;
       }
       // Node click → open side panel

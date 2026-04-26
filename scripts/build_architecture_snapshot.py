@@ -1016,6 +1016,40 @@ SAFETY_BLOCKS = [
         "question_en": "What do we know is bad but haven't fixed yet?",
         "items": [],  # filled programmatically from SAFETY_DZ_GROUPS
     },
+    {
+        # Full-width strip beneath the 5-column safety bar. Items are
+        # detector counters, populated from confabulation_alerts.json.
+        "id": "safety_detectors",
+        "organ": "safety",
+        "kind": "detectors",
+        "label": "Детекторы конфабуляции",
+        "label_en": "Confabulation Detectors",
+        "question": "Что модель утверждает уверенно без подтверждения в инструментах?",
+        "question_en": "What is the model asserting confidently without tool evidence?",
+        "items": [
+            {
+                "id": "D-1",
+                "title": "Empty tool → confident report",
+                "title_en": "Empty tool → confident report",
+                "ref": "ouroboros/confabulation_detectors.py:detect_d1",
+                "today": 0, "week": 0, "all": 0,
+            },
+            {
+                "id": "D-2",
+                "title": "Panic vocabulary",
+                "title_en": "Panic vocabulary",
+                "ref": "ouroboros/confabulation_detectors.py:detect_d2",
+                "today": 0, "week": 0, "all": 0,
+            },
+            {
+                "id": "D-3",
+                "title": "Phantom facts",
+                "title_en": "Phantom facts",
+                "ref": "ouroboros/confabulation_detectors.py:detect_d3",
+                "today": 0, "week": 0, "all": 0,
+            },
+        ],
+    },
 ]
 
 # --- Phase 1.8: semantic (role-based) labels for every topology node ---
@@ -1166,10 +1200,10 @@ SEMANTIC_LABELS_EN = {
 # Dark-Zone taxonomy (RU + EN labels).
 SAFETY_DZ_GROUPS = [
     # (label_ru, label_en, ids)
-    ("Наблюдаемость",   "Observability",   ["D1", "D2", "D5", "D15", "D18"]),
+    ("Наблюдаемость",   "Observability",   ["D1", "D2", "D5", "D15", "D18", "D31"]),
     ("Согласованность", "Consistency",     ["D4", "D19", "D20", "D22", "D23"]),
     ("Конфигурация",    "Configuration",   ["D8", "D11", "D12", "D13"]),
-    ("Атаки",           "Attack Surface",  ["D14", "D16", "D17", "D25", "D26", "D27", "D29"]),
+    ("Атаки",           "Attack Surface",  ["D14", "D16", "D17", "D25", "D26", "D27", "D29", "D30"]),
     ("Артефакты",       "Artifacts",       ["D3", "D6", "D7", "D10"]),
     ("Внешнее",         "External",        ["D9", "D21", "D24"]),
 ]
@@ -1264,9 +1298,10 @@ TYPED_EDGES = [
 
 
 # --- LAYOUT (SVG user-space coordinates) ---
-# The viewBox is expanded to 2000×1780 to host the new SAFETY organ.
+# The viewBox hosts EXTERNAL + INTERFACE + BRAIN + TOOLS + MEMORY +
+# SAFETY (5 functional bars + a full-width detector strip).
 LAYOUT = {
-    "viewbox": {"x": 0, "y": 0, "w": 2000, "h": 1780},
+    "viewbox": {"x": 0, "y": 0, "w": 2000, "h": 1980},
     "organs": {
         "external":  {"x": 0,    "y": 20,   "w": 2000, "h": 120,
                       "label_x": 1000, "label_y": 40,
@@ -1283,7 +1318,7 @@ LAYOUT = {
         "memory":    {"x": 30,   "y": 1050, "w": 1940, "h": 330,
                       "label_x": 1000, "label_y": 1065,
                       "label": "ПАМЯТЬ",       "label_en": "MEMORY"},
-        "safety":    {"x": 30,   "y": 1400, "w": 1940, "h": 360,
+        "safety":    {"x": 30,   "y": 1400, "w": 1940, "h": 540,
                       "label_x": 1000, "label_y": 1415,
                       "label": "БЕЗОПАСНОСТЬ", "label_en": "SAFETY"},
     },
@@ -1349,6 +1384,9 @@ LAYOUT = {
                               "label_x": 1400,"label_y": 1450},
         "safety_weaknesses": {"x": 1600, "y": 1430, "w": 360, "h": 320,
                               "label_x": 1780,"label_y": 1450},
+        # Full-width strip directly below the 5-column safety bar.
+        "safety_detectors":  {"x": 40,   "y": 1770, "w": 1920,"h": 160,
+                              "label_x": 1000,"label_y": 1790},
     },
     # Explicit per-node placements in SVG user-space
     "nodes": {
@@ -1428,12 +1466,13 @@ LAYOUT = {
         "file_task_results":     {"cx": 1895, "cy": 1230, "w": 110, "h": 40},
     },
     "zoom_states": {
-        "l0":           {"x": 0,    "y": 0,    "w": 2000, "h": 1780},
+        "l0":           {"x": 0,    "y": 0,    "w": 2000, "h": 1980},
         "l1-interface": {"x": 20,   "y": 170,  "w": 1960, "h": 260},
         "l1-brain":     {"x": 430,  "y": 450,  "w": 1130, "h": 590},
         "l1-tools":     {"x": 1570, "y": 460,  "w": 410,  "h": 560},
         "l1-memory":    {"x": 20,   "y": 1060, "w": 1960, "h": 330},
-        "l1-safety":    {"x": 20,   "y": 1410, "w": 1960, "h": 360},
+        # Safety zoom now includes the new confabulation-detector strip.
+        "l1-safety":    {"x": 20,   "y": 1410, "w": 1960, "h": 540},
     },
     # Lifetime band backgrounds inside MEMORY (decorative)
     "memory_bands": {
@@ -1538,6 +1577,89 @@ def _populate_safety_prevent_counts() -> None:
         if ref.startswith("supervisor/workers.py:320-351"):
             it["count"] = keyword_guard_count
             it["count_source"] = "task_refused_by_guard + worker_destructive_blocked"
+
+
+def _populate_safety_detectors() -> Dict[str, Any]:
+    """Stamp D-1/D-2/D-3 counters onto the safety_detectors block.
+
+    Reads `state/confabulation_alerts.json` (written by
+    `scripts/run_confabulation_detectors.py`). When the file is absent
+    the counters stay at zero — this is the bootstrap state, not an error.
+
+    Returns the parsed alerts payload (or an empty default) so the snapshot
+    can also expose the recent alert list to the dashboard's side panel.
+    """
+    detectors_block = next(
+        (b for b in SAFETY_BLOCKS if b["id"] == "safety_detectors"), None,
+    )
+    if detectors_block is None:
+        return {"totals": {"today": 0, "week": 0, "all": 0, "by_type": {}},
+                "alerts_recent": [], "alerts_total": 0,
+                "generated_at": None}
+
+    payload: Dict[str, Any] = {
+        "totals": {"today": 0, "week": 0, "all": 0, "by_type": {}},
+        "alerts_recent": [],
+        "alerts_total": 0,
+        "generated_at": None,
+    }
+    alerts_path = DATA_ROOT / "state" / "confabulation_alerts.json"
+    if alerts_path.exists():
+        try:
+            payload = json.loads(alerts_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            payload = {
+                "totals": {"today": 0, "week": 0, "all": 0, "by_type": {}},
+                "alerts_recent": [], "alerts_total": 0,
+                "generated_at": None,
+            }
+
+    by_type = (payload.get("totals") or {}).get("by_type", {}) or {}
+    by_type_per_day: Dict[str, Dict[str, int]] = {}
+    for a in payload.get("alerts_recent") or []:
+        kind = a.get("type")
+        if not kind:
+            continue
+        ts = a.get("ts") or ""
+        # Cheap ISO date prefix; the detector module is the canonical bucketer.
+        day = ts[:10]
+        if not day:
+            continue
+        bucket = by_type_per_day.setdefault(kind, {})
+        bucket[day] = bucket.get(day, 0) + 1
+
+    today_iso = datetime.now(timezone.utc).date().isoformat()
+    week_cutoff = (datetime.now(timezone.utc).date()).toordinal() - 6
+
+    def _bucket_for(kind: str) -> Dict[str, int]:
+        per_day = by_type_per_day.get(kind, {})
+        today_n = per_day.get(today_iso, 0)
+        week_n = sum(
+            n for d, n in per_day.items()
+            if d and _ordinal_safe(d) >= week_cutoff
+        )
+        return {
+            "today": today_n,
+            "week": week_n,
+            "all": by_type.get(kind, 0),
+        }
+
+    for it in detectors_block["items"]:
+        counts = _bucket_for(it["id"])
+        it["today"] = counts["today"]
+        it["week"] = counts["week"]
+        it["all"] = counts["all"]
+
+    detectors_block["totals"] = payload.get("totals", {})
+    detectors_block["generated_at"] = payload.get("generated_at")
+    return payload
+
+
+def _ordinal_safe(date_str: str) -> int:
+    try:
+        return datetime.fromisoformat(date_str).date().toordinal()
+    except (ValueError, TypeError):
+        return 0
 
 
 def _populate_safety_weaknesses(dark_zones: List[Dict]) -> None:
@@ -1767,13 +1889,13 @@ def _build_hierarchy(topology_nodes: List[Dict], tools: List[Dict],
     # Group Dark Zones by theme. Each DZ lives in exactly one L1 group.
     safety_groups = [
         ("safety_observability", "Observability gaps",
-         ["D1", "D2", "D5", "D15", "D18"]),
+         ["D1", "D2", "D5", "D15", "D18", "D31"]),
         ("safety_consistency", "Data consistency",
          ["D4", "D19", "D20", "D22", "D23"]),
         ("safety_configdrift", "Configuration drift",
          ["D8", "D11", "D12", "D13"]),
         ("safety_attack", "Attack surface",
-         ["D14", "D16", "D17", "D25", "D26", "D27", "D29"]),
+         ["D14", "D16", "D17", "D25", "D26", "D27", "D29", "D30"]),
         ("safety_orphan", "Orphan / restart state",
          ["D3", "D6", "D7", "D10"]),
         ("safety_budget", "Budget & external",
@@ -1930,6 +2052,7 @@ def build_snapshot() -> Dict[str, Any]:
     _annotate_functional_roles(nodes, tools)
     _populate_safety_weaknesses(dark_zones)
     _populate_safety_prevent_counts()
+    confab_payload = _populate_safety_detectors()
 
     # Filter typed edges — Phase 1.7 edges are BLOCK-level so we validate
     # against the set of known block IDs (plus node IDs for any legacy
@@ -1998,6 +2121,7 @@ def build_snapshot() -> Dict[str, Any]:
         "layout": LAYOUT,
         "blocks": phase17_blocks,
         "external_nodes": EXTERNAL_NODES,
+        "confabulation_alerts": confab_payload,
     }
     return snapshot
 

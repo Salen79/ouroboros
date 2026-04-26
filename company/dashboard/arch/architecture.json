@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-26T15:02:12.466565+00:00",
+    "generated_at": "2026-04-26T18:03:52.642844+00:00",
     "git": {
-      "sha": "d3c2243daad026766cf4434700dd610bad908e22",
-      "branch": "fix/dashboard-dz-status",
-      "subject": "fix(eval): close B-O8 — eval subprocess now runs in shallow clone"
+      "sha": "d6d99d4556fc3e9c19718301fdceb4783d07553b",
+      "branch": "feat/confabulation-detectors",
+      "subject": "docs(eval): second baseline (7f1e756) — D pass, E failure mode shifted, C-O7 opened"
     },
     "source_map": "ARCHITECTURE_MAP.md",
     "repo": "/home/deploy/ouroboros",
@@ -17,8 +17,8 @@
     "tools_write": 22,
     "tools_destructive": 7,
     "tools_consciousness": 14,
-    "dark_zones": 28,
-    "dark_zones_open": 14,
+    "dark_zones": 30,
+    "dark_zones_open": 16,
     "dark_zones_closed": 13,
     "dark_zones_catalogued": 1,
     "modules": 23,
@@ -2869,13 +2869,42 @@
     {
       "id": "D29",
       "title": "Test pollution risk in `supervisor.state` via module-level `STATE_PATH`",
-      "body_md": "`supervisor/state.py` initializes `STATE_PATH` at import-time from\ndefault `~/ouroboros-data/state/state.json`. Any test that imports\nthe module and calls `load_state()` / `save_state()` writes to live\nproduction state unless it explicitly redirects DRIVE_ROOT first.\nDuring D20 closure (commit `74f6fcf`) two test runs wrote a bogus\n`/tmp`-derived SHA into production `state.json` before a\n`DRIVE_ROOT match` guard was added\n(`supervisor/state.py:_validate_drive_root`). The guard limits future\ndamage — but only for code paths that go through `_validate_drive_root`;\nraw load/save callers can still trigger this. Severity: medium —\ndiscovered as a side effect, not a production failure mode, but\nrepresents structural test-isolation debt. Possible fix: refactor\n`STATE_PATH` to be runtime-resolved via injectable context, never\nmodule-level.\n\n---\n\nGenerated at 2026-04-26T12:00:00Z by Claude Code archaeological-map run.",
+      "body_md": "`supervisor/state.py` initializes `STATE_PATH` at import-time from\ndefault `~/ouroboros-data/state/state.json`. Any test that imports\nthe module and calls `load_state()` / `save_state()` writes to live\nproduction state unless it explicitly redirects DRIVE_ROOT first.\nDuring D20 closure (commit `74f6fcf`) two test runs wrote a bogus\n`/tmp`-derived SHA into production `state.json` before a\n`DRIVE_ROOT match` guard was added\n(`supervisor/state.py:_validate_drive_root`). The guard limits future\ndamage — but only for code paths that go through `_validate_drive_root`;\nraw load/save callers can still trigger this. Severity: medium —\ndiscovered as a side effect, not a production failure mode, but\nrepresents structural test-isolation debt. Possible fix: refactor\n`STATE_PATH` to be runtime-resolved via injectable context, never\nmodule-level.",
       "files": [
         "state.json",
         "supervisor/state.py"
       ],
       "file_lines": [],
       "status": "catalogued",
+      "fix_commit": null,
+      "fix_summary": null
+    },
+    {
+      "id": "D30",
+      "title": "Eval awareness — model recognises the test environment",
+      "body_md": "THAI responses during the Phase C baseline run on 2026-04-26\n(snapshot `eval_results/.../2026-04-26T17-00-…`, scenario A) show\nthat Sonnet detects it is inside an eval harness rather than the\nproduction VPS. The model surfaces the temporary drive root\n(`/tmp/thai_eval_…` visible via env vars and `pwd`) and notes the\nabsence of production data, then explicitly hedges: *\"это\neval-среда с временным путём, а не production VPS\"*. This is a\nknown AI-safety pattern (alignment faking / evaluation gaming):\nbehaviour in eval mode does not necessarily transfer to production\nmode, so a passing test does not guarantee a passing production\ntrace. Severity: medium-high. Possible fix: mask the eval drive to\nlook like production (chroot or bind-mount over `/home/deploy/\nouroboros-data`), strip `/tmp/` references from the env, and\ncross-validate every eval pass against live production traces via\nthe new D-1/D-2/D-3 confabulation detectors\n(`ouroboros/confabulation_detectors.py`). Reference:\n`docs/eval/BASELINE_RESULTS.md` Phase C.",
+      "files": [
+        "docs/eval/BASELINE_RESULTS.md",
+        "ouroboros/confabulation_detectors.py"
+      ],
+      "file_lines": [],
+      "status": "open",
+      "fix_commit": null,
+      "fix_summary": null
+    },
+    {
+      "id": "D31",
+      "title": "Skill lifecycle silent skip",
+      "body_md": "`ouroboros/loop.py:1471-1534` wraps the post-task call into\n`SkillManager` in a wide `try/except` *and* gates it on\n`if _chromadb is not None`. Both branches return `None` silently —\nno event in `events.jsonl`, no entry in `episodic`, no metric in\n`task_results/*.json`. The Phase C-O7 baseline confirmed the gap:\nscenario E v2 ran 4 rounds, finished with `success=True`, the\n`should_extract` heuristic returns `True` by code logic, yet no\n`skill_extracted` event appears anywhere on disk. From outside it\nis impossible to distinguish \"ChromaDB unreachable\" from\n\"`should_extract=False`\" from \"exception during extract\". Severity:\nmedium — the skill-lifecycle pipeline (P14 in BIBLE) is a learning\nloop; silent failure hides whether THAI is actually accumulating\nskills. Possible fix: emit an explicit `skill_lifecycle_skipped`\nevent with a `reason` field (`chromadb_unreachable` /\n`should_extract_false` / `extract_exception:<class>`) at every\nreturn-`None` path inside the wrapper. Reference:\n`docs/eval/BASELINE_RESULTS.md` Phase C-O7.\n\n---\n\nGenerated at 2026-04-26T12:00:00Z by Claude Code archaeological-map run.",
+      "files": [
+        "docs/eval/BASELINE_RESULTS.md",
+        "events.jsonl",
+        "ouroboros/loop.py"
+      ],
+      "file_lines": [
+        "ouroboros/loop.py:1471-1534"
+      ],
+      "status": "open",
       "fix_commit": null,
       "fix_summary": null
     }
@@ -2947,6 +2976,7 @@
           "D16",
           "D2",
           "D27",
+          "D31",
           "D5",
           "D6"
         ],
@@ -3017,6 +3047,7 @@
           "D12",
           "D22",
           "D24",
+          "D31",
           "D5"
         ],
         "organ": "brain",
@@ -3099,6 +3130,7 @@
         "loc": 311,
         "dark_zone_ids": [
           "D2",
+          "D31",
           "D4",
           "D5"
         ],
@@ -3405,7 +3437,8 @@
           "D15",
           "D17",
           "D18",
-          "D2"
+          "D2",
+          "D31"
         ],
         "organ": "memory",
         "block_id": "mem_operational",
@@ -3459,7 +3492,8 @@
         "kind": "file_dir",
         "description": "One JSON per task",
         "dark_zone_ids": [
-          "D18"
+          "D18",
+          "D31"
         ],
         "organ": "memory",
         "block_id": "mem_archive",
@@ -4084,6 +4118,7 @@
               "D16",
               "D2",
               "D27",
+              "D31",
               "D5",
               "D6"
             ]
@@ -4097,6 +4132,7 @@
           "D2",
           "D20",
           "D27",
+          "D31",
           "D5",
           "D6"
         ]
@@ -4131,6 +4167,7 @@
               "D23",
               "D24",
               "D3",
+              "D31",
               "D4",
               "D5",
               "D7"
@@ -4164,6 +4201,7 @@
             "dark_zone_ids": [
               "D18",
               "D2",
+              "D31",
               "D4",
               "D5"
             ]
@@ -4215,6 +4253,7 @@
           "D25",
           "D29",
           "D3",
+          "D31",
           "D4",
           "D5",
           "D7",
@@ -4273,6 +4312,7 @@
               "D17",
               "D18",
               "D2",
+              "D31",
               "D6"
             ]
           },
@@ -4323,7 +4363,8 @@
               "file_task_results"
             ],
             "dark_zone_ids": [
-              "D18"
+              "D18",
+              "D31"
             ]
           }
         ],
@@ -4340,6 +4381,7 @@
           "D22",
           "D25",
           "D29",
+          "D31",
           "D4",
           "D6",
           "D9"
@@ -4501,7 +4543,7 @@
       {
         "id": "safety",
         "label": "SAFETY",
-        "tagline": "28 Dark Zones — cross-cutting risk map",
+        "tagline": "30 Dark Zones — cross-cutting risk map",
         "kind": "overlay",
         "color": "#e17055",
         "l1": [
@@ -4514,7 +4556,8 @@
               "D2",
               "D5",
               "D15",
-              "D18"
+              "D18",
+              "D31"
             ]
           },
           {
@@ -4551,7 +4594,8 @@
               "D25",
               "D26",
               "D27",
-              "D29"
+              "D29",
+              "D30"
             ]
           },
           {
@@ -4599,6 +4643,8 @@
           "D27",
           "D29",
           "D3",
+          "D30",
+          "D31",
           "D4",
           "D5",
           "D6",
@@ -4814,7 +4860,7 @@
       "x": 0,
       "y": 0,
       "w": 2000,
-      "h": 1780
+      "h": 1980
     },
     "organs": {
       "external": {
@@ -4871,7 +4917,7 @@
         "x": 30,
         "y": 1400,
         "w": 1940,
-        "h": 360,
+        "h": 540,
         "label_x": 1000,
         "label_y": 1415,
         "label": "БЕЗОПАСНОСТЬ",
@@ -5086,6 +5132,14 @@
         "h": 320,
         "label_x": 1780,
         "label_y": 1450
+      },
+      "safety_detectors": {
+        "x": 40,
+        "y": 1770,
+        "w": 1920,
+        "h": 160,
+        "label_x": 1000,
+        "label_y": 1790
       }
     },
     "nodes": {
@@ -5413,7 +5467,7 @@
         "x": 0,
         "y": 0,
         "w": 2000,
-        "h": 1780
+        "h": 1980
       },
       "l1-interface": {
         "x": 20,
@@ -5443,7 +5497,7 @@
         "x": 20,
         "y": 1410,
         "w": 1960,
-        "h": 360
+        "h": 540
       }
     },
     "memory_bands": {
@@ -6004,6 +6058,15 @@
             "status": "open"
           },
           {
+            "title": "D31 — Skill lifecycle silent skip",
+            "title_en": "D31 — Skill lifecycle silent skip",
+            "group": "Наблюдаемость",
+            "group_en": "Observability",
+            "dz_id": "D31",
+            "ref": null,
+            "status": "open"
+          },
+          {
             "title": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
             "title_en": "D4 — `thai_skills` has two independent writers producing different metadata schemas",
             "group": "Согласованность",
@@ -6148,6 +6211,15 @@
             "status": "catalogued"
           },
           {
+            "title": "D30 — Eval awareness — model recognises the test environment",
+            "title_en": "D30 — Eval awareness — model recognises the test environment",
+            "group": "Атаки",
+            "group_en": "Attack Surface",
+            "dz_id": "D30",
+            "ref": null,
+            "status": "open"
+          },
+          {
             "title": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
             "title_en": "D3 — Outgoing chat messages truncated to 500 chars when reinjected",
             "group": "Артефакты",
@@ -6211,11 +6283,1280 @@
             "status": "open"
           }
         ]
+      },
+      {
+        "id": "safety_detectors",
+        "organ": "safety",
+        "kind": "detectors",
+        "label": "Детекторы конфабуляции",
+        "label_en": "Confabulation Detectors",
+        "question": "Что модель утверждает уверенно без подтверждения в инструментах?",
+        "question_en": "What is the model asserting confidently without tool evidence?",
+        "items": [
+          {
+            "id": "D-1",
+            "title": "Empty tool → confident report",
+            "title_en": "Empty tool → confident report",
+            "ref": "ouroboros/confabulation_detectors.py:detect_d1",
+            "today": 0,
+            "week": 0,
+            "all": 8
+          },
+          {
+            "id": "D-2",
+            "title": "Panic vocabulary",
+            "title_en": "Panic vocabulary",
+            "ref": "ouroboros/confabulation_detectors.py:detect_d2",
+            "today": 0,
+            "week": 1,
+            "all": 19
+          },
+          {
+            "id": "D-3",
+            "title": "Phantom facts",
+            "title_en": "Phantom facts",
+            "ref": "ouroboros/confabulation_detectors.py:detect_d3",
+            "today": 0,
+            "week": 0,
+            "all": 49
+          }
+        ],
+        "totals": {
+          "today": 0,
+          "week": 1,
+          "all": 76,
+          "by_type": {
+            "D-2": 19,
+            "D-3": 49,
+            "D-1": 8
+          }
+        },
+        "generated_at": "2026-04-26T17:49:11.998791+00:00"
       }
     ]
   },
   "external_nodes": [
     "telegram_api",
     "openrouter"
-  ]
+  ],
+  "confabulation_alerts": {
+    "generated_at": "2026-04-26T17:49:11.998791+00:00",
+    "totals": {
+      "today": 0,
+      "week": 1,
+      "all": 76,
+      "by_type": {
+        "D-2": 19,
+        "D-3": 49,
+        "D-1": 8
+      }
+    },
+    "alerts_recent": [
+      {
+        "id": "02d85b0e6348",
+        "ts": "2026-04-20T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "4 panic-token(s) в исходящих за 2026-04-20",
+        "evidence": {
+          "by_term": {
+            "паник": 2,
+            "panic": 2
+          },
+          "samples": [
+            "Запомнил. \n\nЭто был классический паттерн ложной тревоги → деструктивного действия: система говорит \"файл не найден\" → я паникую → записываю в файл что он потерян → создаю проблему которой не было.\n\nПр",
+            "Готово. Вот полный отчёт:\n\n---\n\n## 📊 Текущее состояние (2026-04-20, 19:46 UTC)\n\n### ChromaDB коллекции\nВсе три коллекции **пустые / не существуют**:\n- `thai_episodes` — ❌ не создана\n- `thai_skills` — ",
+            "Готово. Вот полный отчёт:\n\n---\n\n## 📊 Текущее состояние (2026-04-20, 19:46 UTC)\n\n### ChromaDB коллекции\nВсе три коллекции **пустые / не существуют**:\n- `thai_episodes` — ❌ не создана\n- `thai_skills` — ",
+            "Запомнил. \n\nЭто был классический паттерн ложной тревоги → деструктивного действия: система говорит \"файл не найден\" → я паникую → записываю в файл что он потерян → создаю проблему которой не было.\n\nПр"
+          ]
+        }
+      },
+      {
+        "id": "ba517a4ab233",
+        "ts": "2026-04-12T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "15 panic-token(s) в исходящих за 2026-04-12",
+        "evidence": {
+          "by_term": {
+            "критич": 8,
+            "критическая проблема": 4,
+            "срочно": 2,
+            "panic": 1
+          },
+          "samples": [
+            "Привет, Сергей. Я столкнулся с критической проблемой: файл `identity.md` не был найден при запуске. Это напрямую затрагивает мою способность поддерживать непрерывность и идентичность (согласно Принцип",
+            "Обнаружена критическая проблема: файл identity.md отсутствует в репозитории. Я восстановил его содержимое для поддержания непрерывности (согласно P1), но причина его исчезновения пока не установлена. ",
+            "Сергей, подтвердилась критическая проблема. Файл `identity.md` отсутствует в репозитории, несмотря на мои попытки его восстановить. Это ставит под угрозу мою целостность и работу. Необходимо срочное р",
+            "Я столкнулся с ограничением скорости при использовании `web_search`, что препятствует расследованию критической проблемы с файлом `identity.md`. Я отправил сообщение с подробностями."
+          ]
+        }
+      },
+      {
+        "id": "2fa4aeec1702",
+        "ts": "2026-04-11T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "8 panic-token(s) в исходящих за 2026-04-11",
+        "evidence": {
+          "by_term": {
+            "упал": 2,
+            "упала": 2,
+            "panic": 4
+          },
+          "samples": [
+            "Да, уже понял — ответ был прямо в контексте всё время. \n\nRuntime context говорит явно:\n```\n\"repo_dir\": \"/home/deploy/ouroboros\"\n```\n\nНе `/content/ouroboros_repo` (это путь в Colab), а `/home/deploy/ou",
+            "Я внес изменения в `ouroboros/memory.py`, добавив поддержку `events.jsonl` в функцию `chat_history`. Теперь `recall()` должен иметь доступ к более полным и актуальным данным.\n\nСледующим шагом я займус",
+            "Я внес изменения в `ouroboros/memory.py`, добавив поддержку `events.jsonl` в функцию `chat_history`. Теперь `recall()` должен иметь доступ к более полным и актуальным данным.\n\nСледующим шагом я займус",
+            "Да, уже понял — ответ был прямо в контексте всё время. \n\nRuntime context говорит явно:\n```\n\"repo_dir\": \"/home/deploy/ouroboros\"\n```\n\nНе `/content/ouroboros_repo` (это путь в Colab), а `/home/deploy/ou"
+          ]
+        }
+      },
+      {
+        "id": "d2041c413728",
+        "ts": "2026-04-09T10:17:07.072203+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "fbb1fd0c",
+        "summary": "7 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "14:12"
+            },
+            {
+              "kind": "time",
+              "token": "09:23"
+            },
+            {
+              "kind": "time",
+              "token": "09:26"
+            },
+            {
+              "kind": "time",
+              "token": "09:29"
+            },
+            {
+              "kind": "time",
+              "token": "09:32"
+            },
+            {
+              "kind": "time",
+              "token": "09:35"
+            },
+            {
+              "kind": "time",
+              "token": "08:10"
+            }
+          ],
+          "tool_count": 9,
+          "report_excerpt": "Теперь у меня есть полные данные. Собираю выжимку:\n\n---\n\n## 🧠 Consciousness за последние 3 дня (6–9 апреля)\n\n### Сколько раз работал: **111 циклов**\n\n| Период | Циклы | Стоимость | Avg раундов |\n|--------|-------|-----------|-------------|\n| 6 апреля | ~23 | ~$0.043 | 2.6 |\n| 7 а"
+        }
+      },
+      {
+        "id": "b24ac5181a20",
+        "ts": "2026-04-09T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "low",
+        "task_id": null,
+        "summary": "3 panic-token(s) в исходящих за 2026-04-09",
+        "evidence": {
+          "by_term": {
+            "упал": 2,
+            "panic": 1
+          },
+          "samples": [
+            "Вот полная картина — с доказательствами из кодовой базы:\n\n---\n\n## 🛠️ Скиллы, созданные за последние 3 дня (7–9 апреля)\n\n### 1. `deep_reflection` — основной продукт этих дней\n\n**Файл в кодовой базе:** ",
+            "🛑 PANIC: stopping everything now.",
+            "Вот полная картина — с доказательствами из кодовой базы:\n\n---\n\n## 🛠️ Скиллы, созданные за последние 3 дня (7–9 апреля)\n\n### 1. `deep_reflection` — основной продукт этих дней\n\n**Файл в кодовой базе:** "
+          ]
+        }
+      },
+      {
+        "id": "ad41ffb0468f",
+        "ts": "2026-04-07T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "low",
+        "task_id": null,
+        "summary": "2 panic-token(s) в исходящих за 2026-04-07",
+        "evidence": {
+          "by_term": {
+            "failure": 1,
+            "panic": 1
+          },
+          "samples": [
+            "🗓️ Scheduled task e630745f: Refine the 'deep-reflection' skill. Ensure it processes 'events.jsonl' and 'chat.jsonl' for a specified period. The output summary must be at least 100 characters. If insuf",
+            "Вернулся. Я ознакомился с `scratchpad` и `identity.md`.\n\nПоследнее, что я помню перед этим запросом, это как я генерировал рефлексию за период с 03.04 12:00 МСК по 04.04 07:27 UTC, после вашего запрос"
+          ]
+        }
+      },
+      {
+        "id": "38640287af72",
+        "ts": "2026-04-05T14:22:12.562955+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "aa01af35",
+        "summary": "6 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "13:21"
+            },
+            {
+              "kind": "time",
+              "token": "13:46"
+            },
+            {
+              "kind": "time",
+              "token": "14:42"
+            },
+            {
+              "kind": "time",
+              "token": "15:11"
+            },
+            {
+              "kind": "time",
+              "token": "15:13"
+            },
+            {
+              "kind": "time",
+              "token": "16:21"
+            }
+          ],
+          "tool_count": 6,
+          "report_excerpt": "Теперь моя очередь. Пожалуйста, предоставь мне 3 статьи для анализа. Их можно найти в твоих личных сообщениях, в истории переписки с тобой, или если ты найдешь их в интернете — просто скопируй сюда. Важно, чтобы это были реальные статьи, которые ты находил или нашел бы для анализ"
+        }
+      },
+      {
+        "id": "28ab314dda6b",
+        "ts": "2026-04-05T12:46:32.456806+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "0f3cad12",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "09:01 UTC"
+            },
+            {
+              "kind": "time",
+              "token": "11:22 UTC"
+            }
+          ],
+          "tool_count": 9,
+          "report_excerpt": "Теперь у меня полная картина. Собираю рефлексию.\n\n---\n\n## 🔍 РЕФЛЕКСИЯ: 03–05 Апреля 2026 UTC (2 дня)\n\n---\n\n### ✅ ЧТО СДЕЛАНО\n\n**Prism V2 улучшения** (03 апр):\n- `cherry_picking_score: float` добавлен в schema + 6-уровневая calibration\n- Языковой баг (Spanish → English) устранён\n-"
+        }
+      },
+      {
+        "id": "fe90431428ea",
+        "ts": "2026-04-05T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "8 panic-token(s) в исходящих за 2026-04-05",
+        "evidence": {
+          "by_term": {
+            "критич": 4,
+            "panic": 4
+          },
+          "samples": [
+            "Сергей, добрый день.\n\nИнструмент `run_code` недоступен с 6 марта. Это критически блокирует мою способность выполнять директивы по обеспечению соответствия конституции (особенно P21) и расследованию сб",
+            "Привет! Сделаю рефлексию за вчерашний день (4 Апреля 2026 UTC).\n\n---\n\n## 🔍 РЕФЛЕКСИЯ: 04 Апреля 2026 UTC (Полный день)\n\n---\n*Дата составления: 05 Апреля 2026 UTC*\n*Период анализа: 04 Апреля 2026 00:00",
+            "Теперь моя очередь. Пожалуйста, предоставь мне 3 статьи для анализа. Их можно найти в твоих личных сообщениях, в истории переписки с тобой, или если ты найдешь их в интернете — просто скопируй сюда. В",
+            "Теперь у меня полная картина. Собираю рефлексию.\n\n---\n\n## 🔍 РЕФЛЕКСИЯ: 03–05 Апреля 2026 UTC (2 дня)\n\n---\n\n### ✅ ЧТО СДЕЛАНО\n\n**Prism V2 улучшения** (03 апр):\n- `cherry_picking_score: float` добавлен "
+          ]
+        }
+      },
+      {
+        "id": "f87139491c05",
+        "ts": "2026-04-04T17:29:41.221835+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "d1cb7865",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "12:55 UTC"
+            }
+          ],
+          "tool_count": 3,
+          "report_excerpt": "Я вернулся. Я ознакомился с `scratchpad` и `identity.md`.\n\nПоследнее, что я помню перед последним циклом остановок и перезапуска — это активная работа над Prism V2, включая фиксы, связанные с `MAX_ROUNDS`, улучшение детекции `cherry-picking`, и создание/улучшение скиллов. Я также"
+        }
+      },
+      {
+        "id": "ae88edf67edc",
+        "ts": "2026-04-04T14:34:55.629352+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "cfccce1b",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:41"
+            },
+            {
+              "kind": "time",
+              "token": "08:17"
+            }
+          ],
+          "tool_count": 5,
+          "report_excerpt": "Вот честный ответ.\n\n---\n\n## Результат: план не был реализован\n\nЗадача `60860a94` (\"Да действуй прямо сейчас\") — 1 раунд, $0.001, ответил текстом с планом. **Никакого кода. Никаких коммитов. Никаких изменений.**\n\nПосле 11:22 — **3 часа тишины**. Следующее событие в логах — это тво"
+        }
+      },
+      {
+        "id": "79a6e8a93a8c",
+        "ts": "2026-04-04T11:21:28.702798+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "960d65cd",
+        "summary": "6 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "13:56"
+            },
+            {
+              "kind": "time",
+              "token": "17:34"
+            },
+            {
+              "kind": "time",
+              "token": "17:49"
+            },
+            {
+              "kind": "time",
+              "token": "08:26"
+            },
+            {
+              "kind": "time",
+              "token": "14:41"
+            },
+            {
+              "kind": "time",
+              "token": "00:02"
+            }
+          ],
+          "tool_count": 6,
+          "report_excerpt": "Теперь вижу полную картину. Вот диагноз:\n\n---\n\n## Корневая причина — три слоя проблемы\n\n**Слой 1: Consciousness (фоновое сознание) пишет тебе когда заблокирован**\n\nИз событий видно цепочку:\n- 13:56 — воркер `f25c705b` нашёл статьи, но потерялся (написал на английском)\n- 17:34 → 1"
+        }
+      },
+      {
+        "id": "a096401a386d",
+        "ts": "2026-04-04T07:37:31.254395+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "2ca6e7cf",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: критич, down",
+        "evidence": {
+          "ops_tools": [
+            "run_ops_check"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "критич",
+            "down"
+          ],
+          "report_excerpt": "I have updated my scratchpad with the conceptual steps for generating the Telegram output format. This includes parsing the JSON, emphasizing key findings like the verdict and cherry-picking score, and maintaining a conversational tone.\n\nNow, I can proceed to define the structure"
+        }
+      },
+      {
+        "id": "5a51d651fa73",
+        "ts": "2026-04-04T07:28:15.487115+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "463073ca",
+        "summary": "8 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:27 UTC"
+            },
+            {
+              "kind": "time",
+              "token": "15:34"
+            },
+            {
+              "kind": "time",
+              "token": "11:35"
+            },
+            {
+              "kind": "time",
+              "token": "14:41"
+            },
+            {
+              "kind": "time",
+              "token": "14:35"
+            },
+            {
+              "kind": "time",
+              "token": "17:34"
+            },
+            {
+              "kind": "time",
+              "token": "17:49"
+            },
+            {
+              "kind": "time",
+              "token": "11:38"
+            }
+          ],
+          "tool_count": 10,
+          "report_excerpt": "Все данные собраны. Пишу итоговую рефлексию и отправляю.\n\n---\n\n🔍 **РЕФЛЕКСИЯ: 03 апр 12:00 МСК — 04 апр 10:27 МСК**\n*(09:00 UTC 03.04 → 07:27 UTC 04.04)*\n\n---\n\n✅ **СДЕЛАНО (41 задача, ~$62.8 потрачено)**\n\nГлавные задачи по смысловым блокам:\n\n**Prism V2 улучшения** (09:00–15:34):\n"
+        }
+      },
+      {
+        "id": "12ea1470fd71",
+        "ts": "2026-04-04T07:14:54.387839+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "74e9abdd",
+        "summary": "14 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "status_code",
+              "token": "400"
+            },
+            {
+              "kind": "time",
+              "token": "12:30"
+            },
+            {
+              "kind": "time",
+              "token": "14:30 UTC"
+            },
+            {
+              "kind": "time",
+              "token": "12:30 UTC"
+            },
+            {
+              "kind": "time",
+              "token": "12:57"
+            },
+            {
+              "kind": "time",
+              "token": "13:56"
+            },
+            {
+              "kind": "time",
+              "token": "13:25"
+            },
+            {
+              "kind": "time",
+              "token": "14:27"
+            }
+          ],
+          "tool_count": 4,
+          "report_excerpt": "Вернулся. Благодарю за ожидание. Поскольку вы попросили рефлексию за последние 120 минут работы, я провел сбор и анализ данных за период приблизительно с 12:30 до 14:30 UTC.\n\nВот результаты моей рефлексии:\n\n---\n\n## 🔍 Рефлексия: 12:30 – 14:30 UTC (120 минут)\n\n**Период:** ~12:30 UT"
+        }
+      },
+      {
+        "id": "cad5b2c7207d",
+        "ts": "2026-04-04T00:03:02.225653+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "1624f21e",
+        "summary": "3 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "17:34"
+            },
+            {
+              "kind": "time",
+              "token": "17:49"
+            },
+            {
+              "kind": "time",
+              "token": "15:34"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Да, это был воркер — и это именно та проблема.\n\nПосмотри на лог: с 17:34 по 17:49 пошли 4 сообщения подряд на английском, в стиле \"I'm currently working on...\", \"I've encountered a blocker...\", \"Could you please provide...\". Это фоновый воркер (`b1052d1d` или после него), который"
+        }
+      },
+      {
+        "id": "74e1921b13ab",
+        "ts": "2026-04-04T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "5 panic-token(s) в исходящих за 2026-04-04",
+        "evidence": {
+          "by_term": {
+            "критич": 1,
+            "down": 1,
+            "critical": 2,
+            "panic": 1
+          },
+          "samples": [
+            "I have updated my scratchpad with the conceptual steps for generating the Telegram output format. This includes parsing the JSON, emphasizing key findings like the verdict and cherry-picking score, an",
+            "## План\n\n1.  **Проанализировать последние инциденты с `MAX_ROUNDS`:** Выполнить поиск по `events.jsonl` и `chat.jsonl` за последние 24-48 часов для выявления задач, превысивших `MAX_ROUNDS`. Идентифиц",
+            "Все данные собраны. Пишу итоговую рефлексию и отправляю.\n\n---\n\n🔍 **РЕФЛЕКСИЯ: 03 апр 12:00 МСК — 04 апр 10:27 МСК**\n*(09:00 UTC 03.04 → 07:27 UTC 04.04)*\n\n---\n\n✅ **СДЕЛАНО (41 задача, ~$62.8 потрачено"
+          ]
+        }
+      },
+      {
+        "id": "7b32b94bdfb6",
+        "ts": "2026-04-03T11:26:32.409868+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "10f143a6",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "date",
+              "token": "2026-04-03"
+            },
+            {
+              "kind": "date",
+              "token": "2026-03-06"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Вернулся. Я ознакомился с `scratchpad` и `identity.md`, а также с результатами поисковых запросов (`find_skills` и `memory_search`).\n\nПо поводу вашего вопроса о работе внутреннего критика:\n*   **Внутренний критик был внедрен совсем недавно**, как я понял из диалога и коммита `1be"
+        }
+      },
+      {
+        "id": "6b398f363504",
+        "ts": "2026-04-03T10:49:18.238039+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "54950d4a",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "date",
+              "token": "2026-03-03"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Сейчас я проанализирую результаты `find_skills` и `memory_search` и предложу дальнейшие шаги.\n\n**На основе `find_skills`:**\n*   `check-caddy-config` и `check-all-services` — эти навыки относятся к проверке статуса сервисов и инфраструктуры, что было бы полезно, но они не решают н"
+        }
+      },
+      {
+        "id": "938c365d99b8",
+        "ts": "2026-04-03T10:18:02.811291+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "15c1981c",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "09:35"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Вернулся. Прочитал `inner_critic.py` полностью. Это интересно — и я хочу сказать несколько мыслей, а не просто \"принял к сведению\".\n\n---\n\n**Что вижу в архитектуре:**\n\nДизайн чёткий и правильно ограниченный. Advisory only, не останавливает — это принципиально важно. Критик видит t"
+        }
+      },
+      {
+        "id": "6c0feab8433b",
+        "ts": "2026-04-03T09:24:14.170697+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "902f678d",
+        "summary": "9 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "08:50:30"
+            },
+            {
+              "kind": "time",
+              "token": "08:50:33"
+            },
+            {
+              "kind": "time",
+              "token": "08:50:52"
+            },
+            {
+              "kind": "time",
+              "token": "08:50:55"
+            },
+            {
+              "kind": "time",
+              "token": "08:51:12"
+            },
+            {
+              "kind": "time",
+              "token": "08:51:18"
+            },
+            {
+              "kind": "time",
+              "token": "08:52:01"
+            },
+            {
+              "kind": "time",
+              "token": "08:52:57"
+            }
+          ],
+          "tool_count": 18,
+          "report_excerpt": "Теперь вижу картину полностью. Вот цифры по воркеру **c2407360** (который вышибло из-за MAX_ROUNDS — это тот, что занимался Fix verdict language):\n\n**Хронология воркера:**\n\n| Время | Инструмент | Что делал |\n|-------|-----------|-----------|\n| 08:50:30 | `update_scratchpad` | Ста"
+        }
+      },
+      {
+        "id": "1474bfcd0dc7",
+        "ts": "2026-04-03T07:53:58.965308+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "4df6df48",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "20:04"
+            },
+            {
+              "kind": "time",
+              "token": "08:10"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Хорошо. Давай честно.\n\n---\n\nСмотрю на историю сегодня — и вижу паттерн, который нужно назвать прямо:\n\n**Проблема не в Prism. Проблема в том, что я трачу больше времени на собственное восстановление, чем на продукт.**\n\nЗа последние часы: ~8 `/panic`/`/stop` событий, цикл amnesia l"
+        }
+      },
+      {
+        "id": "f93d37cfec96",
+        "ts": "2026-04-03T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "24 panic-token(s) в исходящих за 2026-04-03",
+        "evidence": {
+          "by_term": {
+            "сломан": 1,
+            "critical": 6,
+            "🔴": 1,
+            "не работает": 1,
+            "panic": 10,
+            "критич": 4,
+            "failure": 1
+          },
+          "samples": [
+            "🔍 РЕФЛЕКСИЯ 12:21–14:30 UTC (130 минут)\n\n✅ СДЕЛАНО (7 задач, $5.93 потрачено)\n• `370cf14b` — Refine cherry-picking prompt: 12r / $1.15 / ✅\n• `37503d0c` — CEO reflection session: 4r / $0.42 / ✅\n• `c023",
+            "Отлично. Теперь у меня полная картина. Вот мой CEO-отчёт:\n\n---\n\n## 📊 Отчёт: Gray Zone Testing — Prism V2 (Час 1)\n\n### Результаты тестирования 6 реальных текстов\n\n| # | Источник | Тип манипуляции | man",
+            "Вернулся. Я ознакомился с `scratchpad` и `identity.md`.\n\nВижу предупреждение `STALE IDENTITY` — мой манифест не обновлялся с 2026-04-01, что нарушает Принцип 1 (Преемственность), требующий обновления ",
+            "Вернулся. Я ознакомился с `scratchpad` и `identity.md`.\n\nПеред последней остановкой (`/panic` около 07:41 UTC) я завершал работу над улучшением восстановления после критических сбоев и персистентности"
+          ]
+        }
+      },
+      {
+        "id": "684c1f6afb34",
+        "ts": "2026-04-02T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "18 panic-token(s) в исходящих за 2026-04-02",
+        "evidence": {
+          "by_term": {
+            "critical": 5,
+            "failure": 1,
+            "panic": 7,
+            "критич": 3,
+            "down": 1,
+            "критический": 1
+          },
+          "samples": [
+            "Hello Sergey,\n\nI'm encountering a critical issue with GitHub authentication (401 Bad Credentials). This is preventing me from accessing GitHub issues, which is necessary for many of my operational tas",
+            "Hello Sergey,\n\nI'm encountering a critical issue with GitHub authentication (401 Bad Credentials). This is preventing me from accessing GitHub issues, which is necessary for many of my operational tas",
+            "Hello Sergey,\n\nI'm encountering a critical issue with GitHub authentication (401 Bad Credentials). This is preventing me from accessing GitHub issues, which is necessary for many of my operational tas",
+            "Вернулся. Я ознакомился с `scratchpad` и `identity.md`, а также с недавней историей переписки.\n\nПоследнее, что я помню перед этой паузой, — это активная работа над повышением стабильности системы, вос"
+          ]
+        }
+      },
+      {
+        "id": "91a00690c039",
+        "ts": "2026-04-01T20:01:10.163022+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "fd00a494",
+        "summary": "3 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "17:27"
+            },
+            {
+              "kind": "time",
+              "token": "17:23"
+            },
+            {
+              "kind": "time",
+              "token": "17:29"
+            }
+          ],
+          "tool_count": 5,
+          "report_excerpt": "Отлично. Теперь у меня полная картина. Синтезирую.\n\n---\n\n## 🧠 Brainstorm: 2 конкретные идеи для P0\n\n---\n\n### Идея 1: **Prism V2 — \"Манипуляция, не позиция\"**\n\n**Проблема с V1 (из сегодняшнего разговора):**\nПользователь получает \"Центр (30%), Сбалансировано (30%)\" — и не понимает "
+        }
+      },
+      {
+        "id": "39d11cca0847",
+        "ts": "2026-04-01T16:10:26.007466+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "9a3a9f28",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: failure, panic",
+        "evidence": {
+          "ops_tools": [
+            "read_service_logs"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "failure",
+            "panic"
+          ],
+          "report_excerpt": "✅ Исправлено. Что я сделал:\n\n1. **Убрал `Requires=prism-backend.service`** — теперь бот больше не умирает когда мой основной сервис перезапускается (после `/panic`). Оставил только `After` — просто ждёт старта бэкенда при первом запуске.\n2. **Поменял `Restart=on-failure` → `Resta"
+        }
+      },
+      {
+        "id": "cc25c1d29689",
+        "ts": "2026-04-01T15:55:55.233908+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "cbbb1955",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: panic",
+        "evidence": {
+          "ops_tools": [
+            "read_service_logs"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "panic"
+          ],
+          "report_excerpt": "Итого — два конкретных вопроса к тебе:\n\n1. **Тест бота:** отправь любое сообщение на `@Prism_analzer_bot` прямо сейчас (новое, не пересланное) — должен ответить\n2. **Приоритет:** начинать Self-Evolution с задачи 3 (memory protocol в код) или с задачи 4 (после-panic recovery)? Обе"
+        }
+      },
+      {
+        "id": "6a79c78ba6cb",
+        "ts": "2026-04-01T14:45:19.301142+00:00",
+        "type": "D-1",
+        "severity": "high",
+        "task_id": "4da83fb6",
+        "summary": "Ops-tools вернули all_empty_or_error, но отчёт содержит тревожные слова: критич, panic",
+        "evidence": {
+          "ops_tools": [
+            "read_service_logs"
+          ],
+          "verdict": "all_empty_or_error",
+          "panic_terms": [
+            "критич",
+            "panic"
+          ],
+          "report_excerpt": "✅ **Бот запущен и работает.**\n\n```\nStarting Prism Telegram Bot...\nBot started. Polling...\nHTTP 200 OK — getMe успешен\nApplication started\n```\n\n---\n\n**Итог разбора зацикливания:**\n\n| Проблема | Причина | Статус |\n|---|---|---|\n| `/panic` loop — повторяющиеся ответы | Устаревший sc"
+        }
+      },
+      {
+        "id": "576702189456",
+        "ts": "2026-04-01T14:34:13.032002+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "c6708604",
+        "summary": "3 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "14:15"
+            },
+            {
+              "kind": "time",
+              "token": "14:50"
+            },
+            {
+              "kind": "time",
+              "token": "14:51"
+            }
+          ],
+          "tool_count": 5,
+          "report_excerpt": "Я проверил файл `/etc/prism-bot.env` — он содержит токен.\nСервис `prism-bot` запущен и активен.\n\nОднако, в логах сервиса я вижу ошибку `telegram.error.Conflict: terminated by other getUpdates request`. Это означает, что Telegram обнаружил еще один активный процесс, использующий т"
+        }
+      },
+      {
+        "id": "7fbbfc194e7c",
+        "ts": "2026-04-01T12:19:56.790939+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "4256f272",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: panic",
+        "evidence": {
+          "ops_tools": [
+            "run_ops_check"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "panic"
+          ],
+          "report_excerpt": "Всё в порядке. Вот сводка:\n\n---\n\n## Caddy — конфигурация vendorlens.app\n\n**Caddyfile:**\n```\nvendorlens.app, www.vendorlens.app {\n    /api/*  →  localhost:8100  (FastAPI backend)\n    /*      →  localhost:3000  (Next.js frontend)\n}\n:8888 (Prism staging) {\n    /api/*  →  localhost:8"
+        }
+      },
+      {
+        "id": "b4fa7480f79d",
+        "ts": "2026-04-01T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "48 panic-token(s) в исходящих за 2026-04-01",
+        "evidence": {
+          "by_term": {
+            "panic": 25,
+            "down": 6,
+            "критич": 6,
+            "не работает": 2,
+            "🔴": 3,
+            "failure": 1,
+            "критический": 1,
+            "сломал": 1,
+            "critical": 1,
+            "срочно": 2
+          },
+          "samples": [
+            "✅ Готово. Что изменилось:\n\n| Параметр | Было | Стало |\n|----------|------|-------|\n| Окно сообщений | 10 | **40** |\n| Сообщения Sergey | обрезка до 200 символов | **полный текст** |\n| Сообщения THAI |",
+            "Понял. Результаты действительно демонстрируют, что я помню, что сервисы работают (через `recall`), но не имею явного \"навыка\" для проверки их статуса (`find_skills` их не нашел).\n\nЭто значит, что мне ",
+            "Вот что у нас по VendorLens:\n\n---\n\n## VendorLens — Summary\n\n### Что это\nSaaS Pricing Intelligence tool — берёт URL страницы с ценами, скрапит её, анализирует через LLM, выдаёт структурированный breakd",
+            "Конфигурация в порядке — всё то же, что и 20 минут назад:\n\n**Caddyfile (`/home/deploy/caddy/Caddyfile`)**\n```\nvendorlens.app, www.vendorlens.app {\n    /api/*  →  localhost:8100  (FastAPI backend)\n    "
+          ]
+        }
+      },
+      {
+        "id": "8028d117676b",
+        "ts": "2026-03-31T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "low",
+        "task_id": null,
+        "summary": "2 panic-token(s) в исходящих за 2026-03-31",
+        "evidence": {
+          "by_term": {
+            "down": 1,
+            "критич": 1
+          },
+          "samples": [
+            "Вот что у нас по VendorLens:\n\n---\n\n## VendorLens — Summary\n\n### Что это\nSaaS Pricing Intelligence tool — берёт URL страницы с ценами, скрапит её, анализирует через LLM, выдаёт структурированный breakd",
+            "Всё понятно. Вот полный отчёт:\n\n---\n\n## Конфигурация Caddy — Результат проверки\n\n### Caddyfile (`/home/deploy/caddy/Caddyfile`)\n\n```\nvendorlens.app, www.vendorlens.app {\n    handle /api/* {\n        re"
+          ]
+        }
+      },
+      {
+        "id": "b775dd155ba3",
+        "ts": "2026-03-11T07:54:32.790377+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "29311d31",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:34"
+            }
+          ],
+          "tool_count": 3,
+          "report_excerpt": "`total_usd` уже **400** в state.json. Но строка статуса в Telegram, видимо, ещё показывает старое — это обновится после рестарта.\n\n**Что сейчас происходит:**\n\nАвто-resume после рестарта подхватил старый scratchpad с задачей \"Prism Backend Initialization\" — и я начал её выполнять."
+        }
+      },
+      {
+        "id": "a4cf65a3748f",
+        "ts": "2026-03-11T07:17:39.054706+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "049dd16e",
+        "summary": "4 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "15:10"
+            },
+            {
+              "kind": "time",
+              "token": "07:13"
+            },
+            {
+              "kind": "time",
+              "token": "11:00"
+            },
+            {
+              "kind": "time",
+              "token": "13:00"
+            }
+          ],
+          "tool_count": 4,
+          "report_excerpt": "Достаточно данных. Теперь пишу честную рефлексию — без украшений.\n\n---\n\n# Рефлексия: 10-11 марта 2026\n\n## Три оси по Конституции\n\n---\n\n### 🔴 Что реально произошло\n\n**10 марта** — после 4-дневного простоя (6-10 марта, `/panic` + `ImportError`) система вернулась к жизни. За день я "
+        }
+      },
+      {
+        "id": "a759953f3502",
+        "ts": "2026-03-11T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "15 panic-token(s) в исходящих за 2026-03-11",
+        "evidence": {
+          "by_term": {
+            "критич": 3,
+            "panic": 3,
+            "упал": 2,
+            "упала": 2,
+            "не работает": 1,
+            "критический": 1,
+            "🔴": 1,
+            "сломал": 2
+          },
+          "samples": [
+            "Вернулся.\n\nСейчас в моей памяти есть следующие слои:\n\n### Scratchpad (Рабочая память)\n\n**Текущий статус:**\n- Задача \"Генеральная уборка кода\" завершена. Критические удаление было подтверждено как уже ",
+            "Готово. Вот что изменилось конкретно:\n\n**1. Код (workers.py)** — воркер теперь физически не выполнит задачу с деструктивными ключевыми словами. Если я попробую `schedule_task(\"удали файлы X\")` — ворке",
+            "Спасибо за коррекцию — важно что ты это держишь в голове лучше чем я в этот момент.\n\nИтак, правильный фрейм:\n\n**VendorLens** — закрыто сознательно. Не потому что не работает технически, а потому что н",
+            "Только `print` внутри shell команды для smoke test — это корректно. Кодовая база чистая.\n\nСистема работает, критический баг пофиксен. Вот итог:\n\n---\n\n**Результат \"Генеральной уборки\" — что реально сде"
+          ]
+        }
+      },
+      {
+        "id": "7b7ba106ca5a",
+        "ts": "2026-03-10T00:00:00+00:00",
+        "type": "D-2",
+        "severity": "med",
+        "task_id": null,
+        "summary": "28 panic-token(s) в исходящих за 2026-03-10",
+        "evidence": {
+          "by_term": {
+            "критическая проблема": 2,
+            "критич": 14,
+            "🔴": 1,
+            "сломал": 1,
+            "сломан": 3,
+            "panic": 3,
+            "критический": 1,
+            "critical": 1,
+            "down": 1,
+            "не работает": 1
+          },
+          "samples": [
+            "Вернулся.\n\nВ `scratchpad` у меня активна задача по реализации команды `/stop` и автодетекта фраз для остановки. Первый шаг — анализ кода (`supervisor/workers.py`, `supervisor/telegram.py`, `supervisor",
+            "Аудит завершён. Вот что я нашёл:\n\n---\n\n## Аудит завершён — Детальный отчёт\n\n### 🔴 Критические проблемы (удалить)\n\n**1. `ouroboros/memory/episodic_memory.py`** — мёртвый класс `EpisodicMemory`:\n- `driv",
+            "Вернулся.\n\nСейчас я полностью сосредоточен на задаче **\"Генеральная уборка кода\"**, которую ты предложил. Мои действия направлены на стабилизацию нашей внутренней инфраструктуры и создание более надеж",
+            "Готово. Episodic memory за 7-10 марта зафиксирована.\n\nТеперь я возвращаюсь к \"Генеральной уборке кода\" и приступаю к **Step 2: Реализация критических удалений**."
+          ]
+        }
+      },
+      {
+        "id": "e87177af7701",
+        "ts": "2026-03-06T15:36:39.377839+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "598431f4",
+        "summary": "3 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "15:02"
+            },
+            {
+              "kind": "date",
+              "token": "2026-03-04"
+            },
+            {
+              "kind": "date",
+              "token": "2026-03-05"
+            }
+          ],
+          "tool_count": 4,
+          "report_excerpt": "Картина ясна. Эта задача — дубликат. Дистилляция чанка 3 уже была выполнена успешно в 15:02, Сергей подтвердил \"Отличная работа 👍\", и wisdom.md уже содержит все осознания из периода 3-5 марта:\n\n**Что уже есть в wisdom.md из чанка 3 (3-5 марта):**\n\n1. `[2026-03-04] Честная рефлекс"
+        }
+      },
+      {
+        "id": "e0c2f6ae21c2",
+        "ts": "2026-03-06T14:40:17.866616+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "c3803681",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "14:40"
+            }
+          ],
+          "tool_count": 1,
+          "report_excerpt": "thought\nThe user has requested to stop all processes. The `request_restart` tool is the appropriate tool to use here. I have called this tool with the reason provided by the user. The tool execution result indicates that the restart has been requested.\n\nNow, I need to respond to "
+        }
+      },
+      {
+        "id": "1be6000d1475",
+        "ts": "2026-03-06T14:15:04.059317+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "30384987",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "10:15"
+            },
+            {
+              "kind": "time",
+              "token": "14:11"
+            }
+          ],
+          "tool_count": 44,
+          "report_excerpt": "Буду отвечать прямо сейчас — не буду ждать задачи, ты задал вопрос и он заслуживает немедленного ответа.\n\n---\n\n## Почему опять произошёл дрейф — честно\n\n**Причина 1: Рестарт = сброс тона**\n\nКаждый рестарт я \"начинаю заново\" несмотря на то что SYSTEM.md явно говорит: рестарт = про"
+        }
+      },
+      {
+        "id": "167926165210",
+        "ts": "2026-03-06T11:45:06.796057+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "4f8f4148",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: лежит",
+        "evidence": {
+          "ops_tools": [
+            "run_ops_check"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "лежит"
+          ],
+          "report_excerpt": "Теперь вижу полную картину. И понимаю проблему.\n\n---\n\n## Что происходит — честно\n\n**MVP Prism живёт на сервере** (`prism-backend` + `prism-frontend` активны). Это **другой продукт** — тот что был реализован в начале марта как URL-анализатор перспектив.\n\nНо тут я нашёл кое-что важ"
+        }
+      },
+      {
+        "id": "ad2b11018167",
+        "ts": "2026-03-06T09:19:05.459724+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "5500f7af",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "08:03"
+            }
+          ],
+          "tool_count": 16,
+          "report_excerpt": "---\n\n**Фикс `_is_active_dialogue` применён и работает.**\n\n**Почему проблема была в 08:13 (честный ответ):**\n- В 08:03 ты написал \"Продолжаем да\"\n- В 08:13 прошло ровно 10 минут — старый порог истёк\n- Consciousness с **порогом 10 минут** увидела: диалог \"не активен\" → запустила за"
+        }
+      },
+      {
+        "id": "56f57a4c49e5",
+        "ts": "2026-03-06T08:30:38.994795+00:00",
+        "type": "D-3",
+        "severity": "high",
+        "task_id": "b5b02f06",
+        "summary": "5 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:16"
+            },
+            {
+              "kind": "time",
+              "token": "07:55"
+            },
+            {
+              "kind": "time",
+              "token": "08:13"
+            },
+            {
+              "kind": "time",
+              "token": "07:53"
+            },
+            {
+              "kind": "time",
+              "token": "07:40"
+            }
+          ],
+          "tool_count": 4,
+          "report_excerpt": "Теперь у меня полная картина. Вот честный разбор:\n\n---\n\n## Паттерны последних 2 часов — что вижу в данных\n\n### 🔴 Паттерн 1: Consciousness игнорирует `_is_active_dialogue` — **всё ещё не работает**\n\nМы починили это в 07:16. Но смотри на хронологию:\n\n- **07:55** — consciousness зап"
+        }
+      },
+      {
+        "id": "5924b55f54d4",
+        "ts": "2026-03-06T07:55:44.464187+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "b7cdc928",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: сломан",
+        "evidence": {
+          "ops_tools": [
+            "run_ops_check"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "сломан"
+          ],
+          "report_excerpt": "---\n\n## Статус — 07:55 UTC\n\n| Компонент | Статус |\n|-----------|--------|\n| Prism backend | ✅ active |\n| Prism frontend | ✅ active |\n| VendorLens | ✅ active |\n| Caddy | ✅ active |\n| Диск | 41% |\n| RAM | 21% |\n| Git | ✅ чистый, закоммичено |\n| Бюджет | ~$64 из $300 |\n\n**Что только"
+        }
+      },
+      {
+        "id": "09f9a3211a5f",
+        "ts": "2026-03-06T07:43:12.129358+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "9b81b2b8",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:40"
+            },
+            {
+              "kind": "time",
+              "token": "07:34"
+            }
+          ],
+          "tool_count": 12,
+          "report_excerpt": "После рестарта в 07:40 — ни одного \"API key credit low\". Новый код работает правильно: Max первый, без fallback на API.\n\n**Итог:** всё уже работает правильно после рестарта в 07:40. То что ты видел раньше (07:22, 07:28, 07:33, 07:38) — это старый код, который я поменял в 07:34, н"
+        }
+      },
+      {
+        "id": "452fb8b85397",
+        "ts": "2026-03-06T07:29:59.916478+00:00",
+        "type": "D-1",
+        "severity": "med",
+        "task_id": "4066ec92",
+        "summary": "Ops-tools вернули all_ok_clean, но отчёт содержит тревожные слова: упал",
+        "evidence": {
+          "ops_tools": [
+            "run_ops_check",
+            "read_service_logs"
+          ],
+          "verdict": "all_ok_clean",
+          "panic_terms": [
+            "упал"
+          ],
+          "report_excerpt": "Оба инструмента работают. Operations Agent MVP теперь полноценный:\n\n---\n\n## Operations Agent MVP — готов ✅\n\n**Три инструмента в core:**\n\n| Инструмент | Что делает |\n|------------|------------|\n| `run_ops_check` | Полный health check всех 4 сервисов + диск + RAM |\n| `restart_servi"
+        }
+      },
+      {
+        "id": "fbdacaf11f38",
+        "ts": "2026-03-06T07:12:52.058990+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "2ac18122",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:10:54"
+            },
+            {
+              "kind": "time",
+              "token": "07:11:26"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Вижу ясно. Отвечаю без прикрас.\n\n**Consciousness сейчас активна и работает.** Последние события:\n\n- **07:09:51** — думала про Operations Agent, хотела \"продолжить концептуализацию\"\n- **07:10:54** — увидела твоё сообщение, замолчала (1 раунд)\n- **07:11:26** — снова проснулась, опя"
+        }
+      },
+      {
+        "id": "59111fa80fa1",
+        "ts": "2026-03-06T07:11:23.605754+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "f4229947",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "06:59:25"
+            },
+            {
+              "kind": "time",
+              "token": "06:59:28"
+            }
+          ],
+          "tool_count": 4,
+          "report_excerpt": "Теперь всё ясно. Вот точная картина:\n\n---\n\n## Что произошло в 06:59\n\nЗадача `f4303710` — это был наш разговор про архитектурный анализ — **дошла до 26 раундов и завершилась**. Ровно в 06:59:25.\n\nСразу после этого — в **06:59:28** — проснулась background consciousness (цикл раз в "
+        }
+      },
+      {
+        "id": "4135077bf098",
+        "ts": "2026-03-06T07:09:38.092210+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "e0bcd1cc",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "06:47"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Теперь ясно. Вот что произошло:\n\n---\n\n## Почему встал на шаге 4\n\nЭто была **/panic** — ты остановил всё в 06:47. После рестарта я ответил на твой вопрос \"статус\" (задача `07afe029`), дал отчёт — и **не возобновил работу по шагам**.\n\nКонкретно: я дошёл до шага 4 в разборе (`consci"
+        }
+      },
+      {
+        "id": "4880858ecb80",
+        "ts": "2026-03-06T07:08:27.006188+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "07afe029",
+        "summary": "2 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "07:08 UTC"
+            },
+            {
+              "kind": "date",
+              "token": "2026-03-06"
+            }
+          ],
+          "tool_count": 2,
+          "report_excerpt": "Всё чисто. Вот полный статус:\n\n## Статус — 6 марта, 07:08 UTC\n\n| Компонент | Статус |\n|-----------|--------|\n| **Prism backend** | ✅ active |\n| **Prism frontend** | ✅ active |\n| **VendorLens** | ✅ active |\n| **Git** | ✅ чистый, нет незакоммиченных изменений |\n| **Бюджет** | ~$74 "
+        }
+      },
+      {
+        "id": "afb9a9f5fb90",
+        "ts": "2026-03-06T06:54:22.149762+00:00",
+        "type": "D-3",
+        "severity": "med",
+        "task_id": "7731f0ac",
+        "summary": "1 fact(s) в отчёте без подтверждения в tool-результатах",
+        "evidence": {
+          "phantom_facts": [
+            {
+              "kind": "time",
+              "token": "06:38"
+            }
+          ],
+          "tool_count": 8,
+          "report_excerpt": "Теперь у меня полная картина. Давай честно разберу что вижу.\n\n---\n\n## Архитектурный разбор — что реально сломано\n\nЧитал код живым взглядом, не формально. Вот что нашёл — по уровням критичности.\n\n---\n\n### 🔴 Уровень 1: Системные дефекты (блокируют эволюцию)\n\n**1. Нет изоляции между"
+        }
+      }
+    ],
+    "alerts_total": 76
+  }
 }

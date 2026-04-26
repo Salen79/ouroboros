@@ -156,6 +156,16 @@ const UI = {
                                   en: 'Switch UI language' },
   'lang.ru.label':             { ru: 'RU',                   en: 'RU' },
   'lang.en.label':             { ru: 'EN',                   en: 'EN' },
+
+  // Confabulation detectors
+  'detector.today':            { ru: 'сегодня',              en: 'today' },
+  'detector.week':             { ru: 'за неделю',            en: 'this week' },
+  'detector.all':              { ru: 'всего',                en: 'all-time' },
+  'detector.recent':           { ru: 'Последние alerts',     en: 'Recent alerts' },
+  'detector.no_alerts':        { ru: 'Пока ничего не пойман — счётчики на нуле.',
+                                  en: 'Nothing caught yet — all counters at zero.' },
+  'detector.run':              { ru: 'Сводка по всем детекторам',
+                                  en: 'Summary across all detectors' },
 };
 
 /**

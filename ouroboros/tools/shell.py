@@ -13,6 +13,7 @@ import subprocess
 from typing import Any, Dict, List
 
 from ouroboros.tools.registry import ToolContext, ToolEntry
+from ouroboros.tools.shell_guards import check_command as _check_shell_guards
 from ouroboros.utils import utc_now_iso, run_cmd, append_jsonl, truncate_for_log
 
 log = logging.getLogger(__name__)
@@ -137,6 +138,27 @@ def _run_shell(ctx: ToolContext, cmd, cwd: str = "", timeout: int = 120) -> str:
     if not isinstance(cmd, list):
         return "⚠️ SHELL_ARG_ERROR: cmd must be a list of strings."
     cmd = [str(x) for x in cmd]
+
+    # D16 — static guard layer. Block known-dangerous patterns before
+    # subprocess.run sees them. See ouroboros/tools/shell_guards.py.
+    guard_hit = _check_shell_guards(cmd)
+    if guard_hit is not None:
+        pattern_id, reason, detail = guard_hit
+        try:
+            append_jsonl(ctx.drive_logs() / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "run_shell_blocked",
+                "tool": "run_shell",
+                "pattern_id": pattern_id,
+                "matched": detail,
+                "cmd_preview": truncate_for_log(" ".join(cmd), 500),
+            })
+        except Exception:
+            log.debug("Failed to log run_shell_blocked to events.jsonl", exc_info=True)
+        return (
+            f"⚠️ SHELL_BLOCKED: {pattern_id} — {detail}\n"
+            f"Reason: {reason}"
+        )
 
     work_dir = ctx.repo_dir
     if cwd and cwd.strip() not in ("", ".", "./"):

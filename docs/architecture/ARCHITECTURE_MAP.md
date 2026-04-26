@@ -3,7 +3,7 @@
 Archaeological map of the **real** running system, derived from the code in
 `/home/deploy/ouroboros/` at commit `fd687fb` (branch `ouroboros`, clean,
 THAI currently off). Every claim carries a `file:line` reference. Norms from
-BIBLE.md / CLAUDE.md / SYSTEM_COMPACT.md were consulted only to decide which
+BIBLE.md / CLAUDE.md / prompts/SYSTEM.md were consulted only to decide which
 facts to record, not as sources of truth; divergences are logged in **Dark
 Zones** at the end.
 

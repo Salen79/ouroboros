@@ -999,4 +999,33 @@ Three things, recorded for the record:
 
 ---
 
+## 12. Open Items for Phase C
+
+Issues discovered during Phase B implementation and pilot — to be
+resolved before Phase C extends the framework to scenarios B–H.
+
+**B-O8 — eval subprocess runs against live repo, not a shallow clone.**
+Phase A §6.1 specified a shallow `git clone` of the repo at the pinned
+SHA into the temp dir, with `OuroborosAgent` constructed against
+`repo_dir=clone`. `isolation.shallow_clone_repo()` exists but was never
+wired through to `make_agent` — the runner currently passes
+`repo_dir=REPO_ROOT` (the live working tree). Consequence observed in
+the recalibration pilot (2026-04-26): when the agent subprocess booted
+with uncommitted changes in the working tree,
+`_verify_system_state`'s auto-rescue fired and produced commit
+`53ecf72` ("auto-rescue: uncommitted changes detected on startup")
+authored by Ouroboros directly on the developer's branch. The
+production safety mechanism worked correctly — but eval should not
+expose it to the live tree at all. **Must be closed before Phase C
+scenario E** (skill extraction), which has the highest write volume
+and the highest chance of triggering production self-modification
+paths against the real repo. Fix: in `runner.py`, before constructing
+the agent, call `iso.shallow_clone_repo(REPO_ROOT, sha, clone_path)`
+and pass `clone_path` to the subprocess as `repo_dir`. Cost: ~1s
+extra per scenario for the clone; clone's remote unset to prevent
+any push. Test: assert that any `git_commit` event during a scenario
+references `clone_path`, never `REPO_ROOT`.
+
+---
+
 **End of design spec.**

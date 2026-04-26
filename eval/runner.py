@@ -77,6 +77,20 @@ def run_scenario(scenario: Scenario, run_id: str, run_dir: pathlib.Path,
                 f"setup_error: {type(e).__name__}: {e}",
             )
 
+        # B-O8: clone the live repo into the temp base so the agent
+        # subprocess sees an isolated working tree. Auto-rescue commits,
+        # repo_write_commit calls, etc. land here — never in REPO_ROOT.
+        try:
+            sha = rec.git_sha_full(REPO_ROOT)
+            clone_path = iso.shallow_clone_repo(
+                REPO_ROOT, sha, iso.clone_path_for(drive_root)
+            )
+        except Exception as e:
+            return _build_skeleton_result(
+                scenario, started, "inconclusive",
+                f"clone_error: {type(e).__name__}: {e}",
+            )
+
         env_overrides = dict(setup.get("env_overrides") or {})
         env_overrides.setdefault("OUROBOROS_MAX_ROUNDS", "8")
 
@@ -90,7 +104,7 @@ def run_scenario(scenario: Scenario, run_id: str, run_dir: pathlib.Path,
                 scenario_id=scenario_id,
                 task=task,
                 drive_root=drive_root,
-                repo_dir=REPO_ROOT,
+                repo_dir=clone_path,
                 chroma_host=chroma_host,
                 chroma_port=chroma_port,
                 env_overrides=env_overrides,

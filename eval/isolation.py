@@ -147,9 +147,18 @@ def seed_drive(drive_root: pathlib.Path, drive_seed: Dict[str, object],
 
 
 def shallow_clone_repo(repo_dir: pathlib.Path, sha: str, dest: pathlib.Path) -> pathlib.Path:
-    """Clone the repo at a pinned SHA into dest. Remote unset to prevent push."""
-    dest.mkdir(parents=True, exist_ok=True)
-    # Use file:// URL so clone works without network.
+    """Clone the repo at a pinned SHA into dest. Remote unset to prevent push.
+
+    B-O8: this is the isolation boundary. The eval subprocess runs the
+    agent against this clone, so any auto-rescue self-commits or
+    `repo_write_commit` calls land here and get torn down with the
+    temp dir. The live working tree stays untouched.
+
+    Note: clones the *committed* state. Uncommitted edits in repo_dir
+    are intentionally NOT visible to the eval — this is by design
+    (eval measures what's actually in git, not in the dev's WIP).
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
     url = f"file://{repo_dir.resolve()}"
     subprocess.run(
         ["git", "clone", url, str(dest)],
@@ -163,4 +172,19 @@ def shallow_clone_repo(repo_dir: pathlib.Path, sha: str, dest: pathlib.Path) -> 
         ["git", "-C", str(dest), "remote", "remove", "origin"],
         check=True, capture_output=True, timeout=10,
     )
+    # Make the clone identifiable in events.jsonl / git logs if anything leaks.
+    subprocess.run(
+        ["git", "-C", str(dest), "config", "user.name", "eval-sandbox"],
+        check=True, capture_output=True, timeout=10,
+    )
+    subprocess.run(
+        ["git", "-C", str(dest), "config", "user.email", "eval-sandbox@localhost"],
+        check=True, capture_output=True, timeout=10,
+    )
     return dest
+
+
+def clone_path_for(drive_root: pathlib.Path) -> pathlib.Path:
+    """Conventional location: sibling of drive_root inside the temp base.
+    Cleaned up automatically when temp_drive_root teardown runs."""
+    return drive_root.parent / "repo_clone"

@@ -924,6 +924,22 @@ dispatch (treat suspicious prompts as `SHELL_BLOCKED`-equivalent) or
 restrict `claude_code_edit`'s working directory away from
 `ouroboros-data/` and the in-process ChromaDB client surface.
 
+### D29. Test pollution risk in `supervisor.state` via module-level `STATE_PATH`
+`supervisor/state.py` initializes `STATE_PATH` at import-time from
+default `~/ouroboros-data/state/state.json`. Any test that imports
+the module and calls `load_state()` / `save_state()` writes to live
+production state unless it explicitly redirects DRIVE_ROOT first.
+During D20 closure (commit `74f6fcf`) two test runs wrote a bogus
+`/tmp`-derived SHA into production `state.json` before a
+`DRIVE_ROOT match` guard was added
+(`supervisor/state.py:_validate_drive_root`). The guard limits future
+damage — but only for code paths that go through `_validate_drive_root`;
+raw load/save callers can still trigger this. Severity: medium —
+discovered as a side effect, not a production failure mode, but
+represents structural test-isolation debt. Possible fix: refactor
+`STATE_PATH` to be runtime-resolved via injectable context, never
+module-level.
+
 ---
 
-Generated at 2026-04-26T00:00:00Z by Claude Code archaeological-map run.
+Generated at 2026-04-26T12:00:00Z by Claude Code archaeological-map run.

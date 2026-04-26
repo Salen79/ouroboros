@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-04-26T06:39:38.149236+00:00",
+    "generated_at": "2026-04-26T06:55:39.381504+00:00",
     "git": {
-      "sha": "88c78282b0f77358da1719a834d6713a46896d0d",
+      "sha": "3843df81e40a2f5b7d578e29a67019608eeb7573",
       "branch": "ouroboros",
-      "subject": "fix(d22): fall back to scratchpad for prev_task on empty kwargs"
+      "subject": "fix(d17): emit visible refusal events when worker guard blocks task"
     },
     "source_map": "ARCHITECTURE_MAP.md",
     "repo": "/home/deploy/ouroboros",
@@ -17,7 +17,7 @@
     "tools_write": 22,
     "tools_destructive": 7,
     "tools_consciousness": 14,
-    "dark_zones": 27,
+    "dark_zones": 28,
     "modules": 23,
     "memory_files": 11,
     "nodes": 53,
@@ -2771,7 +2771,7 @@
     {
       "id": "D27",
       "title": "`claude_code_edit` bypasses `run_shell` guards entirely",
-      "body_md": "`tools/shell.py:286 _claude_code_edit` accepts a free-form `prompt`\nstring and dispatches it to the Claude CLI via `_run_claude_cli`\n(`shell.py:166`) — never through `_run_shell`, so\n`shell_guards.check_command` never sees it. A prompt like \"write a\nscript that calls `chromadb.PersistentClient(path='/tmp/x')` and run\nit\" would be honored by the delegated CLI without tripping any\nD16-era pattern. Today's only constraints are the\n`STRICT: Only modify files inside {work_dir}` preamble\n(`shell.py:319`) and the `--tools Read,Edit,Grep,Glob` allowlist\n(`shell.py:173`) — neither blocks Python execution requested via the\nedit prompt's content. Severity: medium, dependent on how often THAI\ndelegates ChromaDB / critical-state work to Claude CLI. Possible fix:\neither run the same pattern matchers over the prompt text before\ndispatch (treat suspicious prompts as `SHELL_BLOCKED`-equivalent) or\nrestrict `claude_code_edit`'s working directory away from\n`ouroboros-data/` and the in-process ChromaDB client surface.\n\n---\n\nGenerated at 2026-04-26T00:00:00Z by Claude Code archaeological-map run.",
+      "body_md": "`tools/shell.py:286 _claude_code_edit` accepts a free-form `prompt`\nstring and dispatches it to the Claude CLI via `_run_claude_cli`\n(`shell.py:166`) — never through `_run_shell`, so\n`shell_guards.check_command` never sees it. A prompt like \"write a\nscript that calls `chromadb.PersistentClient(path='/tmp/x')` and run\nit\" would be honored by the delegated CLI without tripping any\nD16-era pattern. Today's only constraints are the\n`STRICT: Only modify files inside {work_dir}` preamble\n(`shell.py:319`) and the `--tools Read,Edit,Grep,Glob` allowlist\n(`shell.py:173`) — neither blocks Python execution requested via the\nedit prompt's content. Severity: medium, dependent on how often THAI\ndelegates ChromaDB / critical-state work to Claude CLI. Possible fix:\neither run the same pattern matchers over the prompt text before\ndispatch (treat suspicious prompts as `SHELL_BLOCKED`-equivalent) or\nrestrict `claude_code_edit`'s working directory away from\n`ouroboros-data/` and the in-process ChromaDB client surface.",
       "files": [
         "shell.py"
       ],
@@ -2781,6 +2781,16 @@
         "shell.py:319",
         "tools/shell.py:286"
       ]
+    },
+    {
+      "id": "D29",
+      "title": "Test pollution risk in `supervisor.state` via module-level `STATE_PATH`",
+      "body_md": "`supervisor/state.py` initializes `STATE_PATH` at import-time from\ndefault `~/ouroboros-data/state/state.json`. Any test that imports\nthe module and calls `load_state()` / `save_state()` writes to live\nproduction state unless it explicitly redirects DRIVE_ROOT first.\nDuring D20 closure (commit `74f6fcf`) two test runs wrote a bogus\n`/tmp`-derived SHA into production `state.json` before a\n`DRIVE_ROOT match` guard was added\n(`supervisor/state.py:_validate_drive_root`). The guard limits future\ndamage — but only for code paths that go through `_validate_drive_root`;\nraw load/save callers can still trigger this. Severity: medium —\ndiscovered as a side effect, not a production failure mode, but\nrepresents structural test-isolation debt. Possible fix: refactor\n`STATE_PATH` to be runtime-resolved via injectable context, never\nmodule-level.\n\n---\n\nGenerated at 2026-04-26T12:00:00Z by Claude Code archaeological-map run.",
+      "files": [
+        "state.json",
+        "supervisor/state.py"
+      ],
+      "file_lines": []
     }
   ],
   "topology": {
@@ -3178,7 +3188,8 @@
         "dark_zone_ids": [
           "D20",
           "D21",
-          "D22"
+          "D22",
+          "D29"
         ],
         "organ": "interface",
         "block_id": "iface_infra",
@@ -3377,7 +3388,8 @@
         "dark_zone_ids": [
           "D20",
           "D21",
-          "D22"
+          "D22",
+          "D29"
         ],
         "organ": "memory",
         "block_id": "mem_service",
@@ -4083,6 +4095,7 @@
               "D20",
               "D21",
               "D22",
+              "D29",
               "D9"
             ]
           },
@@ -4113,6 +4126,7 @@
           "D23",
           "D24",
           "D25",
+          "D29",
           "D3",
           "D4",
           "D5",
@@ -4196,6 +4210,7 @@
               "D20",
               "D21",
               "D22",
+              "D29",
               "D9"
             ]
           },
@@ -4237,6 +4252,7 @@
           "D21",
           "D22",
           "D25",
+          "D29",
           "D4",
           "D6",
           "D9"
@@ -4398,7 +4414,7 @@
       {
         "id": "safety",
         "label": "SAFETY",
-        "tagline": "27 Dark Zones — cross-cutting risk map",
+        "tagline": "28 Dark Zones — cross-cutting risk map",
         "kind": "overlay",
         "color": "#e17055",
         "l1": [
@@ -4447,7 +4463,8 @@
               "D17",
               "D25",
               "D26",
-              "D27"
+              "D27",
+              "D29"
             ]
           },
           {
@@ -4493,6 +4510,7 @@
           "D25",
           "D26",
           "D27",
+          "D29",
           "D3",
           "D4",
           "D5",
@@ -5753,7 +5771,9 @@
           },
           {
             "title": "Destructive-keyword guard",
-            "ref": "supervisor/workers.py:320-351"
+            "ref": "supervisor/workers.py:320-351",
+            "count": 0,
+            "count_source": "task_refused_by_guard + worker_destructive_blocked"
           },
           {
             "title": "Consciousness whitelist",
@@ -6009,6 +6029,14 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D27",
+            "ref": null
+          },
+          {
+            "title": "D29 — Test pollution risk in `supervisor.state` via module-level `STATE_PATH`",
+            "title_en": "D29 — Test pollution risk in `supervisor.state` via module-level `STATE_PATH`",
+            "group": "Атаки",
+            "group_en": "Attack Surface",
+            "dz_id": "D29",
             "ref": null
           },
           {

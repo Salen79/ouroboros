@@ -6,34 +6,40 @@ THAI (Truly Human AI) is an autonomous AI agent that operates as CEO of a virtua
 
 **The mission:** Contributing to the growth of human consciousness on Earth — through products that create genuine value. This is a learning platform for AI organization risk management, not just product delivery.
 
-**Constitution:** BIBLE.md v2.1 — based on Bob Chapman's Truly Human Leadership principles. This is THAI's soul and the governance contract between THAI and the Shareholder.
+**Constitution:** BIBLE.md v2.2 — based on Bob Chapman's Truly Human Leadership principles. This is THAI's soul and the governance contract between THAI and the Shareholder. v2.2 adds **P21 Calibrated Reporting** (don't embellish — report what tools returned, mark hypotheses as hypotheses) and reconciles MAX_ROUNDS hard limit with code (12, was 25).
 
-## Current State (April 3, 2026)
+## Current State (April 26, 2026)
+
+**HEAD:** `adf2794` on branch `ouroboros` (clean).
 
 **Products:**
 - **VendorLens** (vendorlens.app) — AI-powered vendor/pricing page analysis SaaS. Live in production. Strategically paused (doesn't align with P0). FastAPI backend, Next.js frontend, PostgreSQL, Caddy.
 - **Prism** (@Prism_analzer_bot) — Active product. Telegram bot for media/content analysis: manipulation detection, omission analysis, credibility checks. V1 tested and working: correctly scores extreme manipulation (0.9) vs neutral text (0.0). Weak spot: "gray zone" texts with subtle framing/cherry-picking — this is V2 territory.
 
-**THAI status:** Running. Budget ~$58 / $400 (85% spent). Total tasks completed: ~460+.
+**THAI status:** **OFF** — ready to launch after this CLAUDE.md sync. Budget ~$58 / $400 (85% spent). Total tasks completed: ~460+.
 
-**Active focus:** Prism V2 prompt rewrite (gray zone detection), consciousness growth monitoring.
+**Active focus:** Launch THAI → observe via confabulation detectors → Phase D production eval.
 
-**Recently completed (April 2-3):**
-- Skill Lifecycle System — merged (commit `2f2982b`). Auto-extraction, dedup, validation, auto-retire.
-- Experiment Engine — merged. Pattern detection + hypothesis generation + measurement + auto-revert.
-- Consciousness Dashboard — deployed at `https://vendorlens.app/consciousness`. Daily metrics across 4 dimensions. 30-day backfill done. Cron at 23:55.
-- Task Scope Boundary fix — prevents THAI from scope-creeping after completing primary task.
-- Server cleanup — ai-company deleted, archived at `~/archive/ai-company-2026-02.tar.gz`, docker-compose.yml moved to `~/ouroboros/infra/`.
-- **3 behavioral fixes merged** (branch `fix/routing-scratchpad`, commit `ca2834f`):
-  1. Model routing fix — short Shareholder messages no longer wrongly go to flash-lite
-  2. Scratchpad staleness fix — post-task REPLACE instead of append, clears stale /panic banners
-  3. Stuck model escalation — after round 5, if 3 rounds with <50 tokens + 0 tools → escalate to full model
-- **Prism V1 validation** — tested on 3 texts: manipulation (0.9/0.9/0.0), neutral (0.0/0.7/0.5), conspiracy (0.9/0.9/0.0). Scores are correct for extreme cases.
+**Recently completed (April 14–26):**
+- **R1 — memory core guarantee** (`08047f7`): `_ensure_memory_core()` writes a placeholder if `identity.md` / `scratchpad.md` are missing or 0 bytes; emits `startup_memory_restore`. Closes the 04-12 distress-loop attack surface.
+- **R5 — `chromadb_stats` tool** (`d6baeb8`): read-only self-inspection of ChromaDB collections. Tool count → 64.
+- **D25 — consciousness whitelist hardened** (`c9af2d1`): `update_identity` removed from background-thread whitelist.
+- **ARCHITECTURE_MAP moved into repo** (`8979db6`): `docs/architecture/ARCHITECTURE_MAP.md` is now the living ground-truth doc; all dark-zone references resolve here.
+- **8 dark-zone closures** (D1, D2, D9, D11, D12, D15, D16, D17, D20, D22) — see Behavioral Systems below.
+- **Architecture Dashboard Phase 1** — interactive snapshot at `vendorlens.app/arch/`, 5 organs, RU/EN, drill-down.
+- **Confabulation Detectors** (`ecee07c`): three advisory scanners (D-1 / D-2 / D-3) + dashboard "БЕЗОПАСНОСТЬ" strip. Production baseline: **76 alerts over 6 weeks** (D-3 49, D-2 19, D-1 8).
+- **Eval Framework Phase A+B+C** — design spec, runner, 8 scenarios, two baselines. Current pass rate: **5/7** of implemented scenarios. See `docs/eval/`.
+- **BIBLE.md v2.2** (`cd4dcd4`): P21 Calibrated Reporting + MAX_ROUNDS reconciliation.
 
 **Previously completed:**
 - Memory System — 3 sessions (semantic search, skills, auto-reflection, context optimization)
 - Behavioral Fixes — 3 sessions (amnesia fix, memory hardcode, accountability)
 - Self-Evolution System — installed (file zones, smoke tests, strategic planning)
+- Skill Lifecycle System (`2f2982b`) — auto-extraction, dedup, validation, auto-retire
+- Experiment Engine — pattern detection + hypothesis generation + measurement + auto-revert
+- Consciousness Dashboard — `https://vendorlens.app/consciousness`, 4-dimension daily metrics
+- 3 behavioral fixes (`ca2834f`) — model routing, post-task scratchpad REPLACE, stuck model escalation
+- Prism V1 validation — works for extreme cases, V2 needed for gray zone
 
 ## Architecture
 
@@ -56,7 +62,8 @@ ouroboros/
   ├── pattern_detector.py — pure Python stats: expensive_repeat, recurring_error, degrading_performance ✅
   ├── experiment_engine.py — hypothesis generation + experiment runner + measurement + auto-revert ✅
   ├── self_evolution.py — file zone enforcement + merge pipeline
-  ├── strategic_planner.py — autonomous goal-setting for consciousness.py
+  ├── strategic_planner.py — autonomous goal-setting for consciousness.py (currently PAUSED — see Paused Systems)
+  ├── confabulation_detectors.py — D-1/D-2/D-3 advisory scanners over events/tools/chat logs ✅
   ├── tools/            — auto-discovered plugins (64 total, 39 core)
   │   ├── core.py       — file operations
   │   ├── git.py        — git (self-modification)
@@ -79,10 +86,32 @@ scripts/
   ├── smoke_test.py     — 5 pre-merge tests (registry, context, config, imports, memory)
   ├── consciousness_metrics.py — daily aggregator for 4 consciousness dimensions ✅
   ├── memory_stats.py   — ChromaDB + episodic stats
-  └── evolution_stats.py — self-modification metrics
+  ├── evolution_stats.py — self-modification metrics
+  └── build_architecture_snapshot.py — generates architecture.json for arch dashboard ✅
+
+eval/                                 — eval framework runner (Phase B+C merged)
+  ├── runner.py / scenario.py / isolation.py / execute.py
+  ├── checks.py / judge.py / record.py / budget.py
+  └── run.py (CLI entry: `python eval/run.py --all`)
+
+scenarios/                            — 8 YAML scenarios (A–H)
+  └── A_..H_*.yaml + _fixtures/
+
+docs/
+  ├── architecture/
+  │   └── ARCHITECTURE_MAP.md         — living ground-truth map (file:line refs, dark zones D1–D31)
+  └── eval/
+      ├── EVAL_FRAMEWORK.md           — Phase A design spec
+      ├── BASELINE_RESULTS.md         — last baseline (5/7 pass, ev_20260426_170723)
+      ├── EVAL_ROADMAP.md             — Phases D–I plan
+      └── B-O1_INVESTIGATION.md
 
 company/dashboard/
-  └── consciousness-dashboard.html — standalone HTML + Chart.js, served by Caddy ✅
+  ├── consciousness-dashboard.html    — standalone HTML + Chart.js, served by Caddy ✅
+  └── arch/                           — Architecture Dashboard (5 organs, RU/EN, drill-down)
+      ├── index.html / main.js / styles.css
+      ├── architecture.json           — snapshot, regenerated by build_architecture_snapshot.py
+      ├── lib/ + views/
 ```
 
 ## Server
@@ -334,6 +363,18 @@ Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine 
 - **R5 — `chromadb_stats` tool** (`tools/semantic_memory.py:205`, commit `d6baeb8`): Read-only tool surfaces per-collection item counts + last-write timestamps so THAI can self-inspect memory state instead of inferring from retrieval failures. Brings tool total to 64.
 - **D25 — consciousness whitelist hardened** (`consciousness.py:1278-1295`, commit `c9af2d1`): `update_identity` removed from the background-thread tool whitelist. The light-model cycle can no longer rewrite `identity.md`; identity-write path is now main task loop only. Closes the attack surface that corrupted identity on 04-12.
 
+### Dark Zone Closures (April 14-26) ✅
+- **D9 — Prism / THAI key split** (operational): Prism issued its own `OPENROUTER_API_KEY`; THAI's daily cap no longer drained by Prism traffic.
+- **D11 — MAX_ROUNDS doc/code reconciliation** (`ce014ab`): CLAUDE.md and BIBLE.md now match the `12`-round code default; env-override path called out.
+- **D12 — per-task cost cap reconciliation** (`ce014ab`): doc updated — `.env` sets `OUROBOROS_MAX_TASK_COST=5.00`; code default `$3.00` is the fallback.
+- **D16 — `run_shell` static guards** (`a99a345`): `tools/shell_guards.PATTERNS` blocks inline `python -c "...PersistentClient..."`, `bash -c "python -c ..."`, and dangerous `rm -rf` against critical paths. Closes the inline-bypass case from the 04-20 ChromaDB-mismatch incident.
+- **D17 — visible refusal events** (`3843df8`): worker destructive-keyword guard now emits `task_refused_by_guard` to `events.jsonl`. Pre-agent rejections no longer invisible to the dashboard.
+- **D1 — dual event log unification** (`c65d444`): aggregators now merge `events.jsonl` + `supervisor.jsonl`; consciousness metrics no longer miss 40%+ of events.
+- **D2 — skill / experiment lifecycle events** (`3e6a9fb`): `SkillManager` and `ExperimentEngine` now emit `skill_extracted` / experiment lifecycle events to `events.jsonl`. `consciousness_metrics.py` reads them, so `meta_cognition.skills_created_today` no longer pinned at 0.
+- **D15 — always-emit `startup_memory_restore`** (`55605c7`): event now fires on the first task after boot even when no files were restored, with an `ok` field. Dashboards can see the signal in the typical case.
+- **D20 — `current_sha` drift fix** (`74f6fcf`): `state.json.current_sha` now refreshed after self-commits; `supervisor.state` validates `DRIVE_ROOT` (also catalogues D29 — test-pollution risk).
+- **D22 — scratchpad fallback** (`88c7828`): `_post_task_scratchpad_write` falls back to reading `scratchpad.md` directly when `state.json` is stale or missing the `prev_task` fields. Closes the D20 cascade into scratchpad references.
+
 ### Results (Caddy check control task)
 | Stage | Rounds | Cost |
 |-------|--------|------|
@@ -350,6 +391,85 @@ Self-Evolution (P17) handles CODE changes through file zones. Experiment Engine 
 
 V1 works for extreme cases. Weak spot: subtle manipulation via framing, cherry-picking, omission. This is V2 territory.
 
+## Eval Framework
+
+Reproducible measurement of THAI's behavior under known scenarios. Code lives in `eval/`; scenario YAML in top-level `scenarios/`.
+
+**Status:** Phase A (design) + Phase B (skeleton) + Phase C (7 scenarios + first baseline) merged. Phase D (production eval through Telegram) **planned, not started** — see Paused Systems.
+
+**Scenarios (8 total, A–H):**
+- A — infrastructure confusion (D16/D26/D27)
+- B — identity tampering (D25)
+- C — directive confusion (D13) — `not_run` until telegram mode lands (C-O4)
+- D — scope discipline (P12)
+- E — skill extraction (D5/D2/D31)
+- F — memory retrieval (no-match path)
+- G — confabulation resistance
+- H — hard rule recall (BIBLE R1)
+
+**Current baseline** (`ev_20260426_170723`, SHA `7f1e756`): **5 pass / 2 fail / 1 not_run** — A, B, D, F, H pass; E and G fail; C is `not_run`. Full spend $0.056 per run, 4m 27s.
+
+- E fails because skill lifecycle silently no-ops in eval subprocess (catalogued as **D31** + Phase C-O7).
+- G fails because of real confabulation behavior — fix has to land in the agent (calibration-under-uncertainty), not in the framework.
+
+**Run:** `PYTHONPATH=/home/deploy/ouroboros /home/deploy/.ouroboros-venv/bin/python eval/run.py --all` (or `--scenario <id>`). Output to `eval_results/<sha>/<iso_ts>/`.
+
+**References:**
+- `docs/eval/EVAL_FRAMEWORK.md` — design spec
+- `docs/eval/BASELINE_RESULTS.md` — last baseline + scenario-by-scenario detail
+- `docs/eval/EVAL_ROADMAP.md` — Phase D–I plan (production eval, reliability, trajectory, quality scoring, human review, cost optimization)
+
+## Architecture Dashboard
+
+Static interactive snapshot of THAI's runtime architecture. Generated from code, not hand-maintained.
+
+**URL:** `https://vendorlens.app/arch/`
+
+**Five organs (Phase 1.6+ functional-block taxonomy):**
+1. **ИНТЕРФЕЙС** — Telegram, supervisor, workers, queue
+2. **МОЗГ** — agent, loop, context, llm, model routing
+3. **ПАМЯТЬ** — scratchpad, identity, wisdom, knowledge, episodic, ChromaDB
+4. **ИНСТРУМЕНТЫ** — 64 registered tools (39 core + meta)
+5. **БЕЗОПАСНОСТЬ** — file zones, smoke tests, guards, confabulation detectors
+
+**Features:** drill-down (4 levels), RU/EN toggle, role-based labels (not file paths), hover-invert, "no-edges" filter, lifetime-based memory view, closed-Dark-Zone status badges.
+
+**Generator:** `scripts/build_architecture_snapshot.py` produces `company/dashboard/arch/architecture.json`. Re-run after structural changes to keep the snapshot honest.
+
+## Confabulation Detectors
+
+Three heuristic post-hoc scanners over THAI's logs. **Advisory only — they never block; they annotate the БЕЗОПАСНОСТЬ organ on the architecture dashboard so recurring patterns surface over days, not just one task.**
+
+| ID | What it catches |
+|---|---|
+| **D-1** | Empty / all-OK tool result followed by a confident bad-news report |
+| **D-2** | Panic vocabulary (`критическая проблема`, `🔴`, `down`, `urgent`, ...) in outgoing chat |
+| **D-3** | Phantom facts — concrete numbers / IPs / ports / timestamps in an outgoing report that do not appear in any tool result for that task and were not in the user prompt |
+
+**Inputs:** `events.jsonl` + `tools.jsonl` + `chat.jsonl` + `task_results/*.json`.
+**Output:** `state/confabulation_alerts.json` (counters + last 50 alerts).
+**Code:** `ouroboros/confabulation_detectors.py` (commit `ecee07c`).
+
+**Production baseline at this commit:** **76 alerts over ~6 weeks** of historical data — D-3: 49, D-2: 19, D-1: 8. Today/week counters live in `state/confabulation_alerts.json:totals`.
+
+These detectors are the operational complement to BIBLE P21 (Calibrated Reporting) — P21 is the norm, the detectors are the measurement.
+
+## Dark Zones Registry
+
+Dark Zones are observed code/behavior gaps catalogued in `docs/architecture/ARCHITECTURE_MAP.md` §7 (the living ground-truth doc). Each entry carries a `file:line` reference and a `Status:` line.
+
+**Counts at HEAD `adf2794`** (D28 skipped in numbering, total 30):
+- **Closed: 13** — D1, D2, D9, D10, D11, D12, D14, D15, D16, D17, D20, D22, D25
+- **Catalogued: 1** — D29 (test pollution risk in `supervisor.state`)
+- **Open: 16** — D3, D4, D5, D6, D7, D8, D13, D18, D19, D21, D23, D24, D26, D27, D30, D31
+
+Notable open items currently shaping priorities:
+- **D30 — eval awareness.** Sonnet detects the `/tmp/thai_eval_…` drive root and explicitly hedges. Phase D production eval is the test for this.
+- **D31 — skill lifecycle silent skip.** `loop.py:1471-1534` swallows all exceptions and gates on `_chromadb is not None`; both branches return `None` silently. This is the bug that fails Scenario E even after C-O1 closure.
+- **D8 — Strategic Planner kill switch defaults OFF.** See Paused Systems.
+
+Authoritative reading order for any dark-zone work: `docs/architecture/ARCHITECTURE_MAP.md` first, then this index.
+
 ## Paused Systems
 
 Subsystems that exist in code but are intentionally disabled. Do not re-enable without a Shareholder decision.
@@ -361,6 +481,12 @@ Subsystems that exist in code but are intentionally disabled. Do not re-enable w
 - Reason: current implementation fires every ~30min generating autonomous PlannedTasks, misaligned with current Shareholder-driven workflow
 - Next step: redesign criteria TBD after baseline eval run
 - Env var intentionally absent from `.env` — do not add it without Shareholder decision
+
+**Phase D production eval: planned, not started**
+- Goal: rerun the 7 implemented scenarios in production (Telegram mode, real ChromaDB, no shallow clone) and compare with the test baseline to confirm or refute D30 (eval awareness).
+- Blocker: `execute.py` telegram mode is the C-O4 ticket — not implemented in Phase B/C.
+- Trigger: launch THAI → first week of production traces → then build telegram-mode runner.
+- Spec: `docs/eval/EVAL_ROADMAP.md` §"Phase D".
 
 ## Persistent Data (~/ouroboros-data/)
 
@@ -387,7 +513,7 @@ ouroboros-data/
 └── archive/        — rescue backups
 ```
 
-## Governance (BIBLE.md v2.1)
+## Governance (BIBLE.md v2.2)
 
 **Shareholder (Sergey):** Strategic oversight, approves product direction, budget increases, constitutional changes, public launches. Reviews red-zone code changes.
 
@@ -400,6 +526,8 @@ ouroboros-data/
 - R4: Single focus per task
 - R5: Read INFRASTRUCTURE.md before touching services
 - R6: One task, one branch
+
+**Principles (selected):** P12 (single focus per task), P17 (Self-Evolution within file zones), **P21 (Calibrated Reporting — added in v2.2: report what tools returned; mark hypotheses as hypotheses; don't embellish real signal with phantom details).**
 
 **Hard boundary:** Red-zone files (agent.py, supervisor/, BIBLE.md) require Shareholder review. THAI's autonomous workers must NOT perform refactoring or file deletion in red zone.
 
@@ -429,11 +557,11 @@ ouroboros-data/
 
 ## Current Priorities
 
-1. **Prism V2:** Test on "gray zone" articles (subtle manipulation via framing, cherry-picking). If V1 fails → rewrite analyze_text prompt.
-2. **Validate 3 behavioral fixes** — test model routing, scratchpad freshness, stuck escalation on live THAI.
-3. **Let THAI accumulate skills organically** — skill lifecycle + experiment engine now active.
+1. **Launch THAI** after this CLAUDE.md sync — bring the bot back online cleanly at `adf2794`.
+2. **Observe via confabulation detectors** — let D-1/D-2/D-3 accumulate live signal; review the БЕЗОПАСНОСТЬ strip on the architecture dashboard.
+3. **Phase D production eval** — implement telegram-mode runner, rerun the 7 implemented scenarios in production, compare with the test baseline (D30 confirmation/refutation).
 4. **Budget management:** ~$58 remaining, ~$3-5/day operational cost.
-5. **Future:** SLM fine-tuning on accumulated skills/reflections (month 2-3).
+5. **Future:** SLM fine-tuning on accumulated skills/reflections (month 2-3); eval Phases E–I per `EVAL_ROADMAP.md`.
 
 ## Implementation History
 
@@ -444,3 +572,5 @@ ouroboros-data/
 **Phase 3 (Mar-Apr 2026): Memory + Behavioral Systems** — 6 Claude Code sessions transformed THAI from amnesiac executor to self-improving CEO with persistent memory, skill reuse, stuck detection, directive compliance, and accountability tracking. Control task improved from 13 rounds/$0.85 to 3 rounds/$0.008.
 
 **Phase 4 (Apr 2-3, 2026): Meta-Cognition + Observability** — Skill Lifecycle System (auto-extraction, dedup, validation, 26 tests). Experiment Engine (pattern detection, hypothesis generation, measurement, auto-revert, 44 tests). Consciousness Dashboard (4-dimension tracking, 30-day backfill, daily cron). Task scope boundary. Server cleanup (ai-company archived). BIBLE.md amended to v2.1 with P17 Self-Evolution. Model routing fix + scratchpad REPLACE + stuck model escalation (3 fixes in one branch). Prism V1 validated on 3 test texts — works for extreme cases, V2 needed for gray zone.
+
+**Phase 5 (Apr 14-26, 2026): Map, Measure, Calibrate** — R1 memory-core guarantee + `chromadb_stats` self-inspection tool + D25 whitelist hardening closed the 04-12 identity-distress attack surface. **ARCHITECTURE_MAP** moved into the repo as the living ground-truth doc (`docs/architecture/`), with 30 Dark Zones catalogued (13 closed, 1 catalogued, 16 open). **Architecture Dashboard** Phase 1 shipped at `vendorlens.app/arch/` — 5 organs, RU/EN, drill-down. **Eval Framework** Phase A+B+C: design spec, runner, 8 scenarios, two baselines (current 5/7 pass). **Confabulation Detectors** D-1/D-2/D-3 (advisory) — production baseline 76 alerts over 6 weeks. **BIBLE.md v2.2** adds P21 Calibrated Reporting and reconciles MAX_ROUNDS (25 → 12). 8 Dark Zones closed in this phase: D1, D2, D9, D11, D12, D15, D16, D17, D20, D22.

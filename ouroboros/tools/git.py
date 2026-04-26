@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import pathlib
@@ -13,6 +14,68 @@ from ouroboros.tools.registry import ToolContext, ToolEntry
 from ouroboros.utils import utc_now_iso, write_text, safe_relpath, run_cmd
 
 log = logging.getLogger(__name__)
+
+
+# --- D20: refresh state.json.current_sha after self-commit -----------------
+#
+# Pre-D20 only `supervisor.git_ops.checkout_and_reset` updated state.json's
+# `current_sha`. THAI's own commits via repo_write_commit / repo_commit_push
+# bypassed that path, so on every self-commit `state.json` started drifting:
+# anything reading it as ground truth (drift diagnostics, /branches Telegram
+# command, worker_sha_verify) would silently use yesterday's SHA.
+
+def _refresh_current_sha(ctx: ToolContext) -> Optional[str]:
+    """Read git HEAD and persist it into state.json.current_sha.
+
+    Best-effort: never raise. Prefers supervisor.state.load_state/save_state
+    when initialized (matches the locking used by every other writer); falls
+    back to a direct atomic write when running outside the supervisor (e.g.
+    in tests).
+
+    Returns the new SHA on success, None otherwise.
+    """
+    try:
+        sha = run_cmd(["git", "rev-parse", "HEAD"], cwd=ctx.repo_dir).strip()
+    except Exception:
+        log.debug("Could not rev-parse HEAD to refresh current_sha", exc_info=True)
+        return None
+    if not sha:
+        return None
+
+    # Preferred path: use supervisor.state when its DRIVE_ROOT matches the
+    # context we were called with. The match check protects tests (which use
+    # a temp drive_root) from being routed at production paths via the
+    # module-level singleton in supervisor.state.
+    try:
+        from supervisor import state as ss
+        ss_root = getattr(ss, "DRIVE_ROOT", None)
+        if ss_root is not None and pathlib.Path(ss_root).resolve() == pathlib.Path(ctx.drive_root).resolve():
+            st = ss.load_state()
+            st["current_sha"] = sha
+            ss.save_state(st)
+            return sha
+    except Exception:
+        log.debug("supervisor.state path failed, using direct write", exc_info=True)
+
+    # Fallback: direct read/write of state.json under drive_root.
+    try:
+        state_path = ctx.drive_path("state/state.json")
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        if state_path.exists():
+            try:
+                data = json.loads(state_path.read_text(encoding="utf-8"))
+            except Exception:
+                data = {}
+        else:
+            data = {}
+        data["current_sha"] = sha
+        tmp = state_path.with_suffix(state_path.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(state_path)
+        return sha
+    except Exception:
+        log.debug("Direct state.json write failed", exc_info=True)
+        return None
 
 
 # --- Git lock ---
@@ -151,6 +214,9 @@ def _repo_write_commit(ctx: ToolContext, path: str, content: str, commit_message
         _release_git_lock(lock)
     ctx.last_push_succeeded = True
 
+    # D20: refresh state.json.current_sha after our own commit.
+    _refresh_current_sha(ctx)
+
     # After push — smoke test for Python files
     if path.endswith(".py"):
         try:
@@ -206,6 +272,9 @@ def _repo_commit_push(ctx: ToolContext, commit_message: str, paths: Optional[Lis
     finally:
         _release_git_lock(lock)
     ctx.last_push_succeeded = True
+
+    # D20: refresh state.json.current_sha after our own commit.
+    _refresh_current_sha(ctx)
 
     # After push — smoke test for Python files
     if any(p.endswith(".py") for p in (paths or [])):

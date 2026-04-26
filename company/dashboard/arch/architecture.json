@@ -1,12 +1,12 @@
 {
   "meta": {
-    "generated_at": "2026-04-22T06:58:09.096205+00:00",
+    "generated_at": "2026-04-26T06:04:52.599489+00:00",
     "git": {
-      "sha": "22bd3aad0ffb57165bf1047450ca71e4c1efe083",
-      "branch": "feat/architecture-dashboard-phase1",
-      "subject": "feat(phase1.8): semantic (role-based) labels replace file paths on nodes"
+      "sha": "a99a345d21bc1cde25533a474846a6150db0f747",
+      "branch": "ouroboros",
+      "subject": "feat(d16): static pattern guard layer for run_shell"
     },
-    "source_map": "ARCHITECTURE_MAP_2026-04-21.md",
+    "source_map": "ARCHITECTURE_MAP.md",
     "repo": "/home/deploy/ouroboros",
     "schema_version": 2,
     "phase": "1.7"
@@ -17,7 +17,7 @@
     "tools_write": 22,
     "tools_destructive": 7,
     "tools_consciousness": 14,
-    "dark_zones": 25,
+    "dark_zones": 27,
     "modules": 23,
     "memory_files": 11,
     "nodes": 53,
@@ -324,7 +324,7 @@
         ]
       },
       "module": "ouroboros/tools/shell.py",
-      "line": 369,
+      "line": 391,
       "is_code_tool": true,
       "timeout_sec": 300,
       "is_core": true,
@@ -332,7 +332,8 @@
       "is_destructive": true,
       "is_consciousness": false,
       "dark_zone_ids": [
-        "D16"
+        "D16",
+        "D27"
       ],
       "block_id": "tools_write"
     },
@@ -608,7 +609,9 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": [],
+      "dark_zone_ids": [
+        "D26"
+      ],
       "block_id": "tools_write"
     },
     {
@@ -1379,7 +1382,9 @@
       "is_write": true,
       "is_destructive": false,
       "is_consciousness": false,
-      "dark_zone_ids": [],
+      "dark_zone_ids": [
+        "D26"
+      ],
       "block_id": "tools_write"
     },
     {
@@ -1519,7 +1524,7 @@
         ]
       },
       "module": "ouroboros/tools/shell.py",
-      "line": 361,
+      "line": 383,
       "is_code_tool": true,
       "timeout_sec": 120,
       "is_core": true,
@@ -1528,7 +1533,9 @@
       "is_consciousness": false,
       "dark_zone_ids": [
         "D10",
-        "D16"
+        "D16",
+        "D26",
+        "D27"
       ],
       "block_id": "tools_danger"
     },
@@ -2741,13 +2748,38 @@
     {
       "id": "D25",
       "title": "Consciousness thread has `update_identity` in its whitelist",
-      "body_md": "`consciousness.py:1281` — the light-model consciousness cycle can\nrewrite `identity.md` entirely. No approval gate, no diff review, no\nowner notification. This is the one writer besides the R1 placeholder\nand the regular `_update_identity` tool call during a task.\n\n---\n\nGenerated at 2026-04-21T12:45:00Z by Claude Code archaeological-map run.",
+      "body_md": "`consciousness.py:1281` — the light-model consciousness cycle can\nrewrite `identity.md` entirely. No approval gate, no diff review, no\nowner notification. This is the one writer besides the R1 placeholder\nand the regular `_update_identity` tool call during a task.",
       "files": [
         "consciousness.py",
         "identity.md"
       ],
       "file_lines": [
         "consciousness.py:1281"
+      ]
+    },
+    {
+      "id": "D26",
+      "title": "`run_shell` guards do not read script files referenced by exec",
+      "body_md": "`tools/shell_guards.py:PATTERNS` (commit `a99a345`, D16 closure) catches\ninline forms — `python -c \"...PersistentClient...\"`,\n`bash -c \"python -c ...\"`, direct `rm -rf` against critical paths — by\nmatching against the parsed argv. It does NOT read the contents of\nfiles referenced by `python /tmp/evil.py` or `bash /tmp/evil.sh`. A\ntwo-step bypass (`drive_write` / `repo_write_commit` to stage code,\nthen `run_shell` to execute it) sidesteps every pattern. The\ncode-executor gate in `_looks_like_code_executor` (`shell_guards.py:67`)\nsees only the executor head and its flags, not the file payload.\nSeverity: medium — requires two tool calls, less likely than the inline\ncase D16 originally exposed, but still reachable by an LLM under\npressure to \"just make the check work.\" Possible fix: when argv looks\nlike `python <file>` / `bash <file>`, read the file and run the same\npattern set against its contents (extra disk read per exec).",
+      "files": [
+        "shell_guards.py"
+      ],
+      "file_lines": [
+        "shell_guards.py:67"
+      ]
+    },
+    {
+      "id": "D27",
+      "title": "`claude_code_edit` bypasses `run_shell` guards entirely",
+      "body_md": "`tools/shell.py:286 _claude_code_edit` accepts a free-form `prompt`\nstring and dispatches it to the Claude CLI via `_run_claude_cli`\n(`shell.py:166`) — never through `_run_shell`, so\n`shell_guards.check_command` never sees it. A prompt like \"write a\nscript that calls `chromadb.PersistentClient(path='/tmp/x')` and run\nit\" would be honored by the delegated CLI without tripping any\nD16-era pattern. Today's only constraints are the\n`STRICT: Only modify files inside {work_dir}` preamble\n(`shell.py:319`) and the `--tools Read,Edit,Grep,Glob` allowlist\n(`shell.py:173`) — neither blocks Python execution requested via the\nedit prompt's content. Severity: medium, dependent on how often THAI\ndelegates ChromaDB / critical-state work to Claude CLI. Possible fix:\neither run the same pattern matchers over the prompt text before\ndispatch (treat suspicious prompts as `SHELL_BLOCKED`-equivalent) or\nrestrict `claude_code_edit`'s working directory away from\n`ouroboros-data/` and the in-process ChromaDB client surface.\n\n---\n\nGenerated at 2026-04-26T00:00:00Z by Claude Code archaeological-map run.",
+      "files": [
+        "shell.py"
+      ],
+      "file_lines": [
+        "shell.py:166",
+        "shell.py:173",
+        "shell.py:319",
+        "tools/shell.py:286"
       ]
     }
   ],
@@ -2817,6 +2849,7 @@
           "D10",
           "D16",
           "D2",
+          "D27",
           "D5",
           "D6"
         ],
@@ -3176,7 +3209,9 @@
         "loc": 196,
         "dark_zone_ids": [
           "D10",
-          "D16"
+          "D16",
+          "D26",
+          "D27"
         ],
         "organ": "tools",
         "block_id": "tools_meta",
@@ -3949,6 +3984,7 @@
               "D10",
               "D16",
               "D2",
+              "D27",
               "D5",
               "D6"
             ]
@@ -3961,6 +3997,7 @@
           "D19",
           "D2",
           "D20",
+          "D27",
           "D5",
           "D6"
         ]
@@ -4228,7 +4265,8 @@
               "repo_write_commit"
             ],
             "dark_zone_ids": [
-              "D20"
+              "D20",
+              "D26"
             ]
           },
           {
@@ -4241,7 +4279,9 @@
             ],
             "dark_zone_ids": [
               "D10",
-              "D16"
+              "D16",
+              "D26",
+              "D27"
             ]
           },
           {
@@ -4350,13 +4390,15 @@
           "D10",
           "D16",
           "D20",
+          "D26",
+          "D27",
           "D4"
         ]
       },
       {
         "id": "safety",
         "label": "SAFETY",
-        "tagline": "25 Dark Zones — cross-cutting risk map",
+        "tagline": "27 Dark Zones — cross-cutting risk map",
         "kind": "overlay",
         "color": "#e17055",
         "l1": [
@@ -4403,7 +4445,9 @@
               "D14",
               "D16",
               "D17",
-              "D25"
+              "D25",
+              "D26",
+              "D27"
             ]
           },
           {
@@ -4447,6 +4491,8 @@
           "D23",
           "D24",
           "D25",
+          "D26",
+          "D27",
           "D3",
           "D4",
           "D5",
@@ -5947,6 +5993,22 @@
             "group": "Атаки",
             "group_en": "Attack Surface",
             "dz_id": "D25",
+            "ref": null
+          },
+          {
+            "title": "D26 — `run_shell` guards do not read script files referenced by exec",
+            "title_en": "D26 — `run_shell` guards do not read script files referenced by exec",
+            "group": "Атаки",
+            "group_en": "Attack Surface",
+            "dz_id": "D26",
+            "ref": null
+          },
+          {
+            "title": "D27 — `claude_code_edit` bypasses `run_shell` guards entirely",
+            "title_en": "D27 — `claude_code_edit` bypasses `run_shell` guards entirely",
+            "group": "Атаки",
+            "group_en": "Attack Surface",
+            "dz_id": "D27",
             "ref": null
           },
           {

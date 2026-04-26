@@ -7,8 +7,8 @@ Reads:
   - ouroboros/tools/registry.py (CORE_TOOL_NAMES)
   - ouroboros/consciousness.py  (_BG_TOOL_WHITELIST, near line 1284)
   - config/FILE_ZONES.yaml
-  - ouroboros-data/ARCHITECTURE_MAP_2026-04-21.md (Dark Zones D1-D25,
-                                                   memory backends, modules)
+  - docs/architecture/ARCHITECTURE_MAP.md (Dark Zones D1-D27,
+                                            memory backends, modules)
 
 Writes:
   - company/dashboard/arch/architecture.json
@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA_ROOT = pathlib.Path("/home/deploy/ouroboros-data")
-ARCH_MAP = DATA_ROOT / "ARCHITECTURE_MAP_2026-04-21.md"
+ARCH_MAP = REPO_ROOT / "docs" / "architecture" / "ARCHITECTURE_MAP.md"
 OUT_PATH = REPO_ROOT / "company" / "dashboard" / "arch" / "architecture.json"
 
 
@@ -1128,7 +1128,7 @@ SAFETY_DZ_GROUPS = [
     ("Наблюдаемость",   "Observability",   ["D1", "D2", "D5", "D15", "D18"]),
     ("Согласованность", "Consistency",     ["D4", "D19", "D20", "D22", "D23"]),
     ("Конфигурация",    "Configuration",   ["D8", "D11", "D12", "D13"]),
-    ("Атаки",           "Attack Surface",  ["D14", "D16", "D17", "D25"]),
+    ("Атаки",           "Attack Surface",  ["D14", "D16", "D17", "D25", "D26", "D27"]),
     ("Артефакты",       "Artifacts",       ["D3", "D6", "D7", "D10"]),
     ("Внешнее",         "External",        ["D9", "D21", "D24"]),
 ]
@@ -1693,7 +1693,7 @@ def _build_hierarchy(topology_nodes: List[Dict], tools: List[Dict],
         ("safety_configdrift", "Configuration drift",
          ["D8", "D11", "D12", "D13"]),
         ("safety_attack", "Attack surface",
-         ["D14", "D16", "D17", "D25"]),
+         ["D14", "D16", "D17", "D25", "D26", "D27"]),
         ("safety_orphan", "Orphan / restart state",
          ["D3", "D6", "D7", "D10"]),
         ("safety_budget", "Budget & external",

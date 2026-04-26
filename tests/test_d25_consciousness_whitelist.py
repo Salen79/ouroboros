@@ -1,6 +1,6 @@
 """D25 regression: consciousness thread must not be able to overwrite identity.md.
 
-Fix reference: ARCHITECTURE_MAP_2026-04-21.md §7 D25 and §5.2.
+Fix reference: docs/architecture/ARCHITECTURE_MAP.md §7 D25 and §5.2.
 Incident: identity.md corruption on 2026-04-12 via the light-model
 background cycle. update_identity was in _BG_TOOL_WHITELIST at
 consciousness.py:1281 — removed in this commit.

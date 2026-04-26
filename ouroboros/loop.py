@@ -1441,10 +1441,19 @@ def run_llm_loop(
                         with _ep_file.open("a", encoding="utf-8") as _f:
                             _f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+                    # D2: pipe lifecycle events into events.jsonl so they show
+                    # up in the consciousness dashboard alongside everything else.
+                    def _skill_event_emit(_evt):
+                        try:
+                            append_jsonl(drive_logs / "events.jsonl", _evt)
+                        except Exception:
+                            log.debug("skill_manager event emit failed", exc_info=True)
+
                     _sm = SkillManager(
                         chromadb_client=_chromadb,
                         llm_client=llm,
                         episodic_write_fn=_episodic_writer,
+                        event_emit_fn=_skill_event_emit,
                     )
 
                     # Build task result from accumulated data
@@ -1485,10 +1494,19 @@ def run_llm_loop(
             try:
                 from ouroboros.experiment_engine import ExperimentEngine
                 _exp_data_dir = drive_root or pathlib.Path("/home/deploy/ouroboros-data")
+
+                # D2: pipe experiment lifecycle into events.jsonl as well.
+                def _exp_event_emit(_evt):
+                    try:
+                        append_jsonl(drive_logs / "events.jsonl", _evt)
+                    except Exception:
+                        log.debug("experiment event emit failed", exc_info=True)
+
                 _exp_engine = ExperimentEngine(
                     data_dir=_exp_data_dir,
                     skill_manager=_sm if '_sm' in dir() else None,
                     llm_client=llm,
+                    event_emit_fn=_exp_event_emit,
                 )
                 _exp_engine.record_task_for_experiments({
                     "task": _task_text_for_log,

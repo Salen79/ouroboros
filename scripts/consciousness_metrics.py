@@ -162,9 +162,13 @@ class ConsciousnessMetrics:
         # Reflections with action: insights in episodic memory
         reflections = sum(1 for ep in episodes if ep.get("type") == "insight")
 
-        # Skills created today
+        # Skills created today (D2: also count skill_extracted events emitted
+        # by SkillManager — episodic 'skill_saved' is a different writer path
+        # and was missing the auto-extracted lifecycle skills entirely).
         skills_created = sum(
             1 for ep in episodes if ep.get("type") == "skill_saved"
+        ) + sum(
+            1 for ev in events if ev.get("type") == "skill_extracted"
         )
 
         # Patterns detected (consciousness thoughts)
@@ -272,7 +276,11 @@ class ConsciousnessMetrics:
         # ChromaDB counts
         chroma = self._get_chromadb_counts()
 
-        skills_created = sum(1 for ep in episodes if ep.get("type") == "skill_saved")
+        skills_created = sum(
+            1 for ep in episodes if ep.get("type") == "skill_saved"
+        ) + sum(
+            1 for ev in events if ev.get("type") == "skill_extracted"
+        )
         skills_used = sum(
             1
             for ev in events

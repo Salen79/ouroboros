@@ -804,23 +804,35 @@ class BackgroundConsciousness:
                 from ouroboros.tools.semantic_memory import _get_client as _get_chromadb
 
                 _chromadb = _get_chromadb()
-                _sm = SkillManager(chromadb_client=_chromadb, llm_client=self._llm) if _chromadb else None
+                # D2: shared emit callback so engine + skill manager surface
+                # their lifecycle events into events.jsonl. Engine emits at the
+                # moment the state changes (start, conclude, revert) — single
+                # source of truth, no duplicates from the consciousness loop.
+                def _bg_event_emit(_evt):
+                    try:
+                        append_jsonl(self._drive_root / "logs" / "events.jsonl", _evt)
+                    except Exception:
+                        log.debug("bg event emit failed", exc_info=True)
+
+                _sm = (
+                    SkillManager(
+                        chromadb_client=_chromadb,
+                        llm_client=self._llm,
+                        event_emit_fn=_bg_event_emit,
+                    )
+                    if _chromadb else None
+                )
                 _exp_engine = ExperimentEngine(
                     data_dir=self._drive_root,
                     skill_manager=_sm,
                     llm_client=self._llm,
+                    event_emit_fn=_bg_event_emit,
                 )
 
                 _new_exp = _exp_engine.run_full_cycle()
                 if _new_exp:
                     _exp_data = _exp_engine.get_experiment(_new_exp)
                     _hyp = _exp_data["hypothesis"][:200] if _exp_data else "?"
-                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
-                        "ts": utc_now_iso(),
-                        "type": "experiment_started",
-                        "experiment_id": _new_exp,
-                        "hypothesis": _hyp,
-                    })
                     if self._event_queue is not None and self._owner_chat_id_fn():
                         self._event_queue.put({
                             "type": "proactive_message",
@@ -829,18 +841,13 @@ class BackgroundConsciousness:
                             "ts": utc_now_iso(),
                         })
 
-                # Report recently concluded experiments
+                # Notify owner about recently concluded experiments. Engine has
+                # already emitted experiment_concluded at conclusion time, so we
+                # only push a chat message here — no duplicate event log entry.
                 for _concluded in _exp_engine.get_recently_concluded(hours=24):
                     _cid = _concluded["id"]
                     _verdict = _concluded.get("verdict", "?")
                     _status = _concluded.get("status", "?")
-                    append_jsonl(self._drive_root / "logs" / "events.jsonl", {
-                        "ts": utc_now_iso(),
-                        "type": "experiment_concluded",
-                        "experiment_id": _cid,
-                        "status": _status,
-                        "verdict": _verdict,
-                    })
                     if self._event_queue is not None and self._owner_chat_id_fn():
                         self._event_queue.put({
                             "type": "proactive_message",

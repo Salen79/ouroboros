@@ -93,18 +93,32 @@ class ExperimentEngine:
         data_dir: Path,
         skill_manager,
         llm_client,
+        event_emit_fn=None,
     ):
         """
         Args:
             data_dir: Path to ~/ouroboros-data/
             skill_manager: ouroboros.skill_manager.SkillManager instance
             llm_client: ouroboros.llm.LLMClient instance
+            event_emit_fn: Optional callable(event: dict) emitting structured
+                           events to events.jsonl. Used for experiment_started,
+                           experiment_concluded, experiment_reverted (D2).
         """
         self.data_dir = data_dir
         self.skill_manager = skill_manager
         self.llm = llm_client
         self.state_path = data_dir / "state" / "experiments.json"
         self.state = self._load_state()
+        self._event_emit_fn = event_emit_fn
+
+    def _emit(self, event: dict) -> None:
+        """Best-effort write to events.jsonl via injected callback."""
+        if self._event_emit_fn is None:
+            return
+        try:
+            self._event_emit_fn(event)
+        except Exception:
+            log.debug("event_emit_fn failed", exc_info=True)
 
     def _load_state(self) -> dict:
         state = _load_json(self.state_path)
@@ -217,6 +231,19 @@ class ExperimentEngine:
         self._save_state()
 
         log.info("Started experiment %s: %s", exp_id, hypothesis["hypothesis"][:100])
+        # D2: surface experiment start to events.jsonl for the dashboard.
+        self._emit({
+            "ts": _utcnow().isoformat(),
+            "type": "experiment_started",
+            "experiment_id": exp_id,
+            "hypothesis": hypothesis["hypothesis"][:200],
+            "action_type": hypothesis["action_type"],
+            "action_name": hypothesis["action_name"],
+            "metric": hypothesis["metric"],
+            "baseline": hypothesis["baseline"],
+            "target": hypothesis["target"],
+            "max_days": _MAX_EXPERIMENT_DAYS,
+        })
         return exp_id
 
     # ------------------------------------------------------------------
@@ -417,7 +444,18 @@ class ExperimentEngine:
         if not tasks or len(tasks) < _MIN_TASKS_FOR_CONCLUSION and reason == "expired":
             exp["status"] = "inconclusive"
             exp["verdict"] = f"Insufficient data: {len(tasks)} matching tasks (need {_MIN_TASKS_FOR_CONCLUSION})"
+            exp["concluded"] = _utcnow().isoformat()
+            exp["conclusion_reason"] = reason
             self._move_to_completed(exp)
+            self._emit({
+                "ts": _utcnow().isoformat(),
+                "type": "experiment_concluded",
+                "experiment_id": exp["id"],
+                "status": "inconclusive",
+                "verdict": exp["verdict"],
+                "conclusion_reason": reason,
+                "matching_tasks": len(tasks),
+            })
             return
 
         metric = exp["metric"]
@@ -453,6 +491,18 @@ class ExperimentEngine:
 
         self._move_to_completed(exp)
         log.info("Experiment %s concluded: %s — %s", exp["id"], exp["status"], exp["verdict"])
+        # D2: surface conclusion (status + verdict) to events.jsonl.
+        self._emit({
+            "ts": _utcnow().isoformat(),
+            "type": "experiment_concluded",
+            "experiment_id": exp["id"],
+            "status": exp["status"],
+            "verdict": exp.get("verdict", ""),
+            "result_value": exp.get("result_value"),
+            "improvement_pct": exp.get("improvement_pct"),
+            "conclusion_reason": reason,
+            "matching_tasks": len(exp.get("matching_tasks", [])),
+        })
 
     def _move_to_completed(self, exp: dict) -> None:
         """Move experiment from active to completed list."""

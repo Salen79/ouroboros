@@ -16,29 +16,46 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional
 
+from ouroboros.utils import utc_now_iso
+
 log = logging.getLogger(__name__)
 
 
 class SkillManager:
     """Closed-loop skill lifecycle: auto-extract, dedup, validate, evolve."""
 
-    def __init__(self, chromadb_client, llm_client, episodic_write_fn=None):
+    def __init__(self, chromadb_client, llm_client, episodic_write_fn=None,
+                 event_emit_fn=None):
         """
         Args:
             chromadb_client: ChromaDB HttpClient (or None if unavailable).
             llm_client: ouroboros.llm.LLMClient instance.
             episodic_write_fn: Optional callable(entry: dict) to write to JSONL.
                                If None, skills are only stored in ChromaDB.
+            event_emit_fn: Optional callable(event: dict) emitting structured
+                           events to events.jsonl. Used to surface skill_extracted,
+                           skill_dedup_match, skill_retired into the central
+                           event stream (D2 closure).
         """
         self._client = chromadb_client
         self._llm = llm_client
         self._episodic_write_fn = episodic_write_fn
+        self._event_emit_fn = event_emit_fn
         self._skills_col = None
         if chromadb_client is not None:
             try:
                 self._skills_col = chromadb_client.get_or_create_collection("thai_skills")
             except Exception as e:
                 log.warning("Failed to get thai_skills collection: %s", e)
+
+    def _emit(self, event: dict) -> None:
+        """Best-effort write to events.jsonl via injected callback."""
+        if self._event_emit_fn is None:
+            return
+        try:
+            self._event_emit_fn(event)
+        except Exception:
+            log.debug("event_emit_fn failed", exc_info=True)
 
     # ------------------------------------------------------------------
     # Step 1: Detection (code-enforced)
@@ -194,7 +211,6 @@ class SkillManager:
         # JSONL write (source of truth)
         if self._episodic_write_fn is not None:
             try:
-                from ouroboros.utils import utc_now_iso
                 entry = {
                     "ts": utc_now_iso(),
                     "type": "skill",
@@ -206,6 +222,17 @@ class SkillManager:
                 self._episodic_write_fn(entry)
             except Exception as e:
                 log.debug("JSONL skill write failed: %s", e)
+
+        # D2: surface skill_extracted into events.jsonl so meta_cognition
+        # aggregator (and any other audit) sees the lifecycle event.
+        self._emit({
+            "ts": utc_now_iso(),
+            "type": "skill_extracted",
+            "skill_name": skill_name,
+            "updated": existing is not None,
+            "rounds": task_result.get("rounds", 0),
+            "tools": tools_used[:5],
+        })
 
         return skill_name
 
@@ -227,6 +254,13 @@ class SkillManager:
         existing = self.find_duplicate(summary)
 
         if existing:
+            # D2: emit the dedup hit into events.jsonl regardless of branch.
+            self._emit({
+                "ts": utc_now_iso(),
+                "type": "skill_dedup_match",
+                "skill_id": existing.get("id", ""),
+                "similarity": round(float(existing.get("similarity", 0.0)), 3),
+            })
             # Update match count
             try:
                 meta = existing["metadata"]
@@ -296,10 +330,22 @@ class SkillManager:
             })
 
             # Auto-retire: score < -3 after 5+ uses
-            if score < -3 and times_used >= 5:
+            newly_retired = False
+            if score < -3 and times_used >= 5 and not meta.get("retired"):
                 meta["retired"] = True
+                newly_retired = True
 
             self._skills_col.update(ids=[skill_id], metadatas=[meta])
+
+            if newly_retired:
+                # D2: surface retirement so dashboards can flag attrition.
+                self._emit({
+                    "ts": utc_now_iso(),
+                    "type": "skill_retired",
+                    "skill_id": skill_id,
+                    "score": score,
+                    "times_used": times_used,
+                })
 
             return {
                 "helped": helped,

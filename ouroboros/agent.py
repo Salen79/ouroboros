@@ -423,13 +423,15 @@ class OuroborosAgent:
     def _ensure_memory_core(self, git_sha: str) -> Tuple[dict, int]:
         """R1: guarantee identity.md and scratchpad.md exist and are non-empty.
 
-        Restores minimal placeholder if file is missing or zero bytes. Emits a
-        separate ``startup_memory_restore`` event listing the restored files
-        only when at least one was actually restored. Never overwrites an
-        existing non-empty file.
+        Restores a minimal placeholder if a file is missing or zero bytes.
+        Always emits ``startup_memory_restore`` (D15) — the event lists which
+        files needed restoration and which were already healthy, so
+        observability dashboards can distinguish "boot just rescued the file"
+        from "files were already fine" instead of inferring from absence.
 
         Returns a payload ``({"identity_md_ok": bool, "scratchpad_md_ok": bool,
-        "restored": [...]}, 0)`` — issues_count is always 0 because we auto-fix.
+        "restored": [...], "ok": [...]}, 0)`` — issues_count is always 0
+        because we auto-fix.
         """
         memory_dir = self.env.drive_path("memory")
         targets = [
@@ -437,6 +439,7 @@ class OuroborosAgent:
             ("scratchpad.md", memory_dir / "scratchpad.md", self._SCRATCHPAD_PLACEHOLDER),
         ]
         restored: List[str] = []
+        ok_already: List[str] = []
         status = {}
         for name, path, placeholder in targets:
             try:
@@ -451,19 +454,22 @@ class OuroborosAgent:
                     log.warning("Failed to restore %s: %s", name, e, exc_info=True)
                     status[f"{name.replace('.md','')}_md_ok"] = False
                     continue
+            else:
+                ok_already.append(name)
             status[f"{name.replace('.md','')}_md_ok"] = True
         status["restored"] = restored
+        status["ok"] = ok_already
 
-        if restored:
-            try:
-                append_jsonl(self.env.drive_path("logs") / "events.jsonl", {
-                    "ts": utc_now_iso(),
-                    "type": "startup_memory_restore",
-                    "restored": restored,
-                    "git_sha": git_sha,
-                })
-            except Exception:
-                log.warning("Failed to log startup_memory_restore event", exc_info=True)
+        try:
+            append_jsonl(self.env.drive_path("logs") / "events.jsonl", {
+                "ts": utc_now_iso(),
+                "type": "startup_memory_restore",
+                "restored": restored,
+                "ok": ok_already,
+                "git_sha": git_sha,
+            })
+        except Exception:
+            log.warning("Failed to log startup_memory_restore event", exc_info=True)
 
         return status, 0
 

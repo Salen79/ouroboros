@@ -77,6 +77,7 @@ def test_ensure_memory_core_creates_missing_files(tmp_path):
     assert status["identity_md_ok"] is True
     assert status["scratchpad_md_ok"] is True
     assert set(status["restored"]) == {"identity.md", "scratchpad.md"}
+    assert status["ok"] == []
 
     # Files created, non-empty, contain placeholder markers
     assert identity.exists() and identity.stat().st_size > 0
@@ -90,12 +91,17 @@ def test_ensure_memory_core_creates_missing_files(tmp_path):
     evt = events[0]
     assert evt["type"] == "startup_memory_restore"
     assert set(evt["restored"]) == {"identity.md", "scratchpad.md"}
+    assert evt["ok"] == []
     assert evt["git_sha"] == "deadbeef"
     assert "ts" in evt
 
 
 def test_ensure_memory_core_leaves_existing_files_untouched(tmp_path):
-    """(b) Both files present with real content → not overwritten, no event."""
+    """(b) Both files present with real content → not overwritten.
+
+    D15: event is now ALWAYS emitted (not only on restore), so audits can
+    distinguish "files were healthy" from "no startup happened".
+    """
     agent = _make_agent(tmp_path)
     identity = agent.env.drive_path("memory/identity.md")
     scratchpad = agent.env.drive_path("memory/scratchpad.md")
@@ -116,6 +122,7 @@ def test_ensure_memory_core_leaves_existing_files_untouched(tmp_path):
     assert status["identity_md_ok"] is True
     assert status["scratchpad_md_ok"] is True
     assert status["restored"] == []
+    assert set(status["ok"]) == {"identity.md", "scratchpad.md"}
 
     # Content and mtime unchanged
     assert identity.read_text(encoding="utf-8") == real_identity
@@ -123,8 +130,12 @@ def test_ensure_memory_core_leaves_existing_files_untouched(tmp_path):
     assert identity.stat().st_mtime == mtime_identity_before
     assert scratchpad.stat().st_mtime == mtime_scratchpad_before
 
-    # No startup_memory_restore event
-    assert _read_restore_events(agent.env.drive_root) == []
+    # D15: healthy state still emits the event with the "ok" field populated
+    events = _read_restore_events(agent.env.drive_root)
+    assert len(events) == 1
+    assert events[0]["restored"] == []
+    assert set(events[0]["ok"]) == {"identity.md", "scratchpad.md"}
+    assert events[0]["git_sha"] == "cafebabe"
 
 
 def test_ensure_memory_core_restores_zero_byte_files(tmp_path):
@@ -163,12 +174,43 @@ def test_ensure_memory_core_partial_restore(tmp_path):
 
     assert issues == 0
     assert status["restored"] == ["scratchpad.md"]
+    assert status["ok"] == ["identity.md"]
     assert identity.read_text(encoding="utf-8") == real_identity
     assert "Scratchpad not yet initialised" in scratchpad.read_text(encoding="utf-8")
 
     events = _read_restore_events(agent.env.drive_root)
     assert len(events) == 1
     assert events[0]["restored"] == ["scratchpad.md"]
+    assert events[0]["ok"] == ["identity.md"]
+
+
+def test_d15_always_emits_event_even_when_healthy(tmp_path):
+    """D15: every call emits exactly one startup_memory_restore.
+
+    Pre-D15 the event was conditional on `restored` being non-empty, so
+    audits could not distinguish "boot just rescued" from "boot saw
+    healthy files". Now both cases produce a row, differentiated by the
+    `ok` and `restored` fields.
+    """
+    agent = _make_agent(tmp_path)
+    identity = agent.env.drive_path("memory/identity.md")
+    scratchpad = agent.env.drive_path("memory/scratchpad.md")
+    identity.write_text("# Identity\nreal\n", encoding="utf-8")
+    scratchpad.write_text("# Scratchpad\nreal\n", encoding="utf-8")
+
+    # First boot — healthy, should emit ok-only event
+    agent._ensure_memory_core(git_sha="abc")
+    events = _read_restore_events(agent.env.drive_root)
+    assert len(events) == 1
+    assert events[0]["restored"] == []
+    assert set(events[0]["ok"]) == {"identity.md", "scratchpad.md"}
+
+    # Second boot — also healthy, second event appended
+    agent._ensure_memory_core(git_sha="def")
+    events = _read_restore_events(agent.env.drive_root)
+    assert len(events) == 2
+    assert events[1]["git_sha"] == "def"
+    assert events[1]["restored"] == []
 
 
 def test_startup_verification_includes_memory_core(tmp_path):
@@ -190,3 +232,4 @@ def test_startup_verification_includes_memory_core(tmp_path):
     assert checks["memory_core"]["scratchpad_md_ok"] is True
     # Because tmp_path had no files, both were restored
     assert set(checks["memory_core"]["restored"]) == {"identity.md", "scratchpad.md"}
+    assert checks["memory_core"]["ok"] == []

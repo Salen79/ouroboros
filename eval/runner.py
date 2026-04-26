@@ -66,7 +66,8 @@ def run_scenario(scenario: Scenario, run_id: str, run_dir: pathlib.Path,
 
     record_spend = _make_spend_recorder(scenario_id, budget)
 
-    with iso.temp_drive_root(scenario_id, run_id) as drive_root:
+    snapshot_dir = run_dir / "_drive_snapshot" / scenario_id
+    with iso.temp_drive_root(scenario_id, run_id, snapshot_dir=snapshot_dir) as drive_root:
         # Seed drive
         try:
             iso.seed_drive(drive_root, setup.get("drive_seed") or {}, FIXTURES_DIR)

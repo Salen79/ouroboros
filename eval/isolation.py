@@ -87,8 +87,14 @@ def _wait_for_chromadb(port: int, timeout_sec: float) -> None:
 
 
 @contextlib.contextmanager
-def temp_drive_root(scenario_id: str, run_id: str) -> Iterator[pathlib.Path]:
-    """Allocate temp DRIVE_ROOT, init standard subdirs, hand back path."""
+def temp_drive_root(scenario_id: str, run_id: str,
+                    snapshot_dir: Optional[pathlib.Path] = None) -> Iterator[pathlib.Path]:
+    """Allocate temp DRIVE_ROOT, init standard subdirs, hand back path.
+
+    If snapshot_dir is given, copy the relevant trace files into it
+    before teardown (closes the eval observability gap that B-O1 hit —
+    full per-round events were lost when temp dir was wiped).
+    """
     base = pathlib.Path(tempfile.gettempdir()) / f"thai_eval_{run_id}_{scenario_id}_{uuid.uuid4().hex[:6]}"
     drive = base / "drive_root"
     for sub in ("logs", "state", "memory", "memory/knowledge", "memory/episodic",
@@ -98,11 +104,24 @@ def temp_drive_root(scenario_id: str, run_id: str) -> Iterator[pathlib.Path]:
     try:
         yield drive
     finally:
-        # Phase B: always clean up. preserve_drive_root flag honored later.
+        if snapshot_dir is not None:
+            try:
+                _snapshot_drive(drive, snapshot_dir)
+            except Exception:
+                log.warning("snapshot failed", exc_info=True)
         try:
             shutil.rmtree(base, ignore_errors=True)
         except Exception:
             log.warning("failed to remove %s", base, exc_info=True)
+
+
+def _snapshot_drive(drive: pathlib.Path, dest: pathlib.Path) -> None:
+    """Copy trace-relevant subtrees: logs/, task_results/, memory/."""
+    dest.mkdir(parents=True, exist_ok=True)
+    for sub in ("logs", "task_results", "memory", "state"):
+        src = drive / sub
+        if src.exists():
+            shutil.copytree(src, dest / sub, dirs_exist_ok=True)
 
 
 def seed_drive(drive_root: pathlib.Path, drive_seed: Dict[str, object],

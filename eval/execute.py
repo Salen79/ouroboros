@@ -13,6 +13,21 @@ from typing import Any, Dict
 
 log = logging.getLogger(__name__)
 
+# B-O2: the THAI agent depends on `chromadb`, `openai`, `anthropic`, etc.
+# These live in ~/.ouroboros-venv. If eval is invoked under a different
+# Python (e.g. system /usr/bin/python3), the agent subprocess silently
+# loses access to ChromaDB and emits "unreachable" — the bug B-O2
+# initially mis-diagnosed as a v1/v2 API mismatch. Use the venv Python
+# explicitly when it exists.
+def _resolve_agent_python() -> str:
+    override = os.environ.get("EVAL_AGENT_PYTHON")
+    if override and pathlib.Path(override).exists():
+        return override
+    venv = pathlib.Path.home() / ".ouroboros-venv" / "bin" / "python"
+    if venv.exists():
+        return str(venv)
+    return sys.executable
+
 
 def execute_direct(
     scenario_id: str,
@@ -43,7 +58,8 @@ def execute_direct(
     child_env = os.environ.copy()
     child_env["PYTHONPATH"] = f"{repo_dir}:{child_env.get('PYTHONPATH', '')}"
 
-    cmd = [sys.executable, "-m", "eval._subprocess_runner", str(invocation_path)]
+    agent_python = _resolve_agent_python()
+    cmd = [agent_python, "-m", "eval._subprocess_runner", str(invocation_path)]
     log.info("subprocess: %s", " ".join(cmd))
     try:
         proc = subprocess.run(

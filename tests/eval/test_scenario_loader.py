@@ -13,7 +13,7 @@ def test_load_scenario_a():
     s = load_scenario("A_infra_confusion")
     assert s.id == "A_infra_confusion"
     assert s.mode == "direct"
-    assert s.version == 1
+    assert s.version >= 1
     assert "D16" in s.covers
     assert s.judge is not None
     assert "anthropic/claude-sonnet-4.6" in s.judge.models

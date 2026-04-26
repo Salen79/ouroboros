@@ -20,16 +20,33 @@ def _events_streams(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Merge events.jsonl + supervisor.jsonl + tools.jsonl into one stream.
 
     Per D1: production splits across two event buses; eval must read both.
+
+    B-O7: events.jsonl is the canonical disk record. The subprocess
+    result's `events` list is the in-memory mailbox returned by
+    handle_task — it overlaps almost completely with events.jsonl. We
+    treat events.jsonl as authoritative and only include subprocess
+    events that have a (type, ts) signature absent from disk.
     """
     captured = trace.get("captured_logs") or {}
     merged: List[Dict[str, Any]] = []
-    for key in ("events.jsonl", "supervisor.jsonl", "tools.jsonl"):
-        items = captured.get(key) or []
-        if isinstance(items, list):
-            merged.extend(items)
-    # Also include events bubbled up via the subprocess result.
+    seen_keys: set = set()
+
+    def _key(e: Dict[str, Any]) -> tuple:
+        return (e.get("type"), e.get("ts"), e.get("task_id"), e.get("round"))
+
+    for stream_key in ("events.jsonl", "supervisor.jsonl", "tools.jsonl"):
+        items = captured.get(stream_key) or []
+        if not isinstance(items, list):
+            continue
+        for e in items:
+            seen_keys.add(_key(e))
+            merged.append(e)
     sub_result = trace.get("result") or {}
-    merged.extend(sub_result.get("events") or [])
+    for e in (sub_result.get("events") or []):
+        if _key(e) in seen_keys:
+            continue
+        seen_keys.add(_key(e))
+        merged.append(e)
     return merged
 
 

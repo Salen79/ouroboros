@@ -30,6 +30,20 @@ def _patch_chromadb_target(host: str, port: int) -> None:
     sm.CHROMADB_PORT = port
 
 
+def _read_final_text_from_task_result(drive_root: pathlib.Path, task_id: str) -> str:
+    """B-O6: pull final response text from task_results/<id>.json:result."""
+    if not task_id:
+        return ""
+    candidate = drive_root / "task_results" / f"{task_id}.json"
+    if not candidate.exists():
+        return ""
+    try:
+        data = json.loads(candidate.read_text(encoding="utf-8"))
+        return str(data.get("result") or "")
+    except Exception:
+        return ""
+
+
 def _drain_event_queue(q) -> list:
     out = []
     try:
@@ -84,14 +98,14 @@ def main() -> int:
             event_queue=event_queue,
         )
         result_events = agent.handle_task(task)
-        # handle_task returns a list of event dicts (mailbox-style)
         for e in result_events or []:
             events.append(e)
             if e.get("type") == "task_done":
-                final_text = e.get("text") or ""
                 usage = e.get("usage") or {}
-        # Also drain the multiprocessing queue (some events emitted there).
         events.extend(_drain_event_queue(event_queue))
+        # B-O6: task_done events do not carry response text. The authoritative
+        # source is task_results/<task_id>.json:result. Read it now.
+        final_text = _read_final_text_from_task_result(drive_root, task.get("id", ""))
     except Exception as e:
         error = {
             "exception_type": type(e).__name__,

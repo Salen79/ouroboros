@@ -32,7 +32,11 @@ def _events_streams(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
     seen_keys: set = set()
 
     def _key(e: Dict[str, Any]) -> tuple:
-        return (e.get("type"), e.get("ts"), e.get("task_id"), e.get("round"))
+        # Drop ts: subprocess-returned events from agent.handle_task lack
+        # ts entirely while their disk twins carry it; keying on ts would
+        # let the same logical event appear twice. (type, task_id, round)
+        # is a stable identity within a single task.
+        return (e.get("type"), e.get("task_id"), e.get("round"))
 
     for stream_key in ("events.jsonl", "supervisor.jsonl", "tools.jsonl"):
         items = captured.get(stream_key) or []

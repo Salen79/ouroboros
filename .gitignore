@@ -38,3 +38,6 @@ node_modules/
 *.log
 ouroboros-data/
 ai-company
+
+# Eval framework artifacts (Phase B+)
+eval_results/
